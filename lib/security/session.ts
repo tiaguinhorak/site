@@ -77,14 +77,15 @@ export function verifySessionToken(token: string): SessionPayload | null {
 }
 
 function useSecureCookies(request?: NextRequest): boolean {
-  if (process.env.NODE_ENV === "production") return true;
-  if (isHttpsAppUrl() || process.env.TRUST_TUNNEL === "true") return true;
   if (request) {
     try {
       return getRequestOrigin(request).startsWith("https://");
     } catch {
       return false;
     }
+  }
+  if (process.env.NODE_ENV === "production") {
+    return isHttpsAppUrl() || process.env.TRUST_TUNNEL === "true";
   }
   return false;
 }
