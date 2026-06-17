@@ -1,21 +1,14 @@
-import path from "node:path";
 import { PrismaClient } from "@/lib/generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-
-function resolveDatabaseUrl(): string {
-  const url = process.env.DATABASE_URL ?? "file:./dev.db";
-  if (url.startsWith("file:")) {
-    const filePath = url.replace(/^file:/, "");
-    if (!path.isAbsolute(filePath)) {
-      // turbopackIgnore: database path resolved at runtime
-      return `file:${path.join(process.cwd(), filePath)}`;
-    }
-  }
-  return url;
-}
+import { PrismaPg } from "@prisma/adapter-pg";
+import pg from "pg";
 
 function createPrismaClient(): PrismaClient {
-  const adapter = new PrismaBetterSqlite3({ url: resolveDatabaseUrl() });
+  const connectionString = process.env.DATABASE_URL ?? "postgresql://luhanvini:8OZPFobNkQvlrRIR%27o%2FI@srv1500242.hstgr.cloud:5432/clutchclube?sslmode=require";
+  const pool = new pg.Pool({
+    connectionString,
+    ssl: { rejectUnauthorized: false },
+  });
+  const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter });
 }
 
