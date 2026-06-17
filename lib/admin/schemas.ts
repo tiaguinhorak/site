@@ -1,0 +1,168 @@
+import { z } from "zod";
+import { LIMITS } from "@/lib/security/constants";
+import {
+  sanitizeEmail,
+  sanitizeNickname,
+  sanitizeText,
+} from "@/lib/security/sanitize";
+
+const planSchema = z.enum(["FREE", "PREMIUM", "ELITE"]);
+const notificationTypeSchema = z.enum(["SYSTEM", "MATCH", "SOCIAL", "PROMO"]);
+const punishmentTypeSchema = z.enum(["BAN", "MUTE", "WARNING", "KICK", "RESTRICT"]);
+const punishmentScopeSchema = z.enum(["PLATFORM", "SERVER"]);
+
+export const adminUserUpdateSchema = z.object({
+  nickname: z
+    .string()
+    .transform(sanitizeNickname)
+    .pipe(
+      z
+        .string()
+        .min(3)
+        .max(LIMITS.nickname)
+        .regex(/^[A-Z0-9_]+$/, "Nickname inválido."),
+    )
+    .optional(),
+  email: z
+    .string()
+    .max(LIMITS.email)
+    .transform(sanitizeEmail)
+    .pipe(z.email("E-mail inválido."))
+    .optional()
+    .nullable(),
+  firstName: z
+    .string()
+    .transform((v) => sanitizeText(v, LIMITS.name))
+    .optional(),
+  lastName: z
+    .string()
+    .transform((v) => sanitizeText(v, LIMITS.name))
+    .optional(),
+  phone: z.string().max(32).optional(),
+  country: z.string().min(2).max(2).optional(),
+  bio: z
+    .string()
+    .transform((v) => sanitizeText(v, LIMITS.bio))
+    .optional(),
+  plan: planSchema.optional(),
+  isAdmin: z.boolean().optional(),
+  rank: z.number().int().min(0).max(999999).optional(),
+  elo: z.number().int().min(0).max(99999).optional(),
+  kd: z.number().min(0).max(99).optional(),
+  matches: z.number().int().min(0).max(999999).optional(),
+  winRate: z.number().int().min(0).max(100).optional(),
+  hoursPlayed: z.number().int().min(0).max(999999).optional(),
+  anticheatInstalled: z.boolean().optional(),
+  mfaEnabled: z.boolean().optional(),
+});
+
+export const adminNotificationSendSchema = z.object({
+  title: z
+    .string()
+    .min(2, "Título muito curto.")
+    .max(120)
+    .transform((v) => sanitizeText(v, 120)),
+  body: z
+    .string()
+    .min(2, "Mensagem muito curta.")
+    .max(500)
+    .transform((v) => sanitizeText(v, 500)),
+  type: notificationTypeSchema.default("SYSTEM"),
+  userId: z.string().min(1).optional(),
+  broadcast: z.boolean().optional(),
+});
+
+export const adminPunishmentCreateSchema = z.object({
+  userId: z.string().min(1),
+  type: punishmentTypeSchema,
+  scope: punishmentScopeSchema.default("PLATFORM"),
+  serverName: z
+    .string()
+    .max(80)
+    .transform((v) => sanitizeText(v, 80))
+    .optional(),
+  reason: z
+    .string()
+    .min(3, "Descreva o motivo.")
+    .max(300)
+    .transform((v) => sanitizeText(v, 300)),
+  notes: z
+    .string()
+    .max(500)
+    .transform((v) => sanitizeText(v, 500))
+    .optional(),
+  expiresAt: z.string().datetime().optional().nullable(),
+  durationDays: z.number().int().min(1).max(3650).optional(),
+});
+
+export const adminServerCreateSchema = z.object({
+  name: z.string().min(2).max(80).transform((v) => sanitizeText(v, 80)),
+  map: z.string().min(2).max(80).transform((v) => sanitizeText(v, 80)),
+  mode: z.string().min(2).max(40).transform((v) => sanitizeText(v, 40)),
+  players: z.number().int().min(0).max(128).default(0),
+  slots: z.number().int().min(1).max(128),
+  ping: z.number().int().min(0).max(999).default(0),
+  sortOrder: z.number().int().min(0).max(9999).default(0),
+});
+
+export const adminServerUpdateSchema = adminServerCreateSchema.partial();
+
+export const adminNewsCreateSchema = z.object({
+  title: z.string().min(4).max(160).transform((v) => sanitizeText(v, 160)),
+  excerpt: z.string().min(10).max(400).transform((v) => sanitizeText(v, 400)),
+  category: z.string().min(2).max(40).transform((v) => sanitizeText(v, 40)),
+  imageAccent: z.string().min(3).max(120).transform((v) => sanitizeText(v, 120)),
+  imageUrl: z
+    .string()
+    .max(500)
+    .optional()
+    .nullable()
+    .transform((v) => (v && v.trim() ? v.trim() : null)),
+  featured: z.boolean().default(false),
+  publishedAt: z.string().datetime().optional(),
+});
+
+export const adminNewsUpdateSchema = adminNewsCreateSchema.partial();
+
+export const adminStoreCreateSchema = z.object({
+  name: z.string().min(2).max(80).transform((v) => sanitizeText(v, 80)),
+  type: z.string().min(2).max(40).transform((v) => sanitizeText(v, 40)),
+  priceCents: z.number().int().min(0).max(99999999),
+  originalCents: z.number().int().min(0).max(99999999).optional().nullable(),
+  badge: z.string().min(1).max(40).transform((v) => sanitizeText(v, 40)),
+  description: z.string().min(4).max(300).transform((v) => sanitizeText(v, 300)),
+  accent: z.string().min(3).max(120).transform((v) => sanitizeText(v, 120)),
+  trending: z.boolean().default(false),
+  featured: z.boolean().default(false),
+  sortOrder: z.number().int().min(0).max(9999).default(0),
+});
+
+export const adminStoreUpdateSchema = adminStoreCreateSchema.partial();
+
+export const adminGameModeCreateSchema = z.object({
+  slug: z
+    .string()
+    .min(2)
+    .max(40)
+    .transform((v) => sanitizeText(v, 40).toLowerCase().replace(/\s+/g, "-"))
+    .pipe(z.string().regex(/^[a-z0-9-]+$/, "Slug inválido.")),
+  name: z.string().min(2).max(60).transform((v) => sanitizeText(v, 60)),
+  accent: z.string().min(3).max(80).transform((v) => sanitizeText(v, 80)),
+  tagline: z.string().max(80).transform((v) => sanitizeText(v, 80)).optional(),
+  description: z.string().max(300).transform((v) => sanitizeText(v, 300)).optional(),
+  iconKey: z.string().min(2).max(40).transform((v) => sanitizeText(v, 40)).optional(),
+  sortOrder: z.number().int().min(0).max(9999).default(0),
+});
+
+export const adminGameModeUpdateSchema = adminGameModeCreateSchema.partial();
+
+export const adminGameModeRoomCreateSchema = z.object({
+  name: z.string().min(2).max(80).transform((v) => sanitizeText(v, 80)),
+  map: z.string().min(2).max(80).transform((v) => sanitizeText(v, 80)),
+  players: z.number().int().min(0).max(128).default(0),
+  slots: z.number().int().min(1).max(128),
+  ping: z.number().int().min(0).max(999).default(0),
+  sortOrder: z.number().int().min(0).max(9999).default(0),
+});
+
+export const adminGameModeRoomUpdateSchema = adminGameModeRoomCreateSchema.partial();
