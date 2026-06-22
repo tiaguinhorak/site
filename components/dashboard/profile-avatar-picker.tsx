@@ -4,9 +4,10 @@ import { useRef } from "react";
 import { Camera, Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { ClutchAvatarFallback } from "@/components/ui/clutch-avatar-fallback";
 import { SteamIcon } from "@/components/ui/icons";
 import { getAvatarInitials } from "@/lib/profile";
-import { avatarPresets } from "@/lib/profile/avatar-presets";
+import { avatarPresets, avatarPresetUrl } from "@/lib/profile/avatar-presets";
 import {
   type AvatarDraft,
   getAvatarPreview,
@@ -68,14 +69,8 @@ export function ProfileAvatarPicker({
                 alt={t("photoAlt")}
                 className="h-full w-full object-cover"
               />
-            ) : preview.presetGradient ? (
-              <div
-                className={cn("h-full w-full bg-gradient-to-br", preview.presetGradient)}
-              />
             ) : (
-              <span className="font-display text-3xl font-bold text-white">
-                {preview.initials}
-              </span>
+              <ClutchAvatarFallback initials={preview.initials} className="h-full w-full" />
             )}
             <span className="absolute inset-0 flex items-center justify-center bg-[rgb(0_0_0/0.45)] opacity-0 transition-opacity group-hover:opacity-100">
               <Camera className="h-6 w-6 text-white" />
@@ -166,11 +161,12 @@ export function ProfileAvatarPicker({
         <div className="grid grid-cols-5 gap-2 sm:grid-cols-10">
           {avatarPresets.map((preset) => {
             const active = activePresetId === preset.id;
+            const presetLabel = t(`presetLabels.${preset.id}` as "presetLabels.viper");
             return (
               <button
                 key={preset.id}
                 type="button"
-                title={preset.label}
+                title={presetLabel}
                 disabled={disabled}
                 onClick={() => onDraftChange({ kind: "preset", presetId: preset.id })}
                 className={cn(
@@ -180,11 +176,11 @@ export function ProfileAvatarPicker({
                     : "border-transparent",
                 )}
               >
-                <div
-                  className={cn(
-                    "h-full w-full bg-gradient-to-br",
-                    preset.gradient,
-                  )}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={avatarPresetUrl(preset.id)}
+                  alt={presetLabel}
+                  className="h-full w-full object-cover"
                 />
                 {active && (
                   <span className="absolute inset-0 flex items-center justify-center bg-[rgb(0_0_0/0.3)]">

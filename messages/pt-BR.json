@@ -652,6 +652,18 @@
     "undo": "Desfazer",
     "saveHint": "Alterações na foto são aplicadas ao salvar as informações.",
     "presetsTitle": "Avatares {site}",
+    "presetLabels": {
+      "viper": "Clutch Purple",
+      "ember": "Clutch Ember",
+      "frost": "Clutch Frost",
+      "neon": "Clutch Neon",
+      "gold": "Clutch Gold",
+      "shadow": "Clutch Shadow",
+      "crimson": "Clutch Crimson",
+      "aurora": "Clutch Aurora",
+      "toxic": "Clutch Toxic",
+      "royal": "Clutch Royal"
+    },
     "invalidFormat": "Formato inválido. Use JPG, PNG ou WEBP.",
     "uploadFailed": "Falha ao enviar foto.",
     "processFailed": "Não foi possível processar a imagem."

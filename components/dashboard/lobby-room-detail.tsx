@@ -16,6 +16,7 @@ import {
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { AvatarImage } from "@/components/ui/avatar-image";
+import { ClutchAvatarFallback } from "@/components/ui/clutch-avatar-fallback";
 import { Input } from "@/components/ui/input";
 import { MapPicker } from "@/components/admin/pickers/map-picker";
 import { secureApi } from "@/lib/api/client";
@@ -299,11 +300,14 @@ export function LobbyRoomDetail({ roomId }: { roomId: string }) {
                     key={member.id}
                     className="flex items-center gap-3 rounded-xl border border-border px-3 py-2"
                   >
-                    <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-primary/15 text-xs font-bold">
+                    <div className="flex h-9 w-9 overflow-hidden rounded-full">
                       {member.avatarUrl ? (
                         <AvatarImage src={member.avatarUrl} size={36} className="rounded-full" />
                       ) : (
-                        member.avatarInitials
+                        <ClutchAvatarFallback
+                          initials={member.avatarInitials}
+                          className="h-9 w-9 rounded-full text-[10px]"
+                        />
                       )}
                     </div>
                     <div className="min-w-0 flex-1">

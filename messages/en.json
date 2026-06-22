@@ -652,6 +652,18 @@
     "undo": "Undo",
     "saveHint": "Photo changes apply when you save your information.",
     "presetsTitle": "{site} avatars",
+    "presetLabels": {
+      "viper": "Clutch Purple",
+      "ember": "Clutch Ember",
+      "frost": "Clutch Frost",
+      "neon": "Clutch Neon",
+      "gold": "Clutch Gold",
+      "shadow": "Clutch Shadow",
+      "crimson": "Clutch Crimson",
+      "aurora": "Clutch Aurora",
+      "toxic": "Clutch Toxic",
+      "royal": "Clutch Royal"
+    },
     "invalidFormat": "Invalid format. Use JPG, PNG or WEBP.",
     "uploadFailed": "Failed to upload photo.",
     "processFailed": "Could not process the image."

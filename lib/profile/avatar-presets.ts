@@ -1,21 +1,22 @@
 export type AvatarPreset = {
   id: string;
+  /** Fallback label (i18n: avatar.presetLabels.{id}) */
   label: string;
-  /** Tailwind gradient classes for picker preview */
+  /** Tailwind gradient for loading shimmer / legacy fallback */
   gradient: string;
 };
 
 export const avatarPresets: AvatarPreset[] = [
-  { id: "viper", label: "Viper", gradient: "from-violet-600 to-fuchsia-500" },
-  { id: "ember", label: "Ember", gradient: "from-orange-500 to-rose-600" },
-  { id: "frost", label: "Frost", gradient: "from-cyan-400 to-blue-600" },
-  { id: "neon", label: "Neon", gradient: "from-emerald-400 to-teal-600" },
-  { id: "gold", label: "Gold", gradient: "from-amber-400 to-yellow-600" },
-  { id: "shadow", label: "Shadow", gradient: "from-zinc-600 to-zinc-900" },
-  { id: "crimson", label: "Crimson", gradient: "from-rose-600 to-red-900" },
-  { id: "aurora", label: "Aurora", gradient: "from-indigo-500 via-purple-500 to-pink-500" },
-  { id: "toxic", label: "Toxic", gradient: "from-lime-400 to-green-700" },
-  { id: "royal", label: "Royal", gradient: "from-blue-600 to-indigo-900" },
+  { id: "viper", label: "Clutch Purple", gradient: "from-violet-600 to-fuchsia-500" },
+  { id: "ember", label: "Clutch Ember", gradient: "from-orange-500 to-violet-700" },
+  { id: "frost", label: "Clutch Frost", gradient: "from-cyan-400 to-indigo-600" },
+  { id: "neon", label: "Clutch Neon", gradient: "from-emerald-400 to-teal-600" },
+  { id: "gold", label: "Clutch Gold", gradient: "from-amber-400 to-violet-600" },
+  { id: "shadow", label: "Clutch Shadow", gradient: "from-zinc-600 to-violet-900" },
+  { id: "crimson", label: "Clutch Crimson", gradient: "from-rose-500 to-violet-800" },
+  { id: "aurora", label: "Clutch Aurora", gradient: "from-pink-500 via-violet-500 to-indigo-600" },
+  { id: "toxic", label: "Clutch Toxic", gradient: "from-lime-400 to-violet-700" },
+  { id: "royal", label: "Clutch Royal", gradient: "from-blue-500 to-violet-900" },
 ];
 
 export const avatarPresetIds = avatarPresets.map((p) => p.id);

@@ -1,5 +1,5 @@
 import type { UserProfile } from "@/lib/serializers";
-import { avatarPresets } from "@/lib/profile/avatar-presets";
+import { avatarPresets, avatarPresetUrl } from "@/lib/profile/avatar-presets";
 import { getAvatarInitials } from "@/lib/profile";
 
 export type AvatarDraft =
@@ -38,14 +38,12 @@ export function getAvatarPreview(
         presetGradient: null,
         initials,
       };
-    case "preset": {
-      const preset = avatarPresets.find((p) => p.id === draft.presetId);
+    case "preset":
       return {
-        url: null,
-        presetGradient: preset?.gradient ?? null,
+        url: avatarPresetUrl(draft.presetId),
+        presetGradient: null,
         initials,
       };
-    }
     case "remove":
       return { url: null, presetGradient: null, initials };
     case "unchanged":
@@ -53,7 +51,11 @@ export function getAvatarPreview(
       if (profile.avatarPreset) {
         const preset = avatarPresets.find((p) => p.id === profile.avatarPreset);
         if (preset && !profile.customAvatarUrl && profile.avatarSource !== "steam") {
-          return { url: null, presetGradient: preset.gradient, initials };
+          return {
+            url: avatarPresetUrl(profile.avatarPreset),
+            presetGradient: preset.gradient,
+            initials,
+          };
         }
       }
       return { url: profile.avatarUrl, presetGradient: null, initials };

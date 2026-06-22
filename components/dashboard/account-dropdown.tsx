@@ -24,6 +24,7 @@ import { useUser } from "@/lib/hooks/use-user";
 import { getAvatarInitials } from "@/lib/profile";
 import { useTheme } from "@/lib/theme";
 import { AvatarImage } from "@/components/ui/avatar-image";
+import { ClutchAvatarFallback } from "@/components/ui/clutch-avatar-fallback";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -62,11 +63,11 @@ export function AccountDropdown({ className }: Props) {
         aria-expanded={open}
         className="flex items-center gap-2 rounded-xl glass-chip py-1.5 pl-1.5 pr-2.5 transition-colors hover:glow-ring-contained"
       >
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[linear-gradient(135deg,var(--primary-soft),var(--primary))] text-xs font-bold text-white">
+        <div className="flex h-8 w-8 shrink-0 overflow-hidden rounded-lg">
           {user.avatarUrl ? (
             <AvatarImage src={user.avatarUrl} size={32} className="rounded-lg" />
           ) : (
-            initials
+            <ClutchAvatarFallback initials={initials} className="h-8 w-8 rounded-lg text-xs" />
           )}
         </div>
         <span className="hidden max-w-[88px] truncate font-display text-sm font-semibold text-foreground md:block">
@@ -87,11 +88,11 @@ export function AccountDropdown({ className }: Props) {
       >
         <div className="border-b border-border/80 p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[linear-gradient(135deg,var(--primary-soft),var(--primary))] font-display text-sm font-bold text-white">
+            <div className="flex h-11 w-11 shrink-0 overflow-hidden rounded-xl">
               {user.avatarUrl ? (
                 <AvatarImage src={user.avatarUrl} size={44} className="rounded-xl" />
               ) : (
-                initials
+                <ClutchAvatarFallback initials={initials} className="h-11 w-11 rounded-xl text-sm" />
               )}
             </div>
             <div className="min-w-0">

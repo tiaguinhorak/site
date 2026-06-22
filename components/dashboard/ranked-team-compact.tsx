@@ -22,6 +22,7 @@ import {
 import { RANKED_MAP_LABELS } from "@/lib/ranked/constants";
 import type { RankedPartyMemberView, RankedPartyView } from "@/lib/ranked/party-shared";
 import { AvatarImage } from "@/components/ui/avatar-image";
+import { ClutchAvatarFallback } from "@/components/ui/clutch-avatar-fallback";
 import { cn } from "@/lib/utils";
 
 function CompactSlot({
@@ -55,7 +56,10 @@ function CompactSlot({
             className={large ? "rounded-xl" : "rounded-lg"}
           />
         ) : player ? (
-          player.avatarInitials
+          <ClutchAvatarFallback
+            initials={player.avatarInitials}
+            className={cn("h-full w-full", large ? "rounded-xl text-xs" : "rounded-lg text-[10px]")}
+          />
         ) : (
           <Users className="h-3.5 w-3.5" />
         )}
