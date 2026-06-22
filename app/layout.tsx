@@ -25,7 +25,13 @@ const manrope = Manrope({
   display: "swap",
 });
 
+const metadataBaseUrl =
+  process.env.APP_URL ??
+  process.env.NEXT_PUBLIC_APP_URL ??
+  "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(metadataBaseUrl),
   title: `${SITE_NAME} — ${SITE_TAGLINE}`,
   description:
     "A rede competitiva de CS2 do Brasil. Retakes, Deathmatch, ranking com ELO, skins liberadas e anticheat próprio. Conecte-se em um clique e domine o servidor.",

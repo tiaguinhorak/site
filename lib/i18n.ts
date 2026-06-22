@@ -4,6 +4,9 @@ export type Locale = (typeof locales)[number];
 
 export const defaultLocale: Locale = "pt-BR";
 
+/** Brazil servers / default audience — keeps SSR and client date formatting aligned. */
+export const defaultTimeZone = "America/Sao_Paulo";
+
 export const localeLabels: Record<Locale, string> = {
   "pt-BR": "Português",
   en: "English",

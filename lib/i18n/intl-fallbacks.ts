@@ -3,7 +3,7 @@ import { RARITY_I18N_FALLBACK } from "@/lib/inventory/rarity-tiers";
 type IntlErrorLike = { code: string };
 
 export function intlOnError(error: IntlErrorLike) {
-  if (error.code === "MISSING_MESSAGE") return;
+  if (error.code === "MISSING_MESSAGE" || error.code === "ENVIRONMENT_FALLBACK") return;
   console.error(error);
 }
 
