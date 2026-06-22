@@ -17,6 +17,10 @@ import {
   type SkinExportWeapon,
 } from "@/lib/csgo-api/skin-export-format";
 import { steamIdForGamePlugin } from "@/lib/steam/steam-id";
+import {
+  isGlovesWeaponId,
+  resolveGloveDefIndex,
+} from "@/lib/inventory/glove-defindex";
 
 type CreateCatalogInput = z.infer<typeof createSkinCatalogSchema>;
 type GiveSkinInput = z.infer<typeof giveSkinSchema>;
@@ -209,16 +213,22 @@ export async function getPlayerLoadoutForSync(steamId64: string): Promise<Player
     steamId: steamIdForGamePlugin(steamId64),
     weapons: equipped
       .filter((s) => s.skin.paintkit > 0)
-      .map((s) => ({
-        weaponId: s.skin.weaponId,
-        paintkit: s.skin.paintkit,
-        wear: parseFloat(WEAR_FLOAT[s.wear] ?? "0.15"),
-        seed: s.seed,
-        stattrak: s.stattrak,
-        stattrakCount: s.stattrakCount,
-        nametag: s.nametag,
-        defIndex: s.skin.weaponDefIndex ?? undefined,
-      })),
+      .map((s) => {
+        const defIndex =
+          isGlovesWeaponId(s.skin.weaponId)
+            ? resolveGloveDefIndex(s.skin.weaponId, s.skin.weaponDefIndex)
+            : s.skin.weaponDefIndex;
+        return {
+          weaponId: s.skin.weaponId,
+          paintkit: s.skin.paintkit,
+          wear: parseFloat(WEAR_FLOAT[s.wear] ?? "0.15"),
+          seed: s.seed,
+          stattrak: s.stattrak,
+          stattrakCount: s.stattrakCount,
+          nametag: s.nametag,
+          defIndex: defIndex ?? undefined,
+        };
+      }),
   };
 }
 
@@ -243,7 +253,11 @@ export async function getAllEquippedLoadoutsForSync(): Promise<PlayerLoadoutSync
       stattrak: row.stattrak,
       stattrakCount: row.stattrakCount,
       nametag: row.nametag,
-      defIndex: row.skin.weaponDefIndex ?? undefined,
+      defIndex:
+        isGlovesWeaponId(row.skin.weaponId)
+          ? resolveGloveDefIndex(row.skin.weaponId, row.skin.weaponDefIndex) ??
+            undefined
+          : row.skin.weaponDefIndex ?? undefined,
     });
     bySteam.set(row.steamId, weapons);
   }
