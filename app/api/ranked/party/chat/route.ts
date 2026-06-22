@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { requireSession } from "@/lib/security/api-guard";
+import {
+  applyApiGuards,
+  parseJsonBody,
+  requireSession,
+} from "@/lib/security/api-guard";
+import { RATE_LIMITS } from "@/lib/security/constants";
 import { handleApiError } from "@/lib/i18n/api-route";
 import {
   getPartyMessagesForUser,
@@ -21,12 +26,21 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const guardError = applyApiGuards(
+    request,
+    "ranked-party-chat",
+    RATE_LIMITS.profile.limit,
+    RATE_LIMITS.profile.windowMs,
+  );
+  if (guardError) return guardError;
+
   const { session, error } = requireSession(request);
   if (error) return error;
 
   try {
-    const data = (await request.json().catch(() => ({}))) as { body?: unknown };
-    const body = typeof data.body === "string" ? data.body : "";
+    const { data, error: parseError } = await parseJsonBody<{ body?: unknown }>(request);
+    if (parseError) return parseError;
+    const body = typeof data?.body === "string" ? data.body : "";
     const messages = await postPartyMessage(session!.userId, body);
     return NextResponse.json({ messages });
   } catch (err) {

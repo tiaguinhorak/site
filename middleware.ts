@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { SESSION_COOKIE } from "@/lib/security/constants";
+import { RATE_LIMITS } from "@/lib/security/constants";
+import { checkRateLimit, getClientIp } from "@/lib/security/rate-limit";
 import { verifySessionTokenEdge } from "@/lib/security/session-edge";
 
 const AUTH_PATHS = ["/login", "/register"];
@@ -8,8 +10,33 @@ const PROTECTED_PREFIX = "/dashboard";
 const ADMIN_PREFIX = "/admin";
 const COMPLETE_PROFILE_PATH = "/completar-perfil";
 
+function apiRateLimitResponse(retryAfterMs: number): NextResponse {
+  return NextResponse.json(
+    { error: "Too many requests" },
+    {
+      status: 429,
+      headers: {
+        "Retry-After": String(Math.ceil(retryAfterMs / 1000)),
+      },
+    },
+  );
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (pathname.startsWith("/api/")) {
+    const ip = getClientIp(request.headers);
+    const result = checkRateLimit(
+      `api-global:${ip}`,
+      RATE_LIMITS.apiRead.limit,
+      RATE_LIMITS.apiRead.windowMs,
+    );
+    if (!result.allowed) {
+      return apiRateLimitResponse(result.retryAfterMs);
+    }
+  }
+
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   const session = token ? await verifySessionTokenEdge(token) : null;
   const isAuthenticated = Boolean(session);
@@ -62,6 +89,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/api/:path*",
     "/dashboard/:path*",
     "/admin/:path*",
     "/login",

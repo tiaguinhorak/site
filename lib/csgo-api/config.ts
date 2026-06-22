@@ -1,16 +1,27 @@
 import "server-only";
 
 export function getCsgoApiBaseUrl(): string {
-  const raw =
-    process.env.CSGO_API_URL ?? "http://188.220.168.233:3000";
+  const raw = process.env.CSGO_API_URL?.trim();
+  if (!raw) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("CSGO_API_URL must be set in production.");
+    }
+    return "http://127.0.0.1:3000";
+  }
   return raw.replace(/\/$/, "");
 }
 
-/** Chave opcional — se vazio, o backend CS:GO é chamado sem autenticação. */
+/** Chave obrigatória em produção — nunca exposta ao browser. */
 export function getCsgoApiKey(): string | undefined {
   const key = process.env.CSGO_API_KEY ?? process.env.API_KEY;
   const trimmed = key?.trim();
-  return trimmed ? trimmed : undefined;
+  if (!trimmed) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("CSGO_API_KEY must be set in production.");
+    }
+    return undefined;
+  }
+  return trimmed;
 }
 
 export function csgoBackendAuthHeaders(): Record<string, string> {

@@ -1,6 +1,9 @@
-export function hasSteamLinked(user: { steamId: string | null }): boolean {
-  return Boolean(user.steamId);
-}
-
 export const STEAM_REQUIRED_MESSAGE =
-  "Vincule sua conta Steam para jogar nos servidores e entrar na fila ranqueada.";
+  "Vincule sua conta Steam no perfil para usar inventário, ranked e servidores.";
+
+export function hasSteamLinked(user: {
+  steamId?: string | null;
+  steamLinkedAt?: Date | null;
+}): boolean {
+  return Boolean(user.steamId?.trim() || user.steamLinkedAt);
+}

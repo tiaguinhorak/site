@@ -6,8 +6,6 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ConfirmProvider } from "@/components/providers/confirm-provider";
 import { BrowserNotificationListener } from "@/components/notifications/browser-notification-listener";
-import { RankedPartyProvider } from "@/components/providers/ranked-party-provider";
-import { RealtimeProvider } from "@/components/providers/realtime-provider";
 import { UserProvider } from "@/components/providers/user-provider";
 import { SITE_NAME, SITE_TAGLINE } from "@/lib/brand";
 import { BRAND_ASSETS } from "@/lib/brand-assets";
@@ -122,12 +120,8 @@ export default async function RootLayout({
           >
             <ConfirmProvider>
               <UserProvider>
-                <RealtimeProvider>
-                  <RankedPartyProvider>
-                    <BrowserNotificationListener />
-                    {children}
-                  </RankedPartyProvider>
-                </RealtimeProvider>
+                <BrowserNotificationListener />
+                {children}
               </UserProvider>
             </ConfirmProvider>
           </ThemeProvider>

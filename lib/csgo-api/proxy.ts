@@ -3,8 +3,9 @@ import "server-only";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth/admin";
+import { assertSessionOwnsSteamId } from "@/lib/auth/steam-ownership";
 import { requireSession } from "@/lib/security/api-guard";
-import { getCsgoApiBaseUrl, getCsgoApiKey, csgoBackendAuthHeaders } from "@/lib/csgo-api/config";
+import { getCsgoApiBaseUrl, csgoBackendAuthHeaders } from "@/lib/csgo-api/config";
 import { csgoError } from "@/lib/csgo-api/http";
 
 export type CsgoProxyAccess = "public" | "session" | "admin";
@@ -13,12 +14,6 @@ async function requireCsgoProxyAccess(
   request: NextRequest,
   access: CsgoProxyAccess,
 ): Promise<NextResponse | null> {
-  const incomingKey = request.headers.get("x-api-key");
-  const configuredKey = getCsgoApiKey();
-  if (configuredKey && incomingKey && incomingKey === configuredKey) {
-    return null;
-  }
-
   if (access === "public") {
     return csgoError("Unauthorized", 401);
   }
@@ -42,6 +37,38 @@ function buildUpstreamUrl(path: string, searchParams: URLSearchParams): string {
   return url.toString();
 }
 
+const SERVER_SECRET_FIELDS = ["rconPassword", "sshPassword", "sshKey"] as const;
+
+function redactServerSecrets<T extends Record<string, unknown>>(row: T): T {
+  const copy = { ...row };
+  for (const field of SERVER_SECRET_FIELDS) {
+    delete copy[field];
+  }
+  return copy;
+}
+
+function sanitizeUpstreamPayload(path: string, payload: string, contentType: string): string {
+  if (!contentType.includes("application/json") || !path.includes("/api/servers")) {
+    return payload;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(payload);
+    if (Array.isArray(parsed)) {
+      return JSON.stringify(parsed.map((row) =>
+        row && typeof row === "object" ? redactServerSecrets(row as Record<string, unknown>) : row,
+      ));
+    }
+    if (parsed && typeof parsed === "object") {
+      return JSON.stringify(redactServerSecrets(parsed as Record<string, unknown>));
+    }
+  } catch {
+    return payload;
+  }
+
+  return payload;
+}
+
 export async function proxyToCsgoApi(
   request: NextRequest,
   upstreamPath: string,
@@ -56,9 +83,15 @@ export async function proxyToCsgoApi(
   if (authError) return authError;
 
   let path = upstreamPath;
-  if (options?.params) {
-    for (const [key, value] of Object.entries(options.params)) {
+  const params = options?.params;
+  if (params) {
+    for (const [key, value] of Object.entries(params)) {
       path = path.replace(`[${key}]`, encodeURIComponent(value));
+    }
+
+    if (access === "session" && params.steamId) {
+      const steamError = await assertSessionOwnsSteamId(request, params.steamId);
+      if (steamError) return steamError;
     }
   }
 
@@ -85,7 +118,7 @@ export async function proxyToCsgoApi(
   }
 
   const contentType = upstream.headers.get("content-type") ?? "application/json";
-  const payload = await upstream.text();
+  const payload = sanitizeUpstreamPayload(path, await upstream.text(), contentType);
 
   return new NextResponse(payload, {
     status: upstream.status,

@@ -25,4 +25,5 @@ export const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
 export const RATE_LIMITS = {
   auth: { limit: 8, windowMs: 60_000 },
   profile: { limit: 20, windowMs: 60_000 },
+  apiRead: { limit: 120, windowMs: 60_000 },
 } as const;

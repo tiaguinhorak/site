@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
   const notifications = await prisma.notification.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
+    take: 50,
   });
 
   const rows = await Promise.all(
@@ -69,13 +70,6 @@ export async function GET(request: NextRequest) {
         );
         title = resolved.title;
         body = resolved.body;
-
-        if (resolved.translated && resolved.translations) {
-          await prisma.notification.update({
-            where: { id: n.id },
-            data: { translations: resolved.translations },
-          });
-        }
       }
 
       return {

@@ -1,21 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { fetchLiveServerStats } from "@/lib/csgo-api/live-server-stats";
-import { requireSession } from "@/lib/security/api-guard";
+import { readSessionFromCookieHeader } from "@/lib/security/session";
 
 export async function GET(request: NextRequest) {
   const servers = await fetchLiveServerStats();
 
-  const { session } = requireSession(request);
-  let isAdmin = false;
-  if (session?.userId) {
-    const user = await prisma.user.findUnique({
-      where: { id: session.userId },
-      select: { isAdmin: true },
-    });
-    isAdmin = user?.isAdmin ?? false;
-  }
+  const session = readSessionFromCookieHeader(request.headers.get("cookie"));
+  const isAdmin = session?.isAdmin === true;
 
   return NextResponse.json({
     isAdmin,

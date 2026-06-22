@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { unstable_cache } from "next/cache";
 import { syncCsgoPublicServers } from "@/lib/csgo-api/sync-public-servers";
 import { queryCsgoServersLive } from "@/lib/csgo-api/query-live-server";
 import { formatPriceCents } from "@/lib/serializers";
@@ -38,6 +39,7 @@ export async function getNewsArticles() {
   return prisma.newsArticle.findMany({
     where: { archivedAt: null },
     orderBy: { publishedAt: "desc" },
+    take: 100,
     include: {
       author: { select: { nickname: true, avatarUrl: true } },
     },
@@ -139,37 +141,60 @@ export async function getLiveSyncedServers() {
 }
 
 export async function getLeaderboard() {
-  return prisma.leaderboardEntry.findMany({ orderBy: { rank: "asc" } });
+  return unstable_cache(
+    async () => prisma.leaderboardEntry.findMany({ orderBy: { rank: "asc" } }),
+    ["site-leaderboard"],
+    { revalidate: 120 },
+  )();
 }
 
 export async function getMarketingFeatures() {
-  return prisma.marketingFeature.findMany({ orderBy: { sortOrder: "asc" } });
+  return unstable_cache(
+    async () => prisma.marketingFeature.findMany({ orderBy: { sortOrder: "asc" } }),
+    ["site-marketing-features"],
+    { revalidate: 300 },
+  )();
 }
 
 export async function getSubscriptionPlans() {
-  const plans = await prisma.subscriptionPlan.findMany({
-    orderBy: { sortOrder: "asc" },
-  });
-  return plans.map((plan) => ({
-    name: plan.name,
-    price: plan.priceCents === 0 ? "R$0" : formatPriceCents(plan.priceCents),
-    period: plan.period,
-    highlight: plan.highlight,
-    badge: plan.badge ?? undefined,
-    features: JSON.parse(plan.features) as string[],
-    cta: plan.cta,
-  }));
+  return unstable_cache(
+    async () => {
+      const plans = await prisma.subscriptionPlan.findMany({
+        orderBy: { sortOrder: "asc" },
+      });
+      return plans.map((plan) => ({
+        name: plan.name,
+        price: plan.priceCents === 0 ? "R$0" : formatPriceCents(plan.priceCents),
+        period: plan.period,
+        highlight: plan.highlight,
+        badge: plan.badge ?? undefined,
+        features: JSON.parse(plan.features) as string[],
+        cta: plan.cta,
+      }));
+    },
+    ["site-subscription-plans"],
+    { revalidate: 300 },
+  )();
 }
 
 export async function getSiteStats() {
-  return prisma.siteStat.findMany({ orderBy: { sortOrder: "asc" } });
+  return unstable_cache(
+    async () => prisma.siteStat.findMany({ orderBy: { sortOrder: "asc" } }),
+    ["site-stats"],
+    { revalidate: 120 },
+  )();
 }
 
 export async function getMarketingGameModes() {
-  return prisma.gameMode.findMany({
-    orderBy: { sortOrder: "asc" },
-    take: 4,
-  });
+  return unstable_cache(
+    async () =>
+      prisma.gameMode.findMany({
+        orderBy: { sortOrder: "asc" },
+        take: 4,
+      }),
+    ["site-marketing-game-modes"],
+    { revalidate: 300 },
+  )();
 }
 
 export async function getPremiumPlan() {

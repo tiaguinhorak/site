@@ -15,14 +15,15 @@ import { eloToLobbyLevel, regionPingEstimate } from "@/lib/lobby/utils";
 import { ensureSystemLobbyRooms } from "@/lib/lobby/provision-system-rooms";
 import { cleanupLobbyMembersForClosedRooms } from "@/lib/lobby/reconcile-membership";
 import { notifyLobbyRooms } from "@/lib/realtime/notify";
+import { LobbyRoomError } from "@/lib/errors/domain";
 import type { Plan } from "@/lib/generated/prisma/client";
+
+export { LobbyRoomError } from "@/lib/errors/domain";
 
 const LOBBY_TTL_HOURS = 6;
 const CASUAL_MODE_SLUGS = new Set(["competitive"]);
-
-import { LobbyRoomError } from "@/lib/errors/domain";
-
-export { LobbyRoomError } from "@/lib/errors/domain";
+const LOBBY_MAINTENANCE_MS = 60_000;
+let lastLobbyMaintenanceAt = 0;
 
 function parseSettings(raw: unknown): LobbyRoomSettings {
   if (!raw || typeof raw !== "object") return { ...DEFAULT_LOBBY_SETTINGS };
@@ -185,9 +186,16 @@ function serializeLobbyRoom(
   };
 }
 
-export async function listActiveLobbyRooms(viewerUserId?: string) {
+async function maybeMaintainLobbyRooms(): Promise<void> {
+  const now = Date.now();
+  if (now - lastLobbyMaintenanceAt < LOBBY_MAINTENANCE_MS) return;
+  lastLobbyMaintenanceAt = now;
   await cleanupExpiredLobbyRooms();
   await ensureSystemLobbyRooms();
+}
+
+export async function listActiveLobbyRooms(viewerUserId?: string) {
+  await maybeMaintainLobbyRooms();
 
   const rooms = await prisma.lobbyRoom.findMany({
     where: {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { DashboardProviders } from "@/components/dashboard/dashboard-providers";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("meta");
@@ -15,5 +16,9 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <DashboardShell>{children}</DashboardShell>;
+  return (
+    <DashboardProviders>
+      <DashboardShell>{children}</DashboardShell>
+    </DashboardProviders>
+  );
 }

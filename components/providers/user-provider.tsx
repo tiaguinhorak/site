@@ -9,7 +9,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { usePathname } from "next/navigation";
 import type { UserProfile } from "@/lib/serializers";
 import { getAvatarInitials } from "@/lib/profile";
 
@@ -26,7 +25,6 @@ type UserContextValue = {
 const UserContext = createContext<UserContextValue | null>(null);
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
   const [user, setUserState] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -47,9 +45,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    setLoading(true);
     refresh();
-  }, [pathname, refresh]);
+  }, [refresh]);
 
   const setUser = useCallback((next: UserProfile | null) => {
     setUserState(next);

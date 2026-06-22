@@ -21,11 +21,28 @@ export function assertSameOrigin(request: NextRequest): NextResponse | null {
   const origin = request.headers.get("origin");
   const host = request.headers.get("host");
 
-  if (!origin || !host) return null;
+  if (!host) return null;
+
+  if (origin) {
+    try {
+      const originHost = new URL(origin).host;
+      if (originHost !== host) {
+        return jsonError(403, apiErrorMessage(locale, "forbiddenOrigin"));
+      }
+    } catch {
+      return jsonError(403, apiErrorMessage(locale, "invalidOrigin"));
+    }
+    return null;
+  }
+
+  const referer = request.headers.get("referer");
+  if (!referer) {
+    return jsonError(403, apiErrorMessage(locale, "forbiddenOrigin"));
+  }
 
   try {
-    const originHost = new URL(origin).host;
-    if (originHost !== host) {
+    const refererHost = new URL(referer).host;
+    if (refererHost !== host) {
       return jsonError(403, apiErrorMessage(locale, "forbiddenOrigin"));
     }
   } catch {

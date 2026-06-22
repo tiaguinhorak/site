@@ -18,7 +18,13 @@ function wsLang(): string {
 }
 
 function csgoApiBaseUrl(): string {
-  const raw = process.env.CSGO_API_URL ?? "http://188.220.168.233:3000";
+  const raw = process.env.CSGO_API_URL?.trim();
+  if (!raw) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("CSGO_API_URL must be set in production.");
+    }
+    return "http://127.0.0.1:3000";
+  }
   return raw.replace(/\/$/, "");
 }
 

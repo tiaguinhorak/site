@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { z } from "zod";
-import { applyApiGuards, parseJsonBody } from "@/lib/security/api-guard";
+import {
+  applyApiGuards,
+  parseJsonBody,
+  requireSession,
+} from "@/lib/security/api-guard";
 import { RATE_LIMITS } from "@/lib/security/constants";
 import { isLocale, type Locale } from "@/lib/i18n";
 import { requestLocale, jsonErrorKey } from "@/lib/i18n/api-route";
@@ -9,6 +12,7 @@ import {
   translateArticleBundle,
   translateText,
 } from "@/lib/translation/auto-translate";
+import { z } from "zod";
 
 const bodySchema = z.object({
   title: z.string().max(500).optional(),
@@ -26,6 +30,9 @@ export async function POST(request: NextRequest) {
     RATE_LIMITS.profile.windowMs,
   );
   if (guardError) return guardError;
+
+  const { error: sessionError } = requireSession(request);
+  if (sessionError) return sessionError;
 
   const { data, error: parseError } = await parseJsonBody(request);
   if (parseError) return parseError;
