@@ -12,6 +12,7 @@ const WEAPON_CATEGORY_IDS = new Set([
   "csgo_inventory_weapon_category_pistols",
   "csgo_inventory_weapon_category_smgs",
   "csgo_inventory_weapon_category_heavy",
+  "csgo_inventory_weapon_category_gloves",
 ]);
 
 const PISTOL_WEAPON_IDS = new Set([

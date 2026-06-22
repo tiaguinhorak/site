@@ -1,15 +1,6 @@
 /** Parse kgns !ws / !gloves config files (KeyValues) into weaponId + paintkit pairs. */
 
-const GLOVE_DEFINDEX_TO_WEAPON_ID: Record<number, string> = {
-  5027: "studded_bloodhound_gloves",
-  5030: "sporty_gloves",
-  5031: "slick_gloves",
-  5032: "leather_handwraps",
-  5033: "motorcycle_gloves",
-  5034: "specialist_gloves",
-  5035: "studded_hydra_gloves",
-  4725: "studded_brokenfang_gloves",
-};
+import { parseGlovesCfgEntries } from "@/lib/inventory/parse-gloves-cfg";
 
 export type WsConfigEntry = {
   weaponId: string;
@@ -39,34 +30,7 @@ export function parseWeaponsCfg(content: string): WsConfigEntry[] {
 }
 
 export function parseGlovesCfg(content: string): WsConfigEntry[] {
-  const entries: WsConfigEntry[] = [];
-  let depth = 0;
-  let gloveDefIndex: number | null = null;
-
-  for (const rawLine of content.split("\n")) {
-    const line = rawLine.trim();
-    if (!line) continue;
-
-    const indexMatch = line.match(/"index"\s+"(\d+)"/);
-    if (indexMatch) {
-      const index = Number(indexMatch[1]);
-      if (!Number.isFinite(index) || index <= 0) continue;
-
-      if (depth === 1) {
-        gloveDefIndex = index;
-      } else if (depth === 2 && gloveDefIndex !== null) {
-        const weaponId = GLOVE_DEFINDEX_TO_WEAPON_ID[gloveDefIndex];
-        if (weaponId) {
-          entries.push({ weaponId, paintkit: index });
-        }
-      }
-    }
-
-    if (line.includes("{")) depth += (line.match(/\{/g) ?? []).length;
-    if (line.includes("}")) depth -= (line.match(/\}/g) ?? []).length;
-  }
-
-  return entries;
+  return parseGlovesCfgEntries(content);
 }
 
 export function wsConfigEntriesToKeys(entries: WsConfigEntry[]): Set<string> {

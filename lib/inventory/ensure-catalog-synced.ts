@@ -6,7 +6,7 @@ import { syncCsgoSkinCatalogWithClient } from "@/lib/inventory/sync-csgo-catalog
 
 /** Full CSGO-API import is ~2000+; kgns !ws-only is typically ~1200–1700. */
 const EXPECTED_MIN_CATALOG_SKINS = 800;
-const EXPECTED_MIN_PISTOLS = 50;
+const EXPECTED_MIN_GLOVES = 40;
 const STALE_FULL_CATALOG_THRESHOLD = 2200;
 const READY_CACHE_MS = 10 * 60 * 1000;
 
@@ -34,7 +34,11 @@ async function catalogHealthCheck(): Promise<{ needsRefresh: boolean; total: num
   }
 
   const pistols = await prisma.csgoSkinCatalog.count({ where: { category: "pistol" } });
-  return { needsRefresh: pistols < EXPECTED_MIN_PISTOLS, total };
+  const gloves = await prisma.csgoSkinCatalog.count({ where: { category: "gloves" } });
+  return {
+    needsRefresh: pistols < EXPECTED_MIN_PISTOLS || gloves < EXPECTED_MIN_GLOVES,
+    total,
+  };
 }
 
 /**
