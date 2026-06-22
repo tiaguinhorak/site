@@ -27,12 +27,14 @@ export async function GET(request: NextRequest) {
     ? (categoryParam as InventoryCategoryKey | "all")
     : "all";
   const search = params.get("search") ?? "";
+  const weaponId = params.get("weaponId") ?? "";
   const page = Number(params.get("page") ?? "1");
   const limit = Number(params.get("limit") ?? "36");
 
   const result = await getCatalogSkinsForUser(userId, {
     category,
     search,
+    weaponId,
     page: Number.isFinite(page) ? page : 1,
     limit: Number.isFinite(limit) ? limit : 36,
   });

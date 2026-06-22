@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import type { InventoryCategoryKey } from "@/lib/profile";
 import { isAllSkinsEquipEnabled } from "@/lib/inventory/catalog-access";
 import { ensureCatalogSynced } from "@/lib/inventory/ensure-catalog-synced";
+import { getCatalogWeaponOptions } from "@/lib/inventory/get-catalog-weapon-options";
 import { rarityAccent } from "@/lib/inventory/catalog-categories";
 import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
 
@@ -30,6 +31,7 @@ export async function getCatalogSkinsForUser(
   options: {
     category?: InventoryCategoryKey | "all";
     search?: string;
+    weaponId?: string;
     page?: number;
     limit?: number;
   },
@@ -40,11 +42,14 @@ export async function getCatalogSkinsForUser(
   total: number;
   totalPages: number;
   catalogTotal: number;
+  weaponOptions: Awaited<ReturnType<typeof getCatalogWeaponOptions>>;
 }> {
   const page = Math.max(1, options.page ?? 1);
   const limit = Math.min(MAX_LIMIT, Math.max(1, options.limit ?? DEFAULT_LIMIT));
   const search = options.search?.trim() ?? "";
   const category = options.category ?? "all";
+
+  const weaponFilter = options.weaponId?.trim() ?? "";
 
   await ensureCatalogSynced();
 
@@ -64,6 +69,7 @@ export async function getCatalogSkinsForUser(
 
   const where = {
     ...(category !== "all" ? { category } : {}),
+    ...(weaponFilter ? { weaponId: weaponFilter } : {}),
     ...(search
       ? {
           OR: [
@@ -100,6 +106,9 @@ export async function getCatalogSkinsForUser(
     owned: allSkins,
   }));
 
+  const weaponOptions =
+    page === 1 ? await getCatalogWeaponOptions(category) : [];
+
   return {
     items,
     page,
@@ -107,5 +116,6 @@ export async function getCatalogSkinsForUser(
     total,
     totalPages: Math.max(1, Math.ceil(total / limit)),
     catalogTotal,
+    weaponOptions,
   };
 }

@@ -827,6 +827,7 @@
     "catalogCount": "{count} skins en catálogo · página {page}/{totalPages}",
     "loading": "Cargando catálogo…",
     "catalogEmpty": "Catálogo vacío. Espera el sync automático o ejecuta npm run sync:skins en el servidor.",
+    "catAllWeapons": "Todas las armas",
     "prevPage": "Anterior",
     "nextPage": "Siguiente",
     "loadoutTitle": "Loadout en servidor (confirmado en el sitio)",

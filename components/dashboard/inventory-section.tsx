@@ -180,6 +180,10 @@ export function InventorySection() {
   const [items, setItems] = useState<CatalogSkin[]>([]);
   const [loadout, setLoadout] = useState<LoadoutResponse | null>(null);
   const [filter, setFilter] = useState<"all" | InventoryCategoryKey>("all");
+  const [weaponFilter, setWeaponFilter] = useState("");
+  const [weaponOptions, setWeaponOptions] = useState<
+    Array<{ weaponId: string; weaponName: string }>
+  >([]);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [page, setPage] = useState(1);
@@ -206,6 +210,7 @@ export function InventorySection() {
         category: filter,
         search,
       });
+      if (weaponFilter) params.set("weaponId", weaponFilter);
       const response = await fetch(`/api/inventory/skins?${params}`, {
         credentials: "same-origin",
       });
@@ -217,10 +222,13 @@ export function InventorySection() {
       setItems(data.items ?? []);
       setTotalPages(data.totalPages ?? 1);
       setCatalogTotal(data.catalogTotal ?? 0);
+      if (page === 1 && Array.isArray(data.weaponOptions)) {
+        setWeaponOptions(data.weaponOptions);
+      }
     } finally {
       setLoading(false);
     }
-  }, [filter, page, search]);
+  }, [filter, page, search, weaponFilter]);
 
   useEffect(() => {
     const timer = setTimeout(() => setSearch(searchInput.trim()), 300);
@@ -229,6 +237,7 @@ export function InventorySection() {
 
   useEffect(() => {
     setPage(1);
+    setWeaponFilter("");
   }, [filter, search]);
 
   useEffect(() => {
@@ -314,6 +323,44 @@ export function InventorySection() {
           </button>
         ))}
       </div>
+
+      {weaponOptions.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setWeaponFilter("");
+              setPage(1);
+            }}
+            className={cn(
+              "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+              weaponFilter === ""
+                ? "bg-[color-mix(in_srgb,var(--primary)_18%,transparent)] text-foreground"
+                : "text-muted hover:text-foreground",
+            )}
+          >
+            {t("catAllWeapons")}
+          </button>
+          {weaponOptions.map((weapon) => (
+            <button
+              key={weapon.weaponId}
+              type="button"
+              onClick={() => {
+                setWeaponFilter(weapon.weaponId);
+                setPage(1);
+              }}
+              className={cn(
+                "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                weaponFilter === weapon.weaponId
+                  ? "bg-[color-mix(in_srgb,var(--primary)_18%,transparent)] text-foreground"
+                  : "text-muted hover:text-foreground",
+              )}
+            >
+              {weapon.weaponName}
+            </button>
+          ))}
+        </div>
+      )}
 
       <p className="mb-4 text-sm text-muted">
         {t("catalogCount", { count: catalogTotal, page, totalPages })}
