@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { CsgoApiError } from "@/lib/csgo-api/http";
 import { isAllSkinsEquipEnabled } from "@/lib/inventory/catalog-access";
+import { getCatalogIdsToUnequipOnEquip } from "@/lib/inventory/equip-slot-rules";
 
 export async function unequipCatalogSkinForUser(
   userId: string,
@@ -23,18 +24,13 @@ export async function unequipCatalogSkinForUser(
   });
   if (!catalog) throw new CsgoApiError("Skin não encontrada no catálogo.", 404);
 
-  const catalogIdsForWeapon = (
-    await prisma.csgoSkinCatalog.findMany({
-      where: { weaponId: catalog.weaponId },
-      select: { id: true },
-    })
-  ).map((s) => s.id);
+  const catalogIdsForSlot = await getCatalogIdsToUnequipOnEquip(prisma, catalog.weaponId);
 
   await prisma.csgoPlayerSkin.updateMany({
     where: {
       steamId: user.steamId,
       equipped: true,
-      skinId: { in: catalogIdsForWeapon },
+      skinId: { in: catalogIdsForSlot },
     },
     data: { equipped: false },
   });
@@ -60,14 +56,9 @@ export async function unequipWeaponForUser(userId: string, weaponId: string) {
     throw new CsgoApiError("Vincule sua Steam no perfil para gerenciar skins no servidor.", 400);
   }
 
-  const catalogIdsForWeapon = (
-    await prisma.csgoSkinCatalog.findMany({
-      where: { weaponId },
-      select: { id: true },
-    })
-  ).map((s) => s.id);
+  const catalogIdsForSlot = await getCatalogIdsToUnequipOnEquip(prisma, weaponId);
 
-  if (!catalogIdsForWeapon.length) {
+  if (!catalogIdsForSlot.length) {
     throw new CsgoApiError("Arma não encontrada no catálogo.", 404);
   }
 
@@ -75,7 +66,7 @@ export async function unequipWeaponForUser(userId: string, weaponId: string) {
     where: {
       steamId: user.steamId,
       equipped: true,
-      skinId: { in: catalogIdsForWeapon },
+      skinId: { in: catalogIdsForSlot },
     },
     data: { equipped: false },
   });

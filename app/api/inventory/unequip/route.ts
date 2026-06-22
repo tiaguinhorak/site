@@ -7,6 +7,7 @@ import {
   unequipCatalogSkinForUser,
   unequipWeaponForUser,
 } from "@/lib/inventory/unequip-catalog-skin";
+import { schedulePushLoadoutToGameServer } from "@/lib/inventory/push-loadout-to-game-server";
 import {
   applyApiGuards,
   parseJsonBody,
@@ -50,6 +51,7 @@ export async function POST(request: NextRequest) {
     const result = parsed.data.catalogSkinId
       ? await unequipCatalogSkinForUser(session!.userId, parsed.data.catalogSkinId)
       : await unequipWeaponForUser(session!.userId, parsed.data.weaponId!);
+    schedulePushLoadoutToGameServer();
     return NextResponse.json(result);
   } catch (err) {
     if (err instanceof CsgoApiError) {

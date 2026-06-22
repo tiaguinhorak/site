@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { CsgoApiError } from "@/lib/csgo-api/http";
+import { getCatalogIdsToUnequipOnEquip } from "@/lib/inventory/equip-slot-rules";
 import type { InventoryCategory } from "@/lib/generated/prisma/client";
 
 const CATEGORY_WEAPON_SLOT: Partial<Record<InventoryCategory, string>> = {
@@ -57,15 +58,10 @@ export async function equipInventoryItemForUser(userId: string, inventoryItemId:
       data: { equipped: true },
     });
 
-    const catalogIdsForWeapon = (
-      await tx.csgoSkinCatalog.findMany({
-        where: { weaponId },
-        select: { id: true },
-      })
-    ).map((s) => s.id);
+    const catalogIdsForSlot = await getCatalogIdsToUnequipOnEquip(tx, weaponId);
 
     await tx.csgoPlayerSkin.updateMany({
-      where: { steamId: user.steamId!, equipped: true, skinId: { in: catalogIdsForWeapon } },
+      where: { steamId: user.steamId!, equipped: true, skinId: { in: catalogIdsForSlot } },
       data: { equipped: false },
     });
 

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { CsgoApiError } from "@/lib/csgo-api/http";
 import { isAllSkinsEquipEnabled } from "@/lib/inventory/catalog-access";
+import { getCatalogIdsToUnequipOnEquip } from "@/lib/inventory/equip-slot-rules";
 import type { InventoryCategoryKey } from "@/lib/profile";
 
 export async function equipCatalogSkinForUser(userId: string, catalogSkinId: string) {
@@ -26,18 +27,13 @@ export async function equipCatalogSkinForUser(userId: string, catalogSkinId: str
   const category = catalog.category as InventoryCategoryKey;
 
   await prisma.$transaction(async (tx) => {
-    const catalogIdsForWeapon = (
-      await tx.csgoSkinCatalog.findMany({
-        where: { weaponId },
-        select: { id: true },
-      })
-    ).map((s) => s.id);
+    const catalogIdsForSlot = await getCatalogIdsToUnequipOnEquip(tx, weaponId);
 
     await tx.csgoPlayerSkin.updateMany({
       where: {
         steamId: user.steamId!,
         equipped: true,
-        skinId: { in: catalogIdsForWeapon },
+        skinId: { in: catalogIdsForSlot },
       },
       data: { equipped: false },
     });
