@@ -618,14 +618,16 @@ model CsgoMatch {
 }
 
 model CsgoSkinCatalog {
-  id           String @id
-  weaponId     String
-  weaponName   String
-  paintkit     Int
-  paintkitName String
-  rarity       String
-  category     String
-  imageUrl     String?
+  id             String @id
+  weaponId       String
+  weaponName     String
+  paintkit       Int
+  paintkitName   String
+  rarity         String
+  category       String
+  imageUrl       String?
+  /** CS:GO item definition index (e.g. glove type 5030). From CSGO-API weapon.weapon_id. */
+  weaponDefIndex Int?
 
   playerSkins     CsgoPlayerSkin[]
   inventoryItems  InventoryItem[]

@@ -215,6 +215,7 @@ export async function getPlayerLoadoutForSync(steamId64: string): Promise<Player
         stattrak: s.stattrak,
         stattrakCount: s.stattrakCount,
         nametag: s.nametag,
+        defIndex: s.skin.weaponDefIndex ?? undefined,
       })),
   };
 }

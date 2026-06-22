@@ -2,7 +2,7 @@
 export const DEMO_CS2_CATALOG_SKINS = [
   {
     id: "knife_gamma_doppler",
-    weaponId: "weapon_knife",
+    weaponId: "weapon_knife_karambit",
     weaponName: "Karambit",
     paintkit: 568,
     paintkitName: "Gamma Doppler",
@@ -65,7 +65,7 @@ export const DEMO_CS2_CATALOG_SKINS = [
   },
   {
     id: "knife_bf_fade",
-    weaponId: "weapon_knife",
+    weaponId: "weapon_knife_butterfly",
     weaponName: "Butterfly Knife",
     paintkit: 413,
     paintkitName: "Fade",

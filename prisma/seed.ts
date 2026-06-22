@@ -228,7 +228,7 @@ async function main() {
   const inventoryCatalogSkins = [
     {
       id: "knife_gamma_doppler",
-      weaponId: "weapon_knife",
+      weaponId: "weapon_knife_karambit",
       weaponName: "Karambit",
       paintkit: 568,
       paintkitName: "Gamma Doppler",
@@ -291,7 +291,7 @@ async function main() {
     },
     {
       id: "knife_bf_fade",
-      weaponId: "weapon_knife",
+      weaponId: "weapon_knife_butterfly",
       weaponName: "Butterfly Knife",
       paintkit: 413,
       paintkitName: "Fade",

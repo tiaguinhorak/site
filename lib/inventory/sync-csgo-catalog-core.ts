@@ -23,7 +23,9 @@ type ApiSkin = {
 
 function normalizeWeaponId(skin: ApiSkin): string | null {
   if (!skin.weapon?.id) return null;
-  return String(skin.weapon.id);
+  const id = String(skin.weapon.id);
+  if (id.startsWith("sfui_wpnhud_")) return null;
+  return id;
 }
 
 function toCatalogRow(skin: ApiSkin) {
@@ -31,6 +33,12 @@ function toCatalogRow(skin: ApiSkin) {
   const paintkit = Number(skin.paint_index);
   if (!weaponId || !Number.isFinite(paintkit) || paintkit <= 0) return null;
   if (!isWeaponSkinCategory(skin.category?.id)) return null;
+
+  const rawDefIndex = skin.weapon?.weapon_id;
+  const weaponDefIndex =
+    rawDefIndex !== undefined && rawDefIndex !== null && Number.isFinite(Number(rawDefIndex))
+      ? Number(rawDefIndex)
+      : null;
 
   return {
     id: skin.id,
@@ -41,6 +49,7 @@ function toCatalogRow(skin: ApiSkin) {
     rarity: rarityLabelFromId(skin.rarity?.id ?? "rarity_common_weapon"),
     category: mapCatalogCategoryToUi(skin.category?.id, weaponId),
     imageUrl: skin.image ?? null,
+    weaponDefIndex,
   };
 }
 
@@ -71,6 +80,7 @@ export async function syncCsgoSkinCatalogWithClient(prisma: PrismaClient) {
             rarity: row.rarity,
             category: row.category,
             imageUrl: row.imageUrl,
+            weaponDefIndex: row.weaponDefIndex,
           },
         }),
       ),
