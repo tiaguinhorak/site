@@ -4,6 +4,10 @@ import {
   mapCatalogCategoryToUi,
   rarityLabelFromId,
 } from "@/lib/inventory/catalog-categories";
+import {
+  fetchWsAllowlistKeys,
+  isInWsAllowlist,
+} from "@/lib/inventory/fetch-ws-allowlist";
 
 const CSGO_API_SKINS_URL =
   "https://raw.githubusercontent.com/ByMykel/CSGO-API/main/public/api/en/skins.json";
@@ -61,13 +65,15 @@ export async function syncCsgoSkinCatalogWithClient(prisma: PrismaClient) {
   }
 
   const payload = (await response.json()) as ApiSkin[];
-  const rows = payload
+  const wsAllowlist = await fetchWsAllowlistKeys();
+  const allRows = payload
     .map(toCatalogRow)
-    .filter((row): row is NonNullable<typeof row> => row !== null);
+    .filter((row): row is NonNullable<typeof row> => row !== null)
+    .filter((row) => isInWsAllowlist(row.weaponId, row.paintkit, wsAllowlist));
 
   let synced = 0;
-  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-    const batch = rows.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < allRows.length; i += BATCH_SIZE) {
+    const batch = allRows.slice(i, i + BATCH_SIZE);
     await prisma.$transaction(
       batch.map((row) =>
         prisma.csgoSkinCatalog.upsert({
@@ -90,5 +96,12 @@ export async function syncCsgoSkinCatalogWithClient(prisma: PrismaClient) {
     synced += batch.length;
   }
 
-  return { synced };
+  if (wsAllowlist.size > 0 && allRows.length > 0) {
+    const allowedIds = allRows.map((row) => row.id);
+    await prisma.csgoSkinCatalog.deleteMany({
+      where: { id: { notIn: allowedIds } },
+    });
+  }
+
+  return { synced, wsOnly: wsAllowlist.size > 0 };
 }

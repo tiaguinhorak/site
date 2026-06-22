@@ -17,6 +17,9 @@ async function catalogNeedsRefresh(): Promise<boolean> {
   const total = await getCatalogSkinCount();
   if (total < EXPECTED_MIN_CATALOG_SKINS) return true;
 
+  // Prune stale full CSGO-API import after switching to !ws-only catalog
+  if (total > 1600) return true;
+
   const pistols = await prisma.csgoSkinCatalog.count({ where: { category: "pistol" } });
   return pistols < EXPECTED_MIN_PISTOLS;
 }
