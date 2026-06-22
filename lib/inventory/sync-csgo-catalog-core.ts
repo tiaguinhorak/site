@@ -22,7 +22,7 @@ type ApiSkin = {
   image?: string;
   paint_index?: string | number;
   category?: { id?: string };
-  weapon?: { id?: string; name?: string };
+  weapon?: { id?: string; name?: string; weapon_id?: number | string };
   pattern?: { name?: string };
   rarity?: { id?: string };
 };

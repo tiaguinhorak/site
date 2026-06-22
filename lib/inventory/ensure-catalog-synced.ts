@@ -6,6 +6,7 @@ import { syncCsgoSkinCatalogWithClient } from "@/lib/inventory/sync-csgo-catalog
 
 /** Full CSGO-API import is ~2000+; kgns !ws-only is typically ~1200–1700. */
 const EXPECTED_MIN_CATALOG_SKINS = 800;
+const EXPECTED_MIN_PISTOLS = 50;
 const EXPECTED_MIN_GLOVES = 40;
 const STALE_FULL_CATALOG_THRESHOLD = 2200;
 const READY_CACHE_MS = 10 * 60 * 1000;
@@ -83,5 +84,34 @@ export async function ensureCatalogSynced(): Promise<{ synced: number; alreadyPo
 /** Clears in-memory ready cache (e.g. after manual npm run sync:skins). */
 export async function invalidateCatalogReadyCache(): Promise<void> {
   catalogReadyCache = null;
+  totalCountCache = null;
   await redisDel("catalog:ready");
+}
+
+/**
+ * Best-effort populate. Never throws — a slow/failed sync must not break catalog reads.
+ * Only triggers a full sync when the catalog is actually empty.
+ */
+export async function ensureCatalogReady(): Promise<void> {
+  try {
+    const total = await getCatalogTotalCached();
+    if (total > 0) return;
+    await ensureCatalogSynced();
+  } catch (err) {
+    console.warn("[catalog] ensureCatalogReady non-fatal:", err);
+  }
+}
+
+let totalCountCache: { count: number; at: number } | null = null;
+const TOTAL_COUNT_CACHE_MS = 60 * 1000;
+
+/** Cached unfiltered catalog size — avoids a count() on every inventory request. */
+export async function getCatalogTotalCached(): Promise<number> {
+  const now = Date.now();
+  if (totalCountCache && now - totalCountCache.at < TOTAL_COUNT_CACHE_MS) {
+    return totalCountCache.count;
+  }
+  const count = await prisma.csgoSkinCatalog.count();
+  totalCountCache = { count, at: now };
+  return count;
 }

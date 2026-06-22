@@ -3,7 +3,10 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import type { InventoryCategoryKey } from "@/lib/profile";
 import { isAllSkinsEquipEnabled } from "@/lib/inventory/catalog-access";
-import { ensureCatalogSynced } from "@/lib/inventory/ensure-catalog-synced";
+import {
+  ensureCatalogReady,
+  getCatalogTotalCached,
+} from "@/lib/inventory/ensure-catalog-synced";
 import { getCatalogWeaponOptions } from "@/lib/inventory/get-catalog-weapon-options";
 import { rarityAccent } from "@/lib/inventory/catalog-categories";
 import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
@@ -50,7 +53,7 @@ export async function getCatalogSkinsForUser(
   const category = options.category ?? "all";
   const weaponFilter = options.weaponId?.trim() ?? "";
 
-  const { synced: catalogTotal } = await ensureCatalogSynced();
+  await ensureCatalogReady();
 
   const where = {
     ...(category !== "all" ? { category } : {}),
@@ -70,7 +73,8 @@ export async function getCatalogSkinsForUser(
     select: { steamId: true },
   });
 
-  const [equippedRows, total, rows, weaponOptions] = await Promise.all([
+  const [catalogTotal, equippedRows, total, rows, weaponOptions] = await Promise.all([
+    getCatalogTotalCached(),
     user?.steamId
       ? prisma.csgoPlayerSkin.findMany({
           where: { steamId: user.steamId, equipped: true },
@@ -84,7 +88,9 @@ export async function getCatalogSkinsForUser(
       skip: (page - 1) * limit,
       take: limit,
     }),
-    page === 1 ? getCatalogWeaponOptions(category) : Promise.resolve([]),
+    page === 1
+      ? getCatalogWeaponOptions(category).catch(() => [])
+      : Promise.resolve([]),
   ]);
 
   const equippedIds = new Set(equippedRows.map((row) => row.skinId));

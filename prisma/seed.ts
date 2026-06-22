@@ -225,14 +225,7 @@ async function main() {
     ],
   });
 
-  const inventoryCatalogSkins = [
-    // Legacy ids removed — full catalog comes from syncCsgoSkinCatalogWithClient below.
-  ];
-
-  for (const skin of inventoryCatalogSkins) {
-    await prisma.csgoSkinCatalog.create({ data: skin });
-  }
-
+  // Full CS:GO catalog comes from syncCsgoSkinCatalogWithClient below.
   const { syncCsgoSkinCatalogWithClient } = await import("../lib/inventory/sync-csgo-catalog-core");
   const syncResult = await syncCsgoSkinCatalogWithClient(prisma);
   console.log(`[seed] CS:GO catalog synced: ${syncResult.synced} skins`);

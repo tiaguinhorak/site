@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import { PublicProfilePage } from "@/components/profile/public-profile-page";
+import { PublicProfileSkins } from "@/components/profile/public-profile-skins";
 import { prisma } from "@/lib/prisma";
 import { serializePublicPlayer } from "@/lib/profile/serialize-public";
+import { getPublicPlayerSkins } from "@/lib/inventory/get-public-player-skins";
 
 type PageProps = {
   params: Promise<{ nickname: string }>;
@@ -29,10 +31,12 @@ export default async function PlayerProfilePage({ params }: PageProps) {
   if (!user) notFound();
 
   const player = serializePublicPlayer(user);
+  const { groups } = await getPublicPlayerSkins(user.steamId);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 pb-24 pt-28 sm:px-6 sm:pt-32">
+    <div className="mx-auto max-w-5xl space-y-6 px-4 pb-24 pt-28 sm:px-6 sm:pt-32">
       <PublicProfilePage initialPlayer={player} />
+      <PublicProfileSkins groups={groups} />
     </div>
   );
 }

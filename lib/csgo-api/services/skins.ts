@@ -194,6 +194,8 @@ export type PlayerLoadoutSyncPayload = {
     stattrak: boolean;
     stattrakCount: number;
     nametag: string | null;
+    /** Glove type defindex (from catalog weaponDefIndex) — needed for glove sync. */
+    defIndex?: number;
   }>;
 };
 
