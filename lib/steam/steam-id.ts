@@ -35,3 +35,11 @@ export function steamIdForGamePlugin(steamId: string): string {
   const steam2 = steamId64ToSteam2(steamId);
   return steam2 ?? steamId.trim();
 }
+
+/** CS:GO may use STEAM_1:x:y while export uses STEAM_0:x:y — same account. */
+export function alternateSteam2(steam2: string): string | null {
+  const trimmed = steam2.trim();
+  if (trimmed.startsWith("STEAM_0:")) return `STEAM_1:${trimmed.slice(8)}`;
+  if (trimmed.startsWith("STEAM_1:")) return `STEAM_0:${trimmed.slice(8)}`;
+  return null;
+}
