@@ -341,7 +341,7 @@
     "markAllReadDesc": "Todas as notificações serão marcadas como lidas. Esta ação não pode ser desfeita.",
     "markAllReadConfirm": "Marcar todas",
     "connectServerTitle": "Conectar a {serverName}?",
-    "connectServerDesc": "Você entrará no modo {mode}. O CS:GO Legacy será iniciado automaticamente (instale o branch csgo_legacy no Steam se ainda não tiver).",
+    "connectServerDesc": "Você entrará no modo {mode}. O Counter-Strike: Global Offensive será iniciado automaticamente (instale o CS:GO Legacy na biblioteca Steam se ainda não tiver).",
     "connectServerConfirm": "Conectar",
     "joinQueueTitle": "Entrar na fila de {serverName}?",
     "joinQueueDesc": "O servidor está cheio. Você entrará na fila e será conectado quando houver slot.",

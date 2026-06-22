@@ -1,8 +1,14 @@
-/** Shared Steam app id for CS2 and CS:GO Legacy (branch csgo_legacy). */
-export const CSGO_STEAM_APP_ID = 730;
+/** CS2 on Steam (do not use for legacy server connect — opens cs2.exe). */
+export const CS2_STEAM_APP_ID = 730;
 
 /**
- * Legacy CS:GO client binary. steam://run/730 alone launches CS2 (cs2.exe).
+ * Counter-Strike: Global Offensive (legacy client), unlisted on Steam store.
+ * @see https://store.steampowered.com/app/4465480/CounterStrikeGlobal_Offensive/
+ */
+export const CSGO_STEAM_APP_ID = 4465480;
+
+/**
+ * Legacy CS:GO client binary. steam://run/730 launches CS2; use {@link CSGO_STEAM_APP_ID}.
  * @see https://developer.valvesoftware.com/wiki/Steam_browser_protocol#run
  */
 export const CSGO_LEGACY_EXE = "csgo.exe";
