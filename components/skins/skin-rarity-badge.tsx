@@ -1,12 +1,12 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import {
   accentForRarity,
+  RARITY_TIER_I18N_KEY,
   rarityKeyFromLabel,
-  type RarityKey,
 } from "@/lib/inventory/rarity-tiers";
+import { useInventoryRarityText } from "@/lib/inventory/use-inventory-rarity-text";
 
 type SkinRarityBadgeProps = {
   rarity: string;
@@ -15,25 +15,16 @@ type SkinRarityBadgeProps = {
   size?: "sm" | "md";
 };
 
-const LABEL_KEY: Record<RarityKey, string> = {
-  mythic: "rarityMythic",
-  legendary: "rarityLegendary",
-  epic: "rarityEpic",
-  rare: "rarityRare",
-  uncommon: "rarityUncommon",
-  common: "rarityCommon",
-};
-
 export function SkinRarityBadge({
   rarity,
   accent,
   className,
   size = "sm",
 }: SkinRarityBadgeProps) {
-  const t = useTranslations("inventory");
+  const rarityText = useInventoryRarityText();
   const key = rarityKeyFromLabel(rarity);
   const gradient = accent ?? accentForRarity(rarity);
-  const label = t(LABEL_KEY[key]);
+  const label = rarityText(RARITY_TIER_I18N_KEY[key]);
 
   return (
     <span

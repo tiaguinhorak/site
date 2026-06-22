@@ -1,25 +1,16 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import { RARITY_TIER_ACCENTS, RARITY_TIER_ORDER } from "@/lib/inventory/rarity-tiers";
-
-const LABEL_KEY: Record<string, string> = {
-  mythic: "rarityMythic",
-  legendary: "rarityLegendary",
-  epic: "rarityEpic",
-  rare: "rarityRare",
-  uncommon: "rarityUncommon",
-  common: "rarityCommon",
-};
+import { RARITY_TIER_ACCENTS, RARITY_TIER_I18N_KEY, RARITY_TIER_ORDER } from "@/lib/inventory/rarity-tiers";
+import { useInventoryRarityText } from "@/lib/inventory/use-inventory-rarity-text";
 
 export function SkinRarityLegend({ className }: { className?: string }) {
-  const t = useTranslations("inventory");
+  const rarityText = useInventoryRarityText();
 
   return (
     <div className={cn("flex flex-wrap items-center gap-2", className)}>
       <span className="text-[10px] font-semibold uppercase tracking-wider text-muted/80">
-        {t("rarityLegendTitle")}
+        {rarityText("rarityLegendTitle")}
       </span>
       {RARITY_TIER_ORDER.map((key) => (
         <span
@@ -30,7 +21,9 @@ export function SkinRarityLegend({ className }: { className?: string }) {
             className={cn("h-2 w-2 rounded-full bg-linear-to-br", RARITY_TIER_ACCENTS[key])}
             aria-hidden
           />
-          <span className="font-medium text-muted">{t(LABEL_KEY[key])}</span>
+          <span className="font-medium text-muted">
+            {rarityText(RARITY_TIER_I18N_KEY[key])}
+          </span>
         </span>
       ))}
     </div>

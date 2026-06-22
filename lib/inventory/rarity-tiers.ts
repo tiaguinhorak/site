@@ -20,6 +20,26 @@ export const RARITY_TIER_ACCENTS: Record<RarityKey, string> = {
   common: "from-slate-500 to-zinc-700",
 };
 
+/** Fallback labels when next-intl messages are stale (dev cache / partial bundle). */
+export const RARITY_I18N_FALLBACK: Record<string, string> = {
+  rarityLegendTitle: "Raridades",
+  rarityMythic: "Mítico",
+  rarityLegendary: "Lendário",
+  rarityEpic: "Épico",
+  rarityRare: "Raro",
+  rarityUncommon: "Incomum",
+  rarityCommon: "Comum",
+};
+
+export const RARITY_TIER_I18N_KEY: Record<RarityKey, string> = {
+  mythic: "rarityMythic",
+  legendary: "rarityLegendary",
+  epic: "rarityEpic",
+  rare: "rarityRare",
+  uncommon: "rarityUncommon",
+  common: "rarityCommon",
+};
+
 export function rarityKeyFromLabel(rarity: string): RarityKey {
   const value = rarity
     .toLowerCase()
