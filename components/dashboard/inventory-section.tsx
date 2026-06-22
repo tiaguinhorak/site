@@ -142,7 +142,7 @@ function LoadoutPanel({
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={unequippingId === item.catalogSkinId}
+                disabled={unequippingId === item.catalogSkinId ? true : undefined}
                 confirm={confirmPresets.unequipSkin(item.name)}
                 onClick={() => onUnequip(item)}
               >
@@ -193,6 +193,14 @@ export function InventorySection() {
   const [equipError, setEquipError] = useState<string | null>(null);
   const [equippingId, setEquippingId] = useState<string | null>(null);
   const [unequippingId, setUnequippingId] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const canGoPrev = mounted && page > 1 && !loading;
+  const canGoNext = mounted && page < totalPages && !loading;
 
   const fetchLoadout = useCallback(async () => {
     const response = await fetch("/api/inventory/loadout", { credentials: "same-origin" });
@@ -398,9 +406,9 @@ export function InventorySection() {
                 size="sm"
                 className="mt-4 w-full"
                 disabled={
-                  equippingId === item.id ||
-                  unequippingId === item.id ||
-                  (!item.equipped && !item.owned)
+                  equippingId === item.id || unequippingId === item.id || (!item.equipped && !item.owned)
+                    ? true
+                    : undefined
                 }
                 confirm={
                   item.equipped
@@ -431,7 +439,7 @@ export function InventorySection() {
           type="button"
           variant="outline"
           size="sm"
-          disabled={page <= 1 || loading}
+          disabled={!canGoPrev}
           onClick={() => setPage((p) => Math.max(1, p - 1))}
         >
           {t("prevPage")}
@@ -443,7 +451,7 @@ export function InventorySection() {
           type="button"
           variant="outline"
           size="sm"
-          disabled={page >= totalPages || loading}
+          disabled={!canGoNext}
           onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
         >
           {t("nextPage")}

@@ -91,6 +91,7 @@ export function Button({
   children,
   confirm,
   onClick,
+  disabled,
   ...props
 }: CommonProps & ComponentProps<"button">) {
   const { confirm: requestConfirm } = useConfirm();
@@ -98,6 +99,7 @@ export function Button({
   return (
     <button
       className={cn(base, variants[variant], sizes[size], className)}
+      disabled={disabled === true}
       onClick={(e) => {
         runWithConfirm(confirm, requestConfirm, () => onClick?.(e), e);
       }}

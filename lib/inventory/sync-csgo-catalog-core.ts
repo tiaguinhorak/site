@@ -6,8 +6,9 @@ import {
 } from "@/lib/inventory/catalog-categories";
 import {
   fetchWsAllowlistKeys,
+  getWsAllowlistSource,
   isInWsAllowlist,
-} from "@/lib/inventory/fetch-ws-allowlist";
+} from "@/lib/inventory/ws-allowlist";
 
 const CSGO_API_SKINS_URL =
   "https://raw.githubusercontent.com/ByMykel/CSGO-API/main/public/api/en/skins.json";

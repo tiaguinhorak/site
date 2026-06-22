@@ -11,7 +11,9 @@ async function main() {
   const prisma = createScriptPrismaClient();
   console.log("Syncing CS:GO skin catalog → Postgres (one-time cache)…");
   const result = await syncCsgoSkinCatalogWithClient(prisma);
-  console.log(`Done. ${result.synced} skins upserted from CSGO-API.`);
+  console.log(
+    `Done. ${result.synced} skins upserted (ws-only: ${result.wsOnly ? "yes" : "all"}).`,
+  );
 
   const byCat = await prisma.csgoSkinCatalog.groupBy({ by: ["category"], _count: true });
   console.log("By category:", byCat.map((r) => `${r.category}=${r._count}`).join(", "));
