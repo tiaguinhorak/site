@@ -226,103 +226,29 @@ async function main() {
   });
 
   const inventoryCatalogSkins = [
-    {
-      id: "knife_gamma_doppler",
-      weaponId: "weapon_knife_karambit",
-      weaponName: "Karambit",
-      paintkit: 568,
-      paintkitName: "Gamma Doppler",
-      rarity: "rare",
-      category: "knife",
-    },
-    {
-      id: "ak47_inheritance",
-      weaponId: "weapon_ak47",
-      weaponName: "AK-47",
-      paintkit: 1207,
-      paintkitName: "Inheritance",
-      rarity: "covert",
-      category: "rifle",
-    },
-    {
-      id: "m4a4_howl",
-      weaponId: "weapon_m4a1",
-      weaponName: "M4A4",
-      paintkit: 309,
-      paintkitName: "Howl",
-      rarity: "rare",
-      category: "rifle",
-    },
-    {
-      id: "awp_dragon_lore",
-      weaponId: "weapon_awp",
-      weaponName: "AWP",
-      paintkit: 344,
-      paintkitName: "Dragon Lore",
-      rarity: "rare",
-      category: "sniper",
-    },
-    {
-      id: "deagle_blaze",
-      weaponId: "weapon_deagle",
-      weaponName: "Desert Eagle",
-      paintkit: 38,
-      paintkitName: "Blaze",
-      rarity: "classified",
-      category: "pistol",
-    },
-    {
-      id: "glock_fade",
-      weaponId: "weapon_glock",
-      weaponName: "Glock-18",
-      paintkit: 38,
-      paintkitName: "Fade",
-      rarity: "classified",
-      category: "pistol",
-    },
-    {
-      id: "mp9_starlight",
-      weaponId: "weapon_mp9",
-      weaponName: "MP9",
-      paintkit: 1090,
-      paintkitName: "Starlight Protector",
-      rarity: "covert",
-      category: "smg",
-    },
-    {
-      id: "knife_bf_fade",
-      weaponId: "weapon_knife_butterfly",
-      weaponName: "Butterfly Knife",
-      paintkit: 413,
-      paintkitName: "Fade",
-      rarity: "rare",
-      category: "knife",
-    },
-    {
-      id: "usp_kill_confirmed",
-      weaponId: "weapon_usp_silencer",
-      weaponName: "USP-S",
-      paintkit: 315,
-      paintkitName: "Kill Confirmed",
-      rarity: "covert",
-      category: "pistol",
-    },
+    // Legacy ids removed — full catalog comes from syncCsgoSkinCatalogWithClient below.
   ];
 
   for (const skin of inventoryCatalogSkins) {
     await prisma.csgoSkinCatalog.create({ data: skin });
   }
 
+  const { syncCsgoSkinCatalogWithClient } = await import("../lib/inventory/sync-csgo-catalog-core");
+  const syncResult = await syncCsgoSkinCatalogWithClient(prisma);
+  console.log(`[seed] CS:GO catalog synced: ${syncResult.synced} skins`);
+
   const catalogByInventoryName: Record<string, string> = {
-    "Karambit Gamma Doppler": "knife_gamma_doppler",
-    "AK-47 Inheritance": "ak47_inheritance",
-    "M4A4 Howl": "m4a4_howl",
-    "AWP Dragon Lore": "awp_dragon_lore",
-    "Desert Eagle Blaze": "deagle_blaze",
-    "Glock-18 Fade": "glock_fade",
-    "MP9 Starlight": "mp9_starlight",
-    "Butterfly Knife Fade": "knife_bf_fade",
-    "USP-S Kill Confirmed": "usp_kill_confirmed",
+    "Karambit Gamma Doppler": "skin-6bd8a366ec88",
+    "AK-47 Inheritance": "skin-82dc98e09ba6",
+    "M4A4 Howl": "skin-8aacf99e7f2f",
+    "AWP Dragon Lore": "skin-4f8d99d09ded",
+    "Desert Eagle Blaze": "skin-e30d23329629",
+    "Glock-18 Fade": "skin-da5da69785da",
+    "MP9 Starlight": "skin-feae180c4968",
+    "Butterfly Knife Fade": "skin-6656ae9270b9",
+    "USP-S Kill Confirmed": "skin-cf4c11689014",
+    "Sport Gloves Vice": "skin-c1ae7186f829",
+    "Driver Gloves King Snake": "skin-ead101bfb2c9",
   };
 
   const inventoryItems = [

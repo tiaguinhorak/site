@@ -322,6 +322,8 @@ export function InventorySection() {
 
       {loading ? (
         <p className="text-sm text-muted">{t("loading")}</p>
+      ) : items.length === 0 ? (
+        <p className="text-sm text-muted">{t("catalogEmpty")}</p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item, i) => (

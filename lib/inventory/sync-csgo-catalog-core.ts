@@ -8,7 +8,8 @@ import {
 const CSGO_API_SKINS_URL =
   "https://raw.githubusercontent.com/ByMykel/CSGO-API/main/public/api/en/skins.json";
 
-const BATCH_SIZE = 40;
+const BATCH_SIZE = 20;
+const TX_TIMEOUT_MS = 120_000;
 
 type ApiSkin = {
   id: string;
@@ -84,6 +85,7 @@ export async function syncCsgoSkinCatalogWithClient(prisma: PrismaClient) {
           },
         }),
       ),
+      { timeout: TX_TIMEOUT_MS },
     );
     synced += batch.length;
   }

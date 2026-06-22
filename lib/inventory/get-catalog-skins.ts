@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import type { InventoryCategoryKey } from "@/lib/profile";
 import { isAllSkinsEquipEnabled } from "@/lib/inventory/catalog-access";
+import { ensureCatalogSynced } from "@/lib/inventory/ensure-catalog-synced";
 import { rarityAccent } from "@/lib/inventory/catalog-categories";
 import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
 
@@ -44,6 +45,8 @@ export async function getCatalogSkinsForUser(
   const limit = Math.min(MAX_LIMIT, Math.max(1, options.limit ?? DEFAULT_LIMIT));
   const search = options.search?.trim() ?? "";
   const category = options.category ?? "all";
+
+  await ensureCatalogSynced();
 
   const user = await prisma.user.findUnique({
     where: { id: userId },

@@ -826,6 +826,7 @@
     "searchPlaceholder": "Buscar skin (ej: Asiimov, Dragon Lore…)",
     "catalogCount": "{count} skins en catálogo · página {page}/{totalPages}",
     "loading": "Cargando catálogo…",
+    "catalogEmpty": "Catálogo vacío. Espera el sync automático o ejecuta npm run sync:skins en el servidor.",
     "prevPage": "Anterior",
     "nextPage": "Siguiente",
     "loadoutTitle": "Loadout en servidor (confirmado en el sitio)",
