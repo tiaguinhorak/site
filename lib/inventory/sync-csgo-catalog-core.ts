@@ -67,6 +67,9 @@ export async function syncCsgoSkinCatalogWithClient(prisma: PrismaClient) {
 
   const payload = (await response.json()) as ApiSkin[];
   const wsAllowlist = await fetchWsAllowlistKeys();
+  if (wsAllowlist.size > 0) {
+    console.log(`[catalog] ws-allowlist loaded (${wsAllowlist.size} keys, source: ${getWsAllowlistSource()})`);
+  }
   const allRows = payload
     .map(toCatalogRow)
     .filter((row): row is NonNullable<typeof row> => row !== null)
