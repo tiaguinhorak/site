@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import {
   LayoutGrid,
@@ -23,6 +22,10 @@ import { type InventoryCategoryKey } from "@/lib/profile";
 import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { cn } from "@/lib/utils";
 import { InventoryItemArt } from "@/components/dashboard/inventory-item-art";
+import {
+  SkinPreviewModal,
+  type SkinPreviewData,
+} from "@/components/skins/skin-preview-modal";
 
 type CatalogSkin = {
   id: string;
@@ -54,14 +57,6 @@ type LoadoutResponse = {
   steamId: string | null;
   steamId2?: string | null;
   items: LoadoutItem[];
-};
-
-type CatalogResponse = {
-  items: CatalogSkin[];
-  totalPages: number;
-  catalogTotal: number;
-  total: number;
-  weaponOptions?: Array<{ weaponId: string; weaponName: string }>;
 };
 
 const CATEGORY_ICON: Record<"all" | InventoryCategoryKey, typeof LayoutGrid> = {
@@ -102,28 +97,18 @@ async function postJson(url: string, body: unknown) {
   return payload;
 }
 
-function RarityBar({ accent }: { accent: string }) {
-  return (
-    <span
-      className={cn(
-        "absolute inset-x-0 bottom-0 h-1 bg-linear-to-r",
-        accent,
-      )}
-      aria-hidden
-    />
-  );
-}
-
-function EquippedLoadout({
+function EquippedSidebar({
   loadout,
   onRefresh,
   onUnequip,
+  onPreview,
   unequippingId,
   refreshing,
 }: {
   loadout: LoadoutResponse | null;
   onRefresh: () => void;
   onUnequip: (item: LoadoutItem) => void;
+  onPreview: (item: LoadoutItem) => void;
   unequippingId: string | null;
   refreshing: boolean;
 }) {
@@ -132,74 +117,64 @@ function EquippedLoadout({
 
   if (!loadout) return null;
 
-  if (!loadout.steamLinked) {
-    return (
-      <div className="mb-6 flex items-start gap-3 rounded-card border border-amber-500/30 bg-amber-500/5 p-4">
-        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
-        <p className="text-sm text-amber-200">{t("loadoutSteamRequired")}</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="mb-6 overflow-hidden rounded-card glass-strong">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 px-5 py-4">
-        <div className="min-w-0">
-          <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-            {t("loadoutTitle")}
-          </p>
-          <p className="mt-0.5 truncate text-xs text-muted">
+    <aside className="lg:w-72 shrink-0">
+      <div className="rounded-card glass-strong lg:sticky lg:top-24">
+        <div className="flex items-center justify-between gap-2 border-b border-border/60 px-4 py-3">
+          <p className="text-sm font-semibold text-foreground">{t("loadoutSidebarTitle")}</p>
+          <Button type="button" variant="ghost" size="sm" onClick={onRefresh}>
+            <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
+          </Button>
+        </div>
+
+        {!loadout.steamLinked ? (
+          <p className="px-4 py-4 text-xs text-amber-200">{t("loadoutSteamRequired")}</p>
+        ) : loadout.items.length === 0 ? (
+          <p className="px-4 py-6 text-sm text-muted">{t("loadoutEmpty")}</p>
+        ) : (
+          <ul className="max-h-[min(70vh,520px)] space-y-2 overflow-y-auto p-3">
+            {loadout.items.map((item) => (
+              <li
+                key={item.catalogSkinId}
+                className="flex items-center gap-2 rounded-xl bg-black/20 p-2 ring-1 ring-white/5"
+              >
+                <InventoryItemArt
+                  imageUrl={item.imageUrl}
+                  accent={item.accent}
+                  className="h-11 w-14 shrink-0"
+                  onClick={() => onPreview(item)}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-medium text-foreground">{item.name}</p>
+                  <p className="truncate text-[10px] text-muted">
+                    {item.weaponId.replace(/^weapon_/, "")}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 px-2 text-[10px]"
+                  disabled={unequippingId === item.catalogSkinId ? true : undefined}
+                  confirm={confirmPresets.unequipSkin(item.name)}
+                  onClick={() => onUnequip(item)}
+                >
+                  {unequippingId === item.catalogSkinId ? "…" : t("unequip")}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {loadout.steamLinked && (
+          <p className="border-t border-border/60 px-4 py-2 text-[10px] leading-relaxed text-muted">
             {loadout.steamId2
               ? t("loadoutSteamId2", { steamId: loadout.steamId2 })
               : t("loadoutSteamId", { steamId: loadout.steamId ?? "" })}
           </p>
-        </div>
-        <Button type="button" variant="outline" size="sm" onClick={onRefresh}>
-          <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
-          {t("loadoutRefresh")}
-        </Button>
+        )}
       </div>
-
-      {loadout.items.length === 0 ? (
-        <p className="px-5 py-6 text-sm text-muted">{t("loadoutEmpty")}</p>
-      ) : (
-        <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
-          {loadout.items.map((item) => (
-            <div
-              key={item.catalogSkinId}
-              className="group flex items-center gap-3 rounded-xl bg-black/20 p-3 ring-1 ring-white/5"
-            >
-              <InventoryItemArt
-                imageUrl={item.imageUrl}
-                accent={item.accent}
-                className="h-12 w-16 shrink-0"
-              />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
-                <p className="truncate text-xs text-muted">
-                  {item.weaponId.replace(/^weapon_/, "")}
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="shrink-0 px-2"
-                disabled={unequippingId === item.catalogSkinId ? true : undefined}
-                confirm={confirmPresets.unequipSkin(item.name)}
-                onClick={() => onUnequip(item)}
-              >
-                {unequippingId === item.catalogSkinId ? t("unequipping") : t("unequip")}
-              </Button>
-            </div>
-          ))}
-        </div>
-      )}
-      <p className="border-t border-border/60 px-5 py-3 text-xs text-muted">
-        {t("loadoutHint")}
-      </p>
-    </div>
+    </aside>
   );
 }
 
@@ -238,8 +213,8 @@ export function InventorySection() {
   const [weaponOptions, setWeaponOptions] = useState<
     Array<{ weaponId: string; weaponName: string }>
   >([]);
-  const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [resultTotal, setResultTotal] = useState(0);
@@ -250,6 +225,7 @@ export function InventorySection() {
   const [equippingId, setEquippingId] = useState<string | null>(null);
   const [unequippingId, setUnequippingId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [previewSkin, setPreviewSkin] = useState<SkinPreviewData | null>(null);
   const [mounted, setMounted] = useState(false);
 
   const reqIdRef = useRef(0);
@@ -268,10 +244,7 @@ export function InventorySection() {
         credentials: "same-origin",
       });
       if (!response.ok) return;
-      const data = (await response.json()) as LoadoutResponse;
-      setLoadout(data);
-    } catch {
-      // keep previous loadout on transient error
+      setLoadout((await response.json()) as LoadoutResponse);
     } finally {
       setRefreshing(false);
     }
@@ -281,6 +254,7 @@ export function InventorySection() {
     const reqId = ++reqIdRef.current;
     setLoading(true);
     setLoadError(false);
+
     try {
       const params = new URLSearchParams({
         page: String(page),
@@ -294,7 +268,6 @@ export function InventorySection() {
         credentials: "same-origin",
       });
 
-      // Ignore stale responses: a newer request already superseded this one.
       if (reqId !== reqIdRef.current) return;
 
       if (!response.ok) {
@@ -302,7 +275,7 @@ export function InventorySection() {
         return;
       }
 
-      const data = (await response.json()) as CatalogResponse;
+      const data = await response.json();
       if (reqId !== reqIdRef.current) return;
 
       setItems(data.items ?? []);
@@ -320,7 +293,7 @@ export function InventorySection() {
   }, [filter, page, search, weaponFilter]);
 
   useEffect(() => {
-    const timer = setTimeout(() => setSearch(searchInput.trim()), 300);
+    const timer = setTimeout(() => setSearch(searchInput.trim()), 350);
     return () => clearTimeout(timer);
   }, [searchInput]);
 
@@ -351,6 +324,9 @@ export function InventorySection() {
         })),
       );
       await fetchLoadout();
+      setPreviewSkin((prev) =>
+        prev?.id === item.id ? { ...prev, equipped: true } : prev,
+      );
     } catch (err) {
       setEquipError(err instanceof Error ? err.message : "Falha ao equipar skin.");
     } finally {
@@ -369,6 +345,9 @@ export function InventorySection() {
         ),
       );
       await fetchLoadout();
+      setPreviewSkin((prev) =>
+        prev?.id === catalogSkinId ? { ...prev, equipped: false } : prev,
+      );
     } catch (err) {
       setEquipError(err instanceof Error ? err.message : "Falha ao desequipar skin.");
     } finally {
@@ -376,247 +355,279 @@ export function InventorySection() {
     }
   };
 
+  const openCatalogPreview = (item: CatalogSkin) => {
+    setPreviewSkin({
+      id: item.id,
+      name: item.name,
+      imageUrl: item.imageUrl,
+      accent: item.accent,
+      category: categoryLabels[item.category],
+      rarity: item.rarity,
+      weaponName: item.weaponName,
+      paintkitName: item.paintkitName,
+      equipped: item.equipped,
+      owned: item.owned,
+    });
+  };
+
+  const openLoadoutPreview = (item: LoadoutItem) => {
+    setPreviewSkin({
+      id: item.catalogSkinId,
+      name: item.name,
+      imageUrl: item.imageUrl,
+      accent: item.accent,
+      equipped: true,
+      owned: true,
+    });
+  };
+
   const showEmptyCatalog = !loading && !loadError && catalogTotal === 0;
-  const showNoResults =
-    !loading && !loadError && catalogTotal > 0 && items.length === 0;
+  const showNoResults = !loading && !loadError && catalogTotal > 0 && items.length === 0;
 
   return (
     <section>
-      <EquippedLoadout
-        loadout={loadout}
-        onRefresh={fetchLoadout}
-        refreshing={refreshing}
-        unequippingId={unequippingId}
-        onUnequip={(item) => handleUnequip(item.catalogSkinId, item.weaponId)}
-      />
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+        <EquippedSidebar
+          loadout={loadout}
+          onRefresh={fetchLoadout}
+          refreshing={refreshing}
+          unequippingId={unequippingId}
+          onUnequip={(item) => handleUnequip(item.catalogSkinId, item.weaponId)}
+          onPreview={openLoadoutPreview}
+        />
 
-      {/* Toolbar */}
-      <div className="sticky top-0 z-10 -mx-1 mb-5 rounded-card glass-strong px-4 py-4 sm:px-5">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <input
-            type="search"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder={t("searchPlaceholder")}
-            className="w-full rounded-xl border border-white/10 bg-black/25 py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-        </div>
+        <div className="min-w-0 flex-1">
+          <div className="mb-4 rounded-card glass-strong p-4">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+              <input
+                type="search"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder={t("searchPlaceholder")}
+                className="w-full rounded-xl border border-white/10 bg-black/25 py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          {filters.map((f) => {
-            const Icon = CATEGORY_ICON[f.id];
-            const active = filter === f.id;
-            return (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setFilter(f.id)}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-medium transition-all",
-                  active
-                    ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground shadow-[0_6px_20px_-8px_var(--glow-1)]"
-                    : "glass-input text-muted hover:text-foreground",
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {f.label}
-              </button>
-            );
-          })}
-        </div>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {filters.map((f) => {
+                const Icon = CATEGORY_ICON[f.id];
+                const active = filter === f.id;
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setFilter(f.id)}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                      active
+                        ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground"
+                        : "text-muted hover:bg-white/5 hover:text-foreground",
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {f.label}
+                  </button>
+                );
+              })}
+            </div>
 
-        {weaponOptions.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border/50 pt-3">
-            <button
-              type="button"
-              onClick={() => {
-                setWeaponFilter("");
-                setPage(1);
-              }}
-              className={cn(
-                "rounded-lg px-2.5 py-1 text-xs font-medium transition-colors",
-                weaponFilter === ""
-                  ? "bg-[color-mix(in_srgb,var(--primary)_20%,transparent)] text-foreground"
-                  : "text-muted hover:text-foreground",
-              )}
-            >
-              {t("catAllWeapons")}
-            </button>
-            {weaponOptions.map((weapon) => (
-              <button
-                key={weapon.weaponId}
-                type="button"
-                onClick={() => {
-                  setWeaponFilter(weapon.weaponId);
-                  setPage(1);
-                }}
-                className={cn(
-                  "rounded-lg px-2.5 py-1 text-xs font-medium transition-colors",
-                  weaponFilter === weapon.weaponId
-                    ? "bg-[color-mix(in_srgb,var(--primary)_20%,transparent)] text-foreground"
-                    : "text-muted hover:text-foreground",
-                )}
-              >
-                {weapon.weaponName}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Meta */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted">
-          {t("catalogCount", { count: resultTotal, page, totalPages })}
-        </p>
-        {catalogTotal > 0 && (
-          <p className="text-xs text-muted/70">{t("itemsCount", { count: catalogTotal })}</p>
-        )}
-      </div>
-
-      {equipError && (
-        <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/5 p-3">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
-          <p className="text-sm text-red-300">{equipError}</p>
-        </div>
-      )}
-
-      {/* Grid / states */}
-      {loading && items.length === 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-64 animate-pulse rounded-card bg-white/5"
-              aria-hidden
-            />
-          ))}
-        </div>
-      ) : loadError ? (
-        <div className="flex flex-col items-center gap-3 rounded-card glass py-16 text-center">
-          <AlertTriangle className="h-8 w-8 text-amber-400" />
-          <p className="text-sm text-muted">{t("loadError")}</p>
-          <Button type="button" variant="outline" size="sm" onClick={fetchSkins}>
-            <RefreshCw className="h-3.5 w-3.5" />
-            {t("retry")}
-          </Button>
-        </div>
-      ) : showEmptyCatalog ? (
-        <div className="flex flex-col items-center gap-3 rounded-card glass py-16 text-center">
-          <PackageOpen className="h-8 w-8 text-muted" />
-          <p className="max-w-md text-sm text-muted">{t("catalogEmpty")}</p>
-        </div>
-      ) : showNoResults ? (
-        <div className="flex flex-col items-center gap-3 rounded-card glass py-16 text-center">
-          <Search className="h-8 w-8 text-muted" />
-          <p className="text-sm text-muted">{t("noResults")}</p>
-        </div>
-      ) : (
-        <div
-          className={cn(
-            "grid gap-4 transition-opacity sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
-            loading && "opacity-60",
-          )}
-        >
-          {items.map((item, i) => (
-            <motion.article
-              key={item.id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: Math.min(i * 0.015, 0.3) }}
-              className={cn(
-                "group relative flex flex-col overflow-hidden rounded-card glass p-4 transition-all hover:-translate-y-0.5 hover:glow-ring-contained",
-                item.equipped && "ring-1 ring-emerald-400/40",
-              )}
-            >
-              <div className="relative">
-                <InventoryItemArt
-                  imageUrl={item.imageUrl}
-                  accent={item.accent}
-                  className="h-28 w-full"
-                />
-                <RarityBar accent={item.accent} />
-                {item.equipped && (
-                  <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-emerald-500/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-black">
-                    <CheckCircle2 className="h-3 w-3" />
-                    {t("equipped")}
-                  </span>
-                )}
+            {weaponOptions.length > 0 && (
+              <div className="mt-3 border-t border-border/50 pt-3">
+                <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted">
+                  {t("weaponFilterLabel")}
+                </label>
+                <select
+                  value={weaponFilter}
+                  onChange={(e) => {
+                    setWeaponFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-sm text-foreground focus:border-primary/50 focus:outline-none"
+                >
+                  <option value="">{t("catAllWeapons")}</option>
+                  {weaponOptions.map((w) => (
+                    <option key={w.weaponId} value={w.weaponId}>
+                      {w.weaponName}
+                    </option>
+                  ))}
+                </select>
               </div>
+            )}
+          </div>
 
-              <h3 className="mt-3 line-clamp-2 font-display text-sm font-bold leading-snug text-foreground">
-                {item.name}
-              </h3>
-              <p className="mt-1 text-[11px] uppercase tracking-wider text-muted">
-                {categoryLabels[item.category]} · {item.rarity}
-              </p>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
+            <span>{t("catalogCount", { count: resultTotal, page, totalPages })}</span>
+            {catalogTotal > 0 && (
+              <span className="text-xs text-muted/70">
+                {t("itemsCount", { count: catalogTotal })}
+              </span>
+            )}
+          </div>
 
+          {equipError && (
+            <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/5 p-3">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
+              <p className="text-sm text-red-300">{equipError}</p>
+            </div>
+          )}
+
+          {loading && items.length === 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-56 animate-pulse rounded-card bg-white/5" />
+              ))}
+            </div>
+          ) : loadError ? (
+            <div className="flex flex-col items-center gap-3 rounded-card glass py-16 text-center">
+              <AlertTriangle className="h-8 w-8 text-amber-400" />
+              <p className="text-sm text-muted">{t("loadError")}</p>
+              <Button type="button" variant="outline" size="sm" onClick={fetchSkins}>
+                <RefreshCw className="h-3.5 w-3.5" />
+                {t("retry")}
+              </Button>
+            </div>
+          ) : showEmptyCatalog ? (
+            <div className="flex flex-col items-center gap-3 rounded-card glass py-16 text-center">
+              <PackageOpen className="h-8 w-8 text-muted" />
+              <p className="max-w-md text-sm text-muted">{t("catalogEmpty")}</p>
+            </div>
+          ) : showNoResults ? (
+            <div className="flex flex-col items-center gap-3 rounded-card glass py-16 text-center">
+              <Search className="h-8 w-8 text-muted" />
+              <p className="text-sm text-muted">{t("noResults")}</p>
+            </div>
+          ) : (
+            <div
+              className={cn(
+                "grid gap-3 sm:grid-cols-2 xl:grid-cols-3 transition-opacity",
+                loading && "opacity-60",
+              )}
+            >
+              {items.map((item) => (
+                <article
+                  key={item.id}
+                  className={cn(
+                    "relative flex flex-col overflow-hidden rounded-card glass p-3",
+                    item.equipped && "ring-1 ring-emerald-400/35",
+                  )}
+                >
+                  <InventoryItemArt
+                    imageUrl={item.imageUrl}
+                    accent={item.accent}
+                    className="h-28 w-full"
+                    onClick={() => openCatalogPreview(item)}
+                    priority={false}
+                  />
+                  <h3 className="mt-2 line-clamp-2 text-sm font-bold text-foreground">
+                    {item.name}
+                  </h3>
+                  <p className="mt-0.5 text-[10px] uppercase tracking-wider text-muted">
+                    {categoryLabels[item.category]} · {item.rarity}
+                  </p>
+                  <Button
+                    type="button"
+                    variant={item.equipped ? "outline" : "primary"}
+                    size="sm"
+                    className="mt-3 w-full"
+                    disabled={
+                      equippingId === item.id ||
+                      unequippingId === item.id ||
+                      (!item.equipped && !item.owned)
+                        ? true
+                        : undefined
+                    }
+                    confirm={
+                      item.equipped
+                        ? confirmPresets.unequipSkin(item.name)
+                        : confirmPresets.equipSkin(item.name)
+                    }
+                    onClick={() =>
+                      item.equipped
+                        ? handleUnequip(item.id, item.weaponId)
+                        : handleEquip(item)
+                    }
+                  >
+                    {item.equipped
+                      ? unequippingId === item.id
+                        ? t("unequipping")
+                        : t("unequip")
+                      : equippingId === item.id
+                        ? t("equipping")
+                        : !item.owned
+                          ? t("equipUnavailable")
+                          : t("equip")}
+                  </Button>
+                  {item.equipped && (
+                    <span className="absolute right-2 top-2 inline-flex items-center gap-0.5 rounded-full bg-emerald-500/90 px-1.5 py-0.5 text-[9px] font-bold uppercase text-black">
+                      <CheckCircle2 className="h-3 w-3" />
+                    </span>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
+
+          {totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-center gap-3">
               <Button
                 type="button"
-                variant={item.equipped ? "outline" : "primary"}
+                variant="outline"
                 size="sm"
-                className="mt-3 w-full"
-                disabled={
-                  equippingId === item.id ||
-                  unequippingId === item.id ||
-                  (!item.equipped && !item.owned)
-                    ? true
-                    : undefined
-                }
-                confirm={
-                  item.equipped
-                    ? confirmPresets.unequipSkin(item.name)
-                    : confirmPresets.equipSkin(item.name)
-                }
-                onClick={() =>
-                  item.equipped
-                    ? handleUnequip(item.id, item.weaponId)
-                    : handleEquip(item)
-                }
+                disabled={!canGoPrev}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
               >
-                {item.equipped
-                  ? unequippingId === item.id
-                    ? t("unequipping")
-                    : t("unequip")
-                  : equippingId === item.id
-                    ? t("equipping")
-                    : !item.owned
-                      ? t("equipUnavailable")
-                      : t("equip")}
+                <ChevronLeft className="h-4 w-4" />
+                {t("prevPage")}
               </Button>
-            </motion.article>
-          ))}
+              <span className="min-w-16 text-center text-sm text-muted">
+                {page} / {totalPages}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!canGoNext}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              >
+                {t("nextPage")}
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
-      {totalPages > 1 && (
-        <div className="mt-8 flex items-center justify-center gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={!canGoPrev}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            {t("prevPage")}
-          </Button>
-          <span className="min-w-16 text-center text-sm text-muted">
-            {page} / {totalPages}
-          </span>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={!canGoNext}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          >
-            {t("nextPage")}
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
+      <SkinPreviewModal
+        open={previewSkin !== null}
+        skin={previewSkin}
+        onClose={() => setPreviewSkin(null)}
+        actionLoading={
+          previewSkin?.id
+            ? equippingId === previewSkin.id || unequippingId === previewSkin.id
+            : false
+        }
+        onEquip={
+          previewSkin?.id && !previewSkin.equipped
+            ? () => {
+                const item = items.find((i) => i.id === previewSkin.id);
+                if (item) handleEquip(item);
+              }
+            : undefined
+        }
+        onUnequip={
+          previewSkin?.id && previewSkin.equipped
+            ? () => {
+                const item = items.find((i) => i.id === previewSkin.id);
+                if (item) handleUnequip(item.id, item.weaponId);
+                else if (loadout?.items.some((l) => l.catalogSkinId === previewSkin.id)) {
+                  const li = loadout.items.find((l) => l.catalogSkinId === previewSkin.id);
+                  if (li) handleUnequip(li.catalogSkinId, li.weaponId);
+                }
+              }
+            : undefined
+        }
+      />
     </section>
   );
 }

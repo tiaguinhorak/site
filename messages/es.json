@@ -843,7 +843,10 @@
     "loadoutEmpty": "Aún no hay skins equipadas.",
     "loadoutConfirmed": "Equipada",
     "loadoutRefresh": "Actualizar",
-    "loadoutHint": "Tras equipar, ejecuta el sync en la VPS o espera el cron. En el juego: respawn o sm_reloadclutchskins."
+    "loadoutHint": "Tras equipar, ejecuta el sync en la VPS o espera el cron. En el juego: respawn o sm_reloadclutchskins.",
+    "loadoutSidebarTitle": "Equipadas",
+    "weaponFilterLabel": "Filtrar por arma",
+    "closePreview": "Cerrar vista"
   },
   "lobby": {
     "statusAll": "Todos",

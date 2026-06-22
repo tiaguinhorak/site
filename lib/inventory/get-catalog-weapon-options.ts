@@ -9,7 +9,7 @@ export type CatalogWeaponOption = {
   weaponName: string;
 };
 
-const WEAPON_OPTIONS_CACHE_MS = 10 * 60 * 1000;
+const WEAPON_OPTIONS_CACHE_MS = 24 * 60 * 60 * 1000;
 const weaponOptionsCache = new Map<
   InventoryCategoryKey | "all",
   { at: number; options: CatalogWeaponOption[] }

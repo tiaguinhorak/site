@@ -4,12 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { redisGetJson, redisSetJson, redisDel } from "@/lib/redis/cache";
 import { syncCsgoSkinCatalogWithClient } from "@/lib/inventory/sync-csgo-catalog-core";
 
-/** Full CSGO-API import is ~2000+; kgns !ws-only is typically ~1200–1700. */
+/** Catalog is static after npm run sync:skins — cache aggressively on reads. */
 const EXPECTED_MIN_CATALOG_SKINS = 800;
 const EXPECTED_MIN_PISTOLS = 50;
 const EXPECTED_MIN_GLOVES = 40;
 const STALE_FULL_CATALOG_THRESHOLD = 2200;
-const READY_CACHE_MS = 10 * 60 * 1000;
+const READY_CACHE_MS = 24 * 60 * 60 * 1000;
+const TOTAL_COUNT_CACHE_MS = 24 * 60 * 60 * 1000;
 
 let syncInFlight: Promise<{ synced: number }> | null = null;
 
@@ -86,6 +87,7 @@ export async function invalidateCatalogReadyCache(): Promise<void> {
   catalogReadyCache = null;
   totalCountCache = null;
   await redisDel("catalog:ready");
+  await redisDel("catalog:total");
 }
 
 /**
@@ -103,15 +105,22 @@ export async function ensureCatalogReady(): Promise<void> {
 }
 
 let totalCountCache: { count: number; at: number } | null = null;
-const TOTAL_COUNT_CACHE_MS = 60 * 1000;
 
-/** Cached unfiltered catalog size — avoids a count() on every inventory request. */
+/** Cached unfiltered catalog size — avoids count() on every inventory request. */
 export async function getCatalogTotalCached(): Promise<number> {
   const now = Date.now();
   if (totalCountCache && now - totalCountCache.at < TOTAL_COUNT_CACHE_MS) {
     return totalCountCache.count;
   }
+
+  const redisCached = await redisGetJson<{ count: number; at: number }>("catalog:total");
+  if (redisCached && now - redisCached.at < TOTAL_COUNT_CACHE_MS) {
+    totalCountCache = redisCached;
+    return redisCached.count;
+  }
+
   const count = await prisma.csgoSkinCatalog.count();
   totalCountCache = { count, at: now };
+  await redisSetJson("catalog:total", totalCountCache, TOTAL_COUNT_CACHE_MS / 1000);
   return count;
 }

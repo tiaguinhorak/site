@@ -843,7 +843,10 @@
     "loadoutEmpty": "No skins equipped yet.",
     "loadoutConfirmed": "Equipped",
     "loadoutRefresh": "Refresh",
-    "loadoutHint": "After equipping, run VPS sync or wait for cron. In-game: respawn or sm_reloadclutchskins."
+    "loadoutHint": "After equipping, run VPS sync or wait for cron. In-game: respawn or sm_reloadclutchskins.",
+    "loadoutSidebarTitle": "Equipped",
+    "weaponFilterLabel": "Filter by weapon",
+    "closePreview": "Close preview"
   },
   "lobby": {
     "statusAll": "All",

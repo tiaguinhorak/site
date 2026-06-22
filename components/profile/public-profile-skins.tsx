@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { LayoutGrid, Swords, Hand, Crosshair, Target, Zap, Boxes } from "lucide-react";
 import { InventoryItemArt } from "@/components/dashboard/inventory-item-art";
+import { SkinPreviewModal, type SkinPreviewData } from "@/components/skins/skin-preview-modal";
 import type { InventoryCategoryKey } from "@/lib/profile";
 import type { PublicSkinGroup } from "@/lib/inventory/get-public-player-skins";
 import { cn } from "@/lib/utils";
@@ -53,6 +54,7 @@ export function PublicProfileSkins({ groups }: { groups: PublicSkinGroup[] }) {
   );
 
   const [active, setActive] = useState<"all" | InventoryCategoryKey>("all");
+  const [previewSkin, setPreviewSkin] = useState<SkinPreviewData | null>(null);
 
   const visibleGroups = active === "all" ? groups : groups.filter((g) => g.category === active);
 
@@ -126,6 +128,18 @@ export function PublicProfileSkins({ groups }: { groups: PublicSkinGroup[] }) {
                           imageUrl={item.imageUrl}
                           accent={item.accent}
                           className="h-24 w-full"
+                          onClick={() =>
+                            setPreviewSkin({
+                              name: item.name,
+                              imageUrl: item.imageUrl,
+                              accent: item.accent,
+                              category: categoryLabels[group.category],
+                              rarity: item.rarity,
+                              weaponName: item.weaponName,
+                              paintkitName: item.paintkitName,
+                              stattrak: item.stattrak,
+                            })
+                          }
                         />
                         <span
                           className={cn(
@@ -152,6 +166,11 @@ export function PublicProfileSkins({ groups }: { groups: PublicSkinGroup[] }) {
           </div>
         </>
       )}
+      <SkinPreviewModal
+        open={previewSkin !== null}
+        skin={previewSkin}
+        onClose={() => setPreviewSkin(null)}
+      />
     </motion.div>
   );
 }
