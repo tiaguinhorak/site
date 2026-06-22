@@ -21,11 +21,19 @@ function saveSeen(seen: Set<string>) {
   sessionStorage.setItem(SEEN_KEY, JSON.stringify([...seen].slice(-200)));
 }
 
+function browserNotificationTarget(href: string, id: string): string {
+  if (!href || href === "/dashboard/notificacoes") {
+    return `/dashboard/notificacoes/${id}`;
+  }
+  return href;
+}
+
 export function BrowserNotificationListener() {
   const { authenticated } = useAuthSession();
   const { notifications } = useNotifications({
     enabled: authenticated,
     pollMs: 30000,
+    query: { limit: 20, page: 1 },
   });
   const seenRef = useRef<Set<string>>(loadSeen());
 
@@ -51,11 +59,16 @@ export function BrowserNotificationListener() {
       if (n.read || seenRef.current.has(n.id)) continue;
       seenRef.current.add(n.id);
       try {
-        new Notification(n.title, {
+        const native = new Notification(n.title, {
           body: n.body,
           icon: BRAND_ASSETS.iconSmall,
           tag: n.id,
         });
+        const target = browserNotificationTarget(n.href, n.id);
+        native.onclick = () => {
+          window.focus();
+          window.location.assign(target);
+        };
       } catch {
         // ignore blocked notifications
       }

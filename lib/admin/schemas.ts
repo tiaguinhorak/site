@@ -72,6 +72,12 @@ export const adminNotificationSendSchema = z.object({
   userId: z.string().min(1).optional(),
   broadcast: z.boolean().optional(),
   autoTranslate: z.boolean().optional(),
+  actionHref: z
+    .string()
+    .max(200)
+    .transform((v) => sanitizeText(v, 200))
+    .optional()
+    .nullable(),
   translations: z
     .object({
       en: z

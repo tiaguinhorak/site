@@ -9,6 +9,7 @@
     "search": "Buscar",
     "copy": "Copiar",
     "copied": "¡Copiado!",
+    "openCsgo": "Abrir CS:GO",
     "soon": "Próximamente",
     "yes": "Sí",
     "no": "No",
@@ -284,6 +285,8 @@
     "anticheatDesc": "Descarga y estado de la protección — obligatorio solo en el modo clasificatorio.",
     "notificationsTitle": "Notificaciones",
     "notificationsDesc": "Actualizaciones, partidas y alertas de tu cuenta.",
+    "notificationDetailTitle": "Detalle de la notificación",
+    "notificationDetailDesc": "Lee el aviso completo y abre el destino relacionado.",
     "profileTitle": "Perfil",
     "profileDesc": "Edita tu información, foto, seguridad de la cuenta y autenticación en dos pasos.",
     "supportTitle": "Soporte",
@@ -910,11 +913,30 @@
   "notifications": {
     "markAllRead": "Marcar todas como leídas",
     "empty": "Sin notificaciones",
+    "loading": "Cargando notificaciones…",
+    "filter": {
+      "all": "Todas",
+      "read": {
+        "all": "Todas",
+        "unread": "No leídas",
+        "read": "Leídas"
+      }
+    },
+    "pagination": {
+      "prev": "Anterior",
+      "next": "Siguiente",
+      "summary": "Página {page} de {total} · {count} notificaciones"
+    },
+    "detail": {
+      "back": "Volver al centro",
+      "notFound": "Notificación no encontrada o eliminada.",
+      "openTarget": "Abrir destino"
+    },
     "type": {
-      "system": "Sistema",
-      "match": "Partida",
-      "social": "Social",
-      "promo": "Promo"
+      "system": "Avisos",
+      "match": "Partidas",
+      "social": "Perfil / Social",
+      "promo": "Promociones"
     }
   },
   "anticheat": {

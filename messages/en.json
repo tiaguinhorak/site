@@ -9,6 +9,7 @@
     "search": "Search",
     "copy": "Copy",
     "copied": "Copied!",
+    "openCsgo": "Open CS:GO",
     "soon": "Coming soon",
     "yes": "Yes",
     "no": "No",
@@ -284,6 +285,8 @@
     "anticheatDesc": "Download and protection status — required only in ranked mode.",
     "notificationsTitle": "Notifications",
     "notificationsDesc": "Updates, matches and alerts for your account.",
+    "notificationDetailTitle": "Notification details",
+    "notificationDetailDesc": "Read the full message and open the related destination.",
     "profileTitle": "Profile",
     "profileDesc": "Edit your info, photo, account security and two-factor authentication.",
     "supportTitle": "Support",
@@ -910,11 +913,30 @@
   "notifications": {
     "markAllRead": "Mark all as read",
     "empty": "No notifications",
+    "loading": "Loading notifications…",
+    "filter": {
+      "all": "All",
+      "read": {
+        "all": "All",
+        "unread": "Unread",
+        "read": "Read"
+      }
+    },
+    "pagination": {
+      "prev": "Previous",
+      "next": "Next",
+      "summary": "Page {page} of {total} · {count} notifications"
+    },
+    "detail": {
+      "back": "Back to inbox",
+      "notFound": "Notification not found or removed.",
+      "openTarget": "Open destination"
+    },
     "type": {
-      "system": "System",
-      "match": "Match",
-      "social": "Social",
-      "promo": "Promo"
+      "system": "Notices",
+      "match": "Matches",
+      "social": "Profile / Social",
+      "promo": "Promotions"
     }
   },
   "anticheat": {

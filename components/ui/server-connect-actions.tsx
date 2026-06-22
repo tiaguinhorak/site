@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Copy, Check, Play } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { steamConnectUrl } from "@/lib/servers/connect";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,7 @@ export function ServerConnectActions({
   size = "sm",
   showSteamLink = true,
 }: ServerConnectActionsProps) {
+  const t = useTranslations("common");
   const [copied, setCopied] = useState(false);
   const connectCommand = `connect ${host}:${port}`;
   const steamUrl = steamConnectUrl(host, port);
@@ -42,12 +44,12 @@ export function ServerConnectActions({
       </code>
       <Button variant="outline" size={size} onClick={() => void copyConnect()}>
         {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-        {copied ? "Copiado" : "Copiar"}
+        {copied ? t("copied") : t("copy")}
       </Button>
       {showSteamLink && steamUrl && (
         <ButtonLink href={steamUrl} variant="primary" size={size}>
           <Play className="h-3.5 w-3.5" />
-          Abrir CS:GO
+          {t("openCsgo")}
         </ButtonLink>
       )}
     </div>

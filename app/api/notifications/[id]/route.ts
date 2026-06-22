@@ -7,7 +7,39 @@ import {
 import { getSessionUserId } from "@/lib/auth/session-user";
 import { prisma } from "@/lib/prisma";
 import { RATE_LIMITS } from "@/lib/security/constants";
+import { getMessages } from "next-intl/server";
+import { getRequestLocale } from "@/lib/i18n/server";
 import { jsonErrorKey } from "@/lib/i18n/api-route";
+import { serializeNotificationForLocale } from "@/lib/notifications/serialize";
+
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> },
+) {
+  const userId = await getSessionUserId(request);
+  if (!userId) {
+    return jsonErrorKey(request, 401, "unauthorized");
+  }
+
+  const { id } = await context.params;
+  const notification = await prisma.notification.findFirst({
+    where: { id, userId },
+  });
+
+  if (!notification) {
+    return jsonErrorKey(request, 404, "notificationNotFound");
+  }
+
+  const locale = await getRequestLocale(request);
+  const messages = await getMessages({ locale });
+  const row = await serializeNotificationForLocale(
+    notification,
+    locale,
+    messages as Record<string, unknown>,
+  );
+
+  return NextResponse.json({ notification: row });
+}
 
 export async function PATCH(
   request: NextRequest,

@@ -81,6 +81,9 @@ export async function POST(request: NextRequest) {
     body: parsed.data.body,
     type: parsed.data.type,
     translations: translations ?? undefined,
+    params: parsed.data.actionHref
+      ? { actionHref: parsed.data.actionHref }
+      : undefined,
   };
 
   const broadcast = parsed.data.broadcast === true;

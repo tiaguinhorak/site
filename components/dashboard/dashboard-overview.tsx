@@ -10,19 +10,30 @@ import { RANKED_ANTICHEAT_REQUIRED } from "@/lib/ranked";
 import { InventoryPreview } from "@/components/dashboard/inventory-section";
 import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { useUser } from "@/lib/hooks/use-user";
+import { useNotifications } from "@/lib/hooks/use-notifications";
+import { notificationTypeStyles } from "@/components/notifications/notification-type-styles";
+import { useNotificationNavigation } from "@/components/notifications/use-notification-navigation";
 import { cn } from "@/lib/utils";
 
-const notificationTypeStyles: Record<string, string> = {
-  system: "bg-violet-500/15 text-violet-400",
-  match: "bg-emerald-500/15 text-emerald-400",
-  social: "bg-fuchsia-500/15 text-fuchsia-400",
-  promo: "bg-amber-500/15 text-amber-400",
-};
+const notificationTypeStylesLocal = notificationTypeStyles;
 
 export function DashboardOverview() {
   const { user } = useUser();
   const t = useTranslations("overview");
+  const tNotif = useTranslations("notifications");
   const confirmPresets = useConfirmPresets();
+  const { notifications, markRead } = useNotifications({
+    query: { limit: 3, page: 1 },
+  });
+  const openNotification = useNotificationNavigation();
+
+  function typeLabel(type: string) {
+    try {
+      return tNotif(`type.${type}` as "type.system");
+    } catch {
+      return type;
+    }
+  }
   const quickLinks = [
     { href: "/dashboard/lobby", label: t("quick.lobbyLabel"), description: t("quick.lobbyDesc") },
     { href: "/dashboard/ranked", label: t("quick.rankedLabel"), description: t("quick.rankedDesc") },
@@ -31,9 +42,6 @@ export function DashboardOverview() {
     { href: "/dashboard/anticheat", label: t("quick.anticheatLabel"), description: t("quick.anticheatDesc") },
     { href: "/dashboard/suporte", label: t("quick.supportLabel"), description: t("quick.supportDesc") },
   ];
-  const [notifications, setNotifications] = useState<
-    Array<{ id: string; title: string; body: string; time: string; read: boolean; type: string }>
-  >([]);
   const [featuredStore, setFeaturedStore] = useState<{
     name: string;
     description: string;
@@ -43,9 +51,6 @@ export function DashboardOverview() {
   } | null>(null);
 
   useEffect(() => {
-    fetch("/api/notifications", { credentials: "same-origin" })
-      .then((r) => (r.ok ? r.json() : { notifications: [] }))
-      .then((d) => setNotifications((d.notifications ?? []).slice(0, 3)));
     fetch("/api/store")
       .then((r) => r.json())
       .then((d) => {
@@ -140,22 +145,29 @@ export function DashboardOverview() {
           </div>
           <ul className="overflow-hidden rounded-card glass-strong">
             {notifications.map((n) => (
-              <li key={n.id} className="border-b border-border px-5 py-4 last:border-0">
-                <div className="flex items-start gap-3">
+              <li key={n.id} className="border-b border-border last:border-0">
+                <button
+                  type="button"
+                  onClick={() => openNotification(n, markRead)}
+                  className={cn(
+                    "flex w-full items-start gap-3 px-5 py-4 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--primary)_6%,transparent)]",
+                    !n.read && "bg-[color-mix(in_srgb,var(--primary)_4%,transparent)]",
+                  )}
+                >
                   <span
                     className={cn(
                       "mt-0.5 shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase",
-                      notificationTypeStyles[n.type] ?? notificationTypeStyles.system,
+                      notificationTypeStylesLocal[n.type] ?? notificationTypeStylesLocal.system,
                     )}
                   >
-                    {n.type}
+                    {typeLabel(n.type)}
                   </span>
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-display text-sm font-semibold text-foreground">{n.title}</p>
-                    <p className="mt-0.5 text-xs text-muted">{n.body}</p>
+                    <p className="mt-0.5 text-xs text-muted line-clamp-2">{n.body}</p>
                     <p className="mt-1 text-[10px] text-muted">{n.time}</p>
                   </div>
-                </div>
+                </button>
               </li>
             ))}
           </ul>

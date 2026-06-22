@@ -12,12 +12,52 @@ export type NotificationItem = {
   read: boolean;
   type: string;
   createdAt: string;
+  href: string;
+  params: Record<string, string>;
 };
 
-export function useNotifications(options?: { pollMs?: number; enabled?: boolean }) {
+export type NotificationListMeta = {
+  total: number;
+  unreadTotal: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+};
+
+type NotificationQuery = {
+  page?: number;
+  limit?: number;
+  type?: string;
+  read?: "all" | "unread" | "read";
+};
+
+function buildQueryString(query?: NotificationQuery): string {
+  if (!query) return "";
+  const params = new URLSearchParams();
+  if (query.page) params.set("page", String(query.page));
+  if (query.limit) params.set("limit", String(query.limit));
+  if (query.type && query.type !== "all") params.set("type", query.type);
+  if (query.read && query.read !== "all") params.set("read", query.read);
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export function useNotifications(options?: {
+  pollMs?: number;
+  enabled?: boolean;
+  query?: NotificationQuery;
+}) {
   const pathname = usePathname();
   const enabled = options?.enabled ?? true;
+  const query = options?.query;
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [meta, setMeta] = useState<NotificationListMeta>({
+    total: 0,
+    unreadTotal: 0,
+    page: 1,
+    limit: 15,
+    hasMore: false,
+  });
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
@@ -27,7 +67,9 @@ export function useNotifications(options?: { pollMs?: number; enabled?: boolean 
       return;
     }
 
-    const res = await fetch("/api/notifications", { credentials: "same-origin" });
+    const res = await fetch(`/api/notifications${buildQueryString(query)}`, {
+      credentials: "same-origin",
+    });
     if (res.status === 401) {
       setNotifications([]);
       setLoading(false);
@@ -39,8 +81,15 @@ export function useNotifications(options?: { pollMs?: number; enabled?: boolean 
     }
     const data = await res.json();
     setNotifications(data.notifications ?? []);
+    setMeta({
+      total: data.total ?? 0,
+      unreadTotal: data.unreadTotal ?? 0,
+      page: data.page ?? 1,
+      limit: data.limit ?? 15,
+      hasMore: data.hasMore ?? false,
+    });
     setLoading(false);
-  }, [enabled]);
+  }, [enabled, query?.page, query?.limit, query?.type, query?.read]);
 
   useEffect(() => {
     setLoading(true);
@@ -84,14 +133,22 @@ export function useNotifications(options?: { pollMs?: number; enabled?: boolean 
     return result.ok;
   }, []);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = meta.unreadTotal;
 
   return {
     notifications,
+    meta,
     loading,
     unreadCount,
     refresh,
     markRead,
     markAllRead,
   };
+}
+
+export async function fetchNotificationById(id: string): Promise<NotificationItem | null> {
+  const res = await fetch(`/api/notifications/${id}`, { credentials: "same-origin" });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.notification ?? null;
 }

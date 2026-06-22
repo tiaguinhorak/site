@@ -48,6 +48,7 @@ export async function notifyRankedMatchReady(userIds: string[]) {
   await notifyRankedUsers(userIds, {
     titleKey: "match.ready.title",
     bodyKey: "match.ready.body",
+    params: { action: "ranked" },
     fallbackTitle: "Partida rankeada encontrada",
     fallbackBody:
       "Confirme que está pronto no lobby rankeado antes da votação de mapas.",
@@ -58,6 +59,7 @@ export async function notifyRankedVoteStarted(userIds: string[]) {
   await notifyRankedUsers(userIds, {
     titleKey: "match.voteStarted.title",
     bodyKey: "match.voteStarted.body",
+    params: { action: "ranked" },
     fallbackTitle: "Votação de mapas",
     fallbackBody: "A partida foi formada! Vote no seu mapa no modal da rankeada.",
   });
@@ -74,7 +76,7 @@ export async function notifyRankedServerLive(
   await notifyRankedUsers(userIds, {
     titleKey: "match.serverLive.title",
     bodyKey: "match.serverLive.body",
-    params: { map: mapLabel, connect },
+    params: { map: mapLabel, connect, action: "ranked" },
     fallbackTitle: "Servidor pronto",
     fallbackBody: `Mapa ${mapLabel} — ${connect}`,
   });

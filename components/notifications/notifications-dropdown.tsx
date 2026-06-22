@@ -9,14 +9,9 @@ import { GlassPortal } from "@/components/ui/glass-portal";
 import { useNotifications } from "@/lib/hooks/use-notifications";
 import { useAuthSession } from "@/lib/hooks/use-auth-session";
 import { requestBrowserNotificationPermission } from "@/components/notifications/browser-notification-listener";
+import { notificationTypeStyles } from "@/components/notifications/notification-type-styles";
+import { useNotificationNavigation } from "@/components/notifications/use-notification-navigation";
 import { cn } from "@/lib/utils";
-
-const notificationTypeStyles: Record<string, string> = {
-  system: "bg-violet-500/15 text-violet-400",
-  match: "bg-emerald-500/15 text-emerald-400",
-  social: "bg-fuchsia-500/15 text-fuchsia-400",
-  promo: "bg-amber-500/15 text-amber-400",
-};
 
 type NotificationsDropdownProps = {
   className?: string;
@@ -41,7 +36,12 @@ export function NotificationsDropdown({
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const { notifications, unreadCount, markRead, markAllRead, refresh } =
-    useNotifications({ enabled: authenticated, pollMs: 60000 });
+    useNotifications({
+      enabled: authenticated,
+      pollMs: 60000,
+      query: { limit: 8, page: 1 },
+    });
+  const openNotification = useNotificationNavigation();
 
   async function toggleOpen() {
     if (!open && authenticated) {
@@ -108,9 +108,9 @@ export function NotificationsDropdown({
             <li key={n.id}>
               <button
                 type="button"
-                onClick={async () => {
-                  if (!n.read) await markRead(n.id);
-                }}
+                onClick={() =>
+                  openNotification(n, markRead, { closeDropdown: () => setOpen(false) })
+                }
                 className={cn(
                   "w-full border-b border-border/80 px-4 py-3 text-left transition-colors last:border-0 hover:bg-[color-mix(in_srgb,var(--primary)_10%,transparent)]",
                   !n.read && "bg-[color-mix(in_srgb,var(--primary)_8%,transparent)]",
