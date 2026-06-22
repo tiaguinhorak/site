@@ -338,7 +338,7 @@
     "markAllReadDesc": "Todas las notificaciones se marcarán como leídas. Esta acción no se puede deshacer.",
     "markAllReadConfirm": "Marcar todas",
     "connectServerTitle": "¿Conectar a {serverName}?",
-    "connectServerDesc": "Entrarás en el modo {mode}. CS2 se iniciará automáticamente cuando esté disponible.",
+    "connectServerDesc": "Entrarás en el modo {mode}. CS:GO Legacy se iniciará automáticamente (instala el branch csgo_legacy en Steam si hace falta).",
     "connectServerConfirm": "Conectar",
     "joinQueueTitle": "¿Entrar en la cola de {serverName}?",
     "joinQueueDesc": "El servidor está lleno. Entrarás en la cola y serás conectado cuando haya un espacio.",

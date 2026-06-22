@@ -37,6 +37,7 @@ export async function unequipCatalogSkinForUser(
 
   return {
     ok: true,
+    steamId: user.steamId,
     catalogSkinId,
     weaponId: catalog.weaponId,
     unequipped: true,
@@ -71,5 +72,5 @@ export async function unequipWeaponForUser(userId: string, weaponId: string) {
     data: { equipped: false },
   });
 
-  return { ok: true, weaponId, unequipped: true };
+  return { ok: true, steamId: user.steamId, weaponId, unequipped: true };
 }

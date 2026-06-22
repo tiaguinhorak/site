@@ -80,7 +80,7 @@ export const confirmPresets = {
   },
   connectServer: (serverName: string, mode: string) => ({
     title: `Conectar a ${serverName}?`,
-    description: `Você entrará no modo ${mode}. O CS2 será iniciado automaticamente quando disponível.`,
+    description: `Você entrará no modo ${mode}. O CS:GO Legacy será iniciado automaticamente quando disponível.`,
     confirmLabel: "Conectar",
     cancelLabel: "Cancelar",
     tone: "default" as const,

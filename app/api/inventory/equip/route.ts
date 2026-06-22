@@ -5,7 +5,7 @@ import { getSessionUserId } from "@/lib/auth/session-user";
 import { CsgoApiError } from "@/lib/csgo-api/http";
 import { equipInventoryItemForUser } from "@/lib/inventory/equip-csgo-skin";
 import { equipCatalogSkinForUser } from "@/lib/inventory/equip-catalog-skin";
-import { schedulePushLoadoutToGameServer } from "@/lib/inventory/push-loadout-to-game-server";
+import { schedulePushPlayerLoadoutToGameServer } from "@/lib/inventory/push-loadout-to-game-server";
 import {
   applyApiGuards,
   parseJsonBody,
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     const result = parsed.data.catalogSkinId
       ? await equipCatalogSkinForUser(session!.userId, parsed.data.catalogSkinId)
       : await equipInventoryItemForUser(session!.userId, parsed.data.inventoryItemId!);
-    schedulePushLoadoutToGameServer();
+    if (result.steamId) schedulePushPlayerLoadoutToGameServer(result.steamId);
     return NextResponse.json(result);
   } catch (err) {
     if (err instanceof CsgoApiError) {

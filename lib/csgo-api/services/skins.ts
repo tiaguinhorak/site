@@ -184,6 +184,41 @@ export async function exportPlayerSkins(steamId: string): Promise<string> {
   );
 }
 
+export type PlayerLoadoutSyncPayload = {
+  steamId: string;
+  weapons: Array<{
+    weaponId: string;
+    paintkit: number;
+    wear: number;
+    seed: number;
+    stattrak: boolean;
+    stattrakCount: number;
+    nametag: string | null;
+  }>;
+};
+
+export async function getPlayerLoadoutForSync(steamId64: string): Promise<PlayerLoadoutSyncPayload> {
+  const equipped = await prisma.csgoPlayerSkin.findMany({
+    where: { steamId: steamId64, equipped: true },
+    include: { skin: true },
+  });
+
+  return {
+    steamId: steamIdForGamePlugin(steamId64),
+    weapons: equipped
+      .filter((s) => s.skin.paintkit > 0)
+      .map((s) => ({
+        weaponId: s.skin.weaponId,
+        paintkit: s.skin.paintkit,
+        wear: parseFloat(WEAR_FLOAT[s.wear] ?? "0.15"),
+        seed: s.seed,
+        stattrak: s.stattrak,
+        stattrakCount: s.stattrakCount,
+        nametag: s.nametag,
+      })),
+  };
+}
+
 export async function exportAllPlayerSkins(): Promise<string> {
   const equipped = await prisma.csgoPlayerSkin.findMany({
     where: { equipped: true },
