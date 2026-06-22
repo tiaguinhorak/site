@@ -480,14 +480,19 @@ model StoreItem {
 }
 
 model InventoryItem {
-  id       String            @id @default(cuid())
-  name     String
-  category InventoryCategory
-  rarity   InventoryRarity
-  accent   String
-  sortOrder Int @default(0)
+  id            String            @id @default(cuid())
+  name          String
+  category      InventoryCategory
+  rarity        InventoryRarity
+  accent        String
+  sortOrder     Int               @default(0)
+  catalogSkinId String?
+  imageUrl      String?
 
-  users UserInventoryItem[]
+  catalogSkin CsgoSkinCatalog? @relation(fields: [catalogSkinId], references: [id], onDelete: SetNull)
+  users       UserInventoryItem[]
+
+  @@index([catalogSkinId])
 }
 
 model UserInventoryItem {
@@ -620,8 +625,10 @@ model CsgoSkinCatalog {
   paintkitName String
   rarity       String
   category     String
+  imageUrl     String?
 
-  playerSkins CsgoPlayerSkin[]
+  playerSkins     CsgoPlayerSkin[]
+  inventoryItems  InventoryItem[]
 
   @@index([weaponId])
 }

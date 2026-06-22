@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AdminRankedSessionsPanel } from "@/components/admin/admin-ranked-sessions-panel";
 import { MapPicker } from "@/components/admin/pickers/map-picker";
 import { ServerConnectActions } from "@/components/ui/server-connect-actions";
 import { confirmPresets } from "@/lib/confirm-presets";
@@ -46,6 +47,18 @@ type CsgoMatchRow = {
   status: string;
   selectedMap: string | null;
   serverId: string | null;
+};
+
+type RankedSessionRow = {
+  id: string;
+  status: string;
+  matchSource: string;
+  selectedMap: string | null;
+  csgoMatchId: string | null;
+  serverHost: string | null;
+  serverPort: number | null;
+  playerCount: number;
+  createdAt: string;
 };
 
 type ControlResponse = {
@@ -78,6 +91,7 @@ const DEFAULT_REGISTER = {
 export function AdminCsgoInfraSection() {
   const [servers, setServers] = useState<CsgoServerRow[]>([]);
   const [matches, setMatches] = useState<CsgoMatchRow[]>([]);
+  const [rankedSessions, setRankedSessions] = useState<RankedSessionRow[]>([]);
   const [serverMaps, setServerMaps] = useState<Record<string, string>>({});
   const [registerForm, setRegisterForm] = useState(DEFAULT_REGISTER);
   const [showRegister, setShowRegister] = useState(false);
@@ -117,11 +131,16 @@ export function AdminCsgoInfraSection() {
         return;
       }
 
-      const data = (await res.json()) as { servers: CsgoServerRow[]; matches: CsgoMatchRow[] };
+      const data = (await res.json()) as {
+        servers: CsgoServerRow[];
+        matches: CsgoMatchRow[];
+        rankedSessions: RankedSessionRow[];
+      };
       if (controller.signal.aborted) return;
 
       setServers(data.servers);
       setMatches(data.matches);
+      setRankedSessions(data.rankedSessions ?? []);
       setServerMaps((prev) => {
         const next: Record<string, string> = {};
         for (const server of data.servers) {
@@ -382,6 +401,21 @@ export function AdminCsgoInfraSection() {
 
   return (
     <div className="space-y-8">
+      <AdminRankedSessionsPanel
+        sessions={rankedSessions}
+        busyId={busyId}
+        onBusyChange={setBusyId}
+        onRefresh={() => void load(true)}
+        onMessage={(text) => {
+          setMessage(text);
+          setError(null);
+        }}
+        onError={(text) => {
+          setError(text);
+          setMessage(null);
+        }}
+      />
+
       <div className="rounded-card glass-strong p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -663,10 +697,11 @@ export function AdminCsgoInfraSection() {
       <div className="rounded-card glass-strong p-6">
         <div className="mb-4 flex items-center gap-2">
           <Swords className="h-5 w-5 text-primary" />
-          <h2 className="font-display text-lg font-bold">Partidas ativas (teste)</h2>
+          <h2 className="font-display text-lg font-bold">Partidas API CS:GO</h2>
         </div>
         <p className="mb-4 text-sm text-muted">
-          Cancele partidas em votação/ready ou encerre partidas live para liberar o servidor.
+          Registros na API externa. Se a ranked de teste não aparece aqui, use &quot;Sessões ranked
+          (site)&quot; acima.
         </p>
 
         <ul className="space-y-3">

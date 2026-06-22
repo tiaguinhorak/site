@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth/admin";
+import { prisma } from "@/lib/prisma";
 import { cached } from "@/lib/csgo-api/request-cache";
 import { csgoBackendFetch } from "@/lib/csgo-api/client";
 import { queryCsgoServersLive } from "@/lib/csgo-api/query-live-server";
@@ -63,17 +64,38 @@ async function buildOverview(syncApiStatus = false) {
 
   const matches = await cached("csgo:admin-active-matches", 15_000, async () => {
     const byId = new Map<string, CsgoMatchSummary>();
-    for (const status of ["live", "ready", "veto", "waiting_players"] as const) {
+    for (const status of ["live", "ready", "veto", "waiting_players", "finished"] as const) {
       try {
         const batch = await csgoBackendFetch<CsgoMatchSummary[]>(`/api/matches?status=${status}`);
         for (const match of batch) {
+          if (status === "finished") {
+            const existing = byId.get(match.id);
+            if (existing && existing.status !== "finished") continue;
+          }
           byId.set(match.id, match);
         }
       } catch {
         /* ignore */
       }
     }
-    return [...byId.values()];
+    return [...byId.values()].filter((m) => m.status !== "finished" && m.status !== "cancelled");
+  });
+
+  const rankedSessions = await prisma.rankedMatchSession.findMany({
+    where: { status: { in: ["accepting", "voting", "starting", "live"] } },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      status: true,
+      matchSource: true,
+      selectedMap: true,
+      csgoMatchId: true,
+      serverHost: true,
+      serverPort: true,
+      createdAt: true,
+      partyA: { select: { members: { select: { userId: true } } } },
+      partyB: { select: { members: { select: { userId: true } } } },
+    },
   });
 
   return {
@@ -105,6 +127,18 @@ async function buildOverview(syncApiStatus = false) {
       status: match.status,
       selectedMap: match.selectedMap ?? null,
       serverId: match.serverId ?? null,
+    })),
+    rankedSessions: rankedSessions.map((session) => ({
+      id: session.id,
+      status: session.status,
+      matchSource: session.matchSource,
+      selectedMap: session.selectedMap ?? null,
+      csgoMatchId: session.csgoMatchId ?? null,
+      serverHost: session.serverHost ?? null,
+      serverPort: session.serverPort ?? null,
+      playerCount:
+        session.partyA.members.length + session.partyB.members.length,
+      createdAt: session.createdAt.toISOString(),
     })),
   };
 }

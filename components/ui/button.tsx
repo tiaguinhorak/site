@@ -7,10 +7,40 @@ import {
   useConfirm,
   type ConfirmOptions,
 } from "@/components/providers/confirm-provider";
+import { isSteamConnectHref, openSteamConnectUrl } from "@/lib/servers/connect";
 import { cn } from "@/lib/utils";
 
 type Variant = "primary" | "outline" | "ghost" | "glass";
 type Size = "sm" | "md" | "lg";
+
+type LinkHref = ComponentProps<typeof Link>["href"];
+
+function hrefToString(href: LinkHref): string {
+  if (typeof href === "string") return href;
+  if (typeof href === "object" && href !== null) {
+    const path = href.pathname ?? "";
+    const query = href.search ?? "";
+    const hash = href.hash ?? "";
+    return `${path}${query}${hash}`;
+  }
+  return String(href);
+}
+
+function isAppInternalHref(href: string): boolean {
+  return href.startsWith("/") || href.startsWith("#");
+}
+
+function navigateToHref(href: string, router: ReturnType<typeof useRouter>) {
+  if (isSteamConnectHref(href)) {
+    openSteamConnectUrl(href);
+    return;
+  }
+  if (isAppInternalHref(href)) {
+    router.push(href);
+    return;
+  }
+  window.location.assign(href);
+}
 
 const base =
   "relative inline-flex items-center justify-center gap-2 font-display font-semibold tracking-wide uppercase whitespace-nowrap rounded-xl transition-all duration-300 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 disabled:pointer-events-none select-none";
@@ -90,28 +120,35 @@ export function ButtonLink({
 }: CommonProps & ComponentProps<typeof Link>) {
   const router = useRouter();
   const { confirm: requestConfirm } = useConfirm();
+  const hrefString = hrefToString(href);
+  const classNames = cn(base, variants[variant], sizes[size], className);
+
+  const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (!confirm) {
+      onClick?.(e);
+      return;
+    }
+    runWithConfirm(
+      confirm,
+      requestConfirm,
+      () => {
+        onClick?.(e);
+        navigateToHref(hrefString, router);
+      },
+      e,
+    );
+  };
+
+  if (!isAppInternalHref(hrefString)) {
+    return (
+      <a href={hrefString} className={classNames} onClick={handleClick} {...props}>
+        {children}
+      </a>
+    );
+  }
 
   return (
-    <Link
-      href={href}
-      className={cn(base, variants[variant], sizes[size], className)}
-      onClick={(e) => {
-        if (!confirm) {
-          onClick?.(e);
-          return;
-        }
-        runWithConfirm(
-          confirm,
-          requestConfirm,
-          () => {
-            onClick?.(e);
-            router.push(href.toString());
-          },
-          e,
-        );
-      }}
-      {...props}
-    >
+    <Link href={href} className={classNames} onClick={handleClick} {...props}>
       {children}
     </Link>
   );

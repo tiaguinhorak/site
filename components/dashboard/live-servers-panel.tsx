@@ -1,8 +1,10 @@
 "use client";
 
-import { Server } from "lucide-react";
+import Link from "next/link";
+import { Server, Settings2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { ServerConnectActions } from "@/components/ui/server-connect-actions";
+import { LiveServerAdminActions } from "@/components/admin/live-server-admin-actions";
 import { useLiveServerStats, type LiveServerStatView } from "@/lib/hooks/use-live-server-stats";
 import { cn } from "@/lib/utils";
 
@@ -12,7 +14,15 @@ function pingColor(ping: number) {
   return "text-rose-400";
 }
 
-function ServerCard({ server }: { server: LiveServerStatView }) {
+function ServerCard({
+  server,
+  isAdmin,
+  onAdminAction,
+}: {
+  server: LiveServerStatView;
+  isAdmin: boolean;
+  onAdminAction: () => void;
+}) {
   const t = useTranslations("liveServers");
   return (
     <li className="rounded-xl border border-border bg-[color-mix(in_srgb,var(--foreground)_3%,transparent)] p-4">
@@ -47,13 +57,21 @@ function ServerCard({ server }: { server: LiveServerStatView }) {
         </div>
       </div>
       {server.online && <ServerConnectActions host={server.host} port={server.port} />}
+      {isAdmin && (
+        <LiveServerAdminActions
+          serverName={server.name}
+          csgoServerId={server.csgoServerId}
+          online={server.online}
+          onActionComplete={onAdminAction}
+        />
+      )}
     </li>
   );
 }
 
 export function LiveServersPanel() {
   const t = useTranslations("liveServers");
-  const { statsByKey, loading } = useLiveServerStats(true);
+  const { statsByKey, loading, refresh, isAdmin } = useLiveServerStats(true);
   const servers = Object.values(statsByKey);
   const onlineCount = servers.filter((s) => s.online).length;
 
@@ -67,19 +85,40 @@ export function LiveServersPanel() {
 
   return (
     <div className="rounded-card glass-strong p-6">
-      <div className="mb-4 flex items-center gap-2">
-        <Server className="h-5 w-5 text-emerald-400" />
-        <h2 className="font-display text-xl font-bold text-foreground">{t("title")}</h2>
-        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-400">
-          {t("onlineCount", { count: onlineCount })}
-        </span>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Server className="h-5 w-5 text-emerald-400" />
+          <h2 className="font-display text-xl font-bold text-foreground">{t("title")}</h2>
+          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-400">
+            {t("onlineCount", { count: onlineCount })}
+          </span>
+        </div>
+        {isAdmin && (
+          <Link
+            href="/admin/infra-csgo"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary underline-offset-2 hover:underline"
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+            Gerenciar infra
+          </Link>
+        )}
       </div>
       <p className="mb-5 text-sm text-muted">
         {t("updateNote")}
+        {isAdmin && (
+          <span className="mt-1 block text-xs">
+            Como admin, você pode derrubar servidores aqui ou abrir Infra CS:GO para controle completo.
+          </span>
+        )}
       </p>
       <ul className="space-y-4">
         {servers.map((server) => (
-          <ServerCard key={server.id} server={server} />
+          <ServerCard
+            key={server.id}
+            server={server}
+            isAdmin={isAdmin}
+            onAdminAction={() => void refresh()}
+          />
         ))}
       </ul>
     </div>

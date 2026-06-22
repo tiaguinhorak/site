@@ -19,6 +19,7 @@ export type LiveServerStatPayload = {
   ping: number;
   online: boolean;
   connectCommand: string;
+  csgoServerId: string | null;
 };
 
 function toPayload(
@@ -28,6 +29,7 @@ function toPayload(
     mode: string;
     host: string;
     port: number;
+    csgoServerId: string | null;
   },
   live: LiveServerQueryResult,
 ): LiveServerStatPayload {
@@ -43,6 +45,7 @@ function toPayload(
     ping: live.online ? live.ping : 0,
     online: live.online,
     connectCommand: formatConnectCommand(row.host, row.port) ?? "",
+    csgoServerId: row.csgoServerId,
   };
 }
 

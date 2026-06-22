@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getSessionUserId } from "@/lib/auth/session-user";
-import { ensureDemoInventoryOwned } from "@/lib/inventory/ensure-demo-inventory";
-import { getUserInventory } from "@/lib/queries";
+import { getUserServerLoadout } from "@/lib/inventory/get-user-loadout";
 import { jsonErrorKey } from "@/lib/i18n/api-route";
 
 export async function GET(request: NextRequest) {
@@ -11,7 +10,6 @@ export async function GET(request: NextRequest) {
     return jsonErrorKey(request, 401, "unauthorized");
   }
 
-  await ensureDemoInventoryOwned(userId);
-  const items = await getUserInventory(userId);
-  return NextResponse.json({ items });
+  const loadout = await getUserServerLoadout(userId);
+  return NextResponse.json(loadout);
 }

@@ -15,6 +15,7 @@ export type LiveServerStatView = {
   ping: number;
   online: boolean;
   connectCommand: string;
+  csgoServerId?: string | null;
 };
 
 const POLL_MS = 30_000;
@@ -22,6 +23,7 @@ const POLL_MS = 30_000;
 export function useLiveServerStats(enabled: boolean) {
   const [statsByKey, setStatsByKey] = useState<Record<string, LiveServerStatView>>({});
   const [loading, setLoading] = useState(enabled);
+  const [isAdmin, setIsAdmin] = useState(false);
   const inflightRef = useRef<AbortController | null>(null);
 
   const refresh = useCallback(async () => {
@@ -38,8 +40,13 @@ export function useLiveServerStats(enabled: boolean) {
       });
       if (!res.ok) return;
 
-      const data = (await res.json()) as { servers: LiveServerStatView[] };
+      const data = (await res.json()) as {
+        servers: LiveServerStatView[];
+        isAdmin?: boolean;
+      };
       if (controller.signal.aborted) return;
+
+      setIsAdmin(data.isAdmin ?? false);
 
       const next: Record<string, LiveServerStatView> = {};
       for (const server of data.servers) {
@@ -55,5 +62,5 @@ export function useLiveServerStats(enabled: boolean) {
 
   usePollWhenVisible(refresh, enabled ? POLL_MS : 0, enabled);
 
-  return { statsByKey, loading, refresh };
+  return { statsByKey, loading, refresh, isAdmin };
 }

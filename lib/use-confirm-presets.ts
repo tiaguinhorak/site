@@ -63,6 +63,7 @@ export function useConfirmPresets() {
         make("purchaseItem", "warning", { itemName, price }),
       openSupport: (channel: string) => make("openSupport", "default", { channel }),
       equipSkin: (itemName: string) => make("equipSkin", "default", { itemName }),
+      unequipSkin: (itemName: string) => make("unequipSkin", "warning", { itemName }),
       quickConnect: make("quickConnect", "default"),
       rankedCancelMatch: make(
         "rankedCancelMatch",

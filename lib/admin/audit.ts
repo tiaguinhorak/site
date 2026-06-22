@@ -34,7 +34,9 @@ export type AuditAction =
   | "CSGO_MATCH_CANCEL"
   | "CSGO_MATCH_END"
   | "RANKED_SIMULATE"
-  | "RANKED_STALE_CLEANUP";
+  | "RANKED_STALE_CLEANUP"
+  | "RANKED_SESSION_CANCEL"
+  | "RANKED_SESSION_FINISH";
 
 export async function logAdminAction(params: {
   adminId: string;

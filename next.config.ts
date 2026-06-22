@@ -22,7 +22,7 @@ const securityHeaders = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://avatars.steamstatic.com https://steamcdn-a.akamaihd.net",
+      "img-src 'self' data: blob: https://avatars.steamstatic.com https://steamcdn-a.akamaihd.net https://community.akamai.steamstatic.com https://community.cloudflare.steamstatic.com",
       "font-src 'self'",
       "connect-src 'self' https://api.steampowered.com https://steamcommunity.com",
       "frame-ancestors 'none'",

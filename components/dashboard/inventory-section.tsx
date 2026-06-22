@@ -1,22 +1,161 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { type InventoryCategoryKey } from "@/lib/profile";
 import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { cn } from "@/lib/utils";
+import { InventoryItemArt } from "@/components/dashboard/inventory-item-art";
 
-type InventoryItem = {
+type CatalogSkin = {
   id: string;
   name: string;
   category: InventoryCategoryKey;
   rarity: string;
   accent: string;
+  imageUrl?: string | null;
+  weaponId: string;
+  paintkit: number;
+  paintkitName: string;
   equipped: boolean;
   owned: boolean;
 };
+
+type LoadoutItem = {
+  catalogSkinId: string;
+  name: string;
+  weaponId: string;
+  paintkit: number;
+  imageUrl: string | null;
+  accent: string;
+  equippedAt: string;
+};
+
+type LoadoutResponse = {
+  steamLinked: boolean;
+  steamId: string | null;
+  steamId2?: string | null;
+  items: LoadoutItem[];
+};
+
+async function equipCatalogSkin(catalogSkinId: string) {
+  const response = await fetch("/api/inventory/equip", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      "Content-Type": "application/json",
+      "x-clutchclube-request": "1",
+    },
+    body: JSON.stringify({ catalogSkinId }),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(payload?.error ?? "Falha ao equipar skin.");
+  }
+
+  return response.json();
+}
+
+async function unequipCatalogSkin(catalogSkinId: string) {
+  const response = await fetch("/api/inventory/unequip", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      "Content-Type": "application/json",
+      "x-clutchclube-request": "1",
+    },
+    body: JSON.stringify({ catalogSkinId }),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(payload?.error ?? "Falha ao desequipar skin.");
+  }
+
+  return response.json();
+}
+
+function LoadoutPanel({
+  loadout,
+  onRefresh,
+  onUnequip,
+  unequippingId,
+}: {
+  loadout: LoadoutResponse | null;
+  onRefresh: () => void;
+  onUnequip: (item: LoadoutItem) => void;
+  unequippingId: string | null;
+}) {
+  const t = useTranslations("inventory");
+  const confirmPresets = useConfirmPresets();
+
+  if (!loadout) return null;
+
+  if (!loadout.steamLinked) {
+    return (
+      <div className="mb-6 rounded-card glass border border-amber-500/30 p-4">
+        <p className="text-sm text-amber-200">{t("loadoutSteamRequired")}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-6 rounded-card glass p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-foreground">{t("loadoutTitle")}</p>
+          <p className="text-xs text-muted">
+            {loadout.steamId2
+              ? t("loadoutSteamId2", { steamId: loadout.steamId2 })
+              : t("loadoutSteamId", { steamId: loadout.steamId ?? "" })}
+          </p>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={onRefresh}>
+          {t("loadoutRefresh")}
+        </Button>
+      </div>
+      {loadout.items.length === 0 ? (
+        <p className="mt-3 text-sm text-muted">{t("loadoutEmpty")}</p>
+      ) : (
+        <ul className="mt-3 space-y-2">
+          {loadout.items.map((item) => (
+            <li
+              key={item.catalogSkinId}
+              className="flex items-center gap-3 rounded-lg bg-black/20 px-3 py-2"
+            >
+              <InventoryItemArt
+                imageUrl={item.imageUrl}
+                accent={item.accent}
+                className="h-10 w-14 shrink-0"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
+                <p className="text-xs text-muted">
+                  {item.weaponId} · paintkit {item.paintkit}
+                </p>
+              </div>
+              <span className="text-xs font-medium text-emerald-400">{t("loadoutConfirmed")}</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={unequippingId === item.catalogSkinId}
+                confirm={confirmPresets.unequipSkin(item.name)}
+                onClick={() => onUnequip(item)}
+              >
+                {unequippingId === item.catalogSkinId ? t("unequipping") : t("unequip")}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="mt-3 text-xs text-muted">{t("loadoutHint")}</p>
+    </div>
+  );
+}
 
 export function InventorySection() {
   const t = useTranslations("inventory");
@@ -36,27 +175,128 @@ export function InventorySection() {
     { id: "rifle", label: t("catRifle") },
     { id: "pistol", label: t("catPistol") },
     { id: "smg", label: t("catSmg") },
-    { id: "agent", label: t("catAgent") },
   ];
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [filter, setFilter] = useState<"all" | InventoryCategoryKey>("all");
 
-  useEffect(() => {
-    fetch("/api/inventory", { credentials: "same-origin" })
-      .then((r) => (r.ok ? r.json() : { items: [] }))
-      .then((data) => setItems(data.items ?? []))
-      .catch(() => setItems([]));
+  const [items, setItems] = useState<CatalogSkin[]>([]);
+  const [loadout, setLoadout] = useState<LoadoutResponse | null>(null);
+  const [filter, setFilter] = useState<"all" | InventoryCategoryKey>("all");
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [catalogTotal, setCatalogTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [equipError, setEquipError] = useState<string | null>(null);
+  const [equippingId, setEquippingId] = useState<string | null>(null);
+  const [unequippingId, setUnequippingId] = useState<string | null>(null);
+
+  const fetchLoadout = useCallback(async () => {
+    const response = await fetch("/api/inventory/loadout", { credentials: "same-origin" });
+    if (!response.ok) return;
+    const data = (await response.json()) as LoadoutResponse;
+    setLoadout(data);
   }, []);
 
-  const filtered =
-    filter === "all"
-      ? items
-      : items.filter((i) => i.category === filter);
+  const fetchSkins = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: "36",
+        category: filter,
+        search,
+      });
+      const response = await fetch(`/api/inventory/skins?${params}`, {
+        credentials: "same-origin",
+      });
+      if (!response.ok) {
+        setItems([]);
+        return;
+      }
+      const data = await response.json();
+      setItems(data.items ?? []);
+      setTotalPages(data.totalPages ?? 1);
+      setCatalogTotal(data.catalogTotal ?? 0);
+    } finally {
+      setLoading(false);
+    }
+  }, [filter, page, search]);
 
-  const ownedCount = items.filter((i) => i.owned).length;
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter, search]);
+
+  useEffect(() => {
+    fetchLoadout();
+  }, [fetchLoadout]);
+
+  useEffect(() => {
+    fetchSkins();
+  }, [fetchSkins]);
+
+  const handleEquip = async (item: CatalogSkin) => {
+    if (item.equipped || !item.owned) return;
+    setEquipError(null);
+    setEquippingId(item.id);
+    try {
+      await equipCatalogSkin(item.id);
+      setItems((prev) =>
+        prev.map((entry) => ({
+          ...entry,
+          equipped:
+            entry.weaponId === item.weaponId ? entry.id === item.id : entry.equipped,
+        })),
+      );
+      await fetchLoadout();
+    } catch (err) {
+      setEquipError(err instanceof Error ? err.message : "Falha ao equipar skin.");
+    } finally {
+      setEquippingId(null);
+    }
+  };
+
+  const handleUnequip = async (catalogSkinId: string, weaponId: string) => {
+    setEquipError(null);
+    setUnequippingId(catalogSkinId);
+    try {
+      await unequipCatalogSkin(catalogSkinId);
+      setItems((prev) =>
+        prev.map((entry) =>
+          entry.weaponId === weaponId ? { ...entry, equipped: false } : entry,
+        ),
+      );
+      await fetchLoadout();
+    } catch (err) {
+      setEquipError(err instanceof Error ? err.message : "Falha ao desequipar skin.");
+    } finally {
+      setUnequippingId(null);
+    }
+  };
 
   return (
     <section>
+      <LoadoutPanel
+        loadout={loadout}
+        onRefresh={fetchLoadout}
+        unequippingId={unequippingId}
+        onUnequip={(item) => handleUnequip(item.catalogSkinId, item.weaponId)}
+      />
+
+      <div className="mb-4">
+        <input
+          type="search"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder={t("searchPlaceholder")}
+          className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary/50 focus:outline-none"
+        />
+      </div>
+
       <div className="mb-6 flex flex-wrap gap-2">
         {filters.map((f) => (
           <button
@@ -76,47 +316,89 @@ export function InventorySection() {
       </div>
 
       <p className="mb-4 text-sm text-muted">
-        {t("itemsCount", { count: ownedCount })}
+        {t("catalogCount", { count: catalogTotal, page, totalPages })}
       </p>
+      {equipError && <p className="mb-4 text-sm text-red-400">{equipError}</p>}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((item, i) => (
-          <motion.article
-            key={item.id}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.03 }}
-            className={cn(
-              "relative overflow-hidden rounded-card glass p-5",
-              !item.owned && "opacity-60",
-            )}
-          >
-            <div
-              className={cn(
-                "h-20 rounded-xl bg-gradient-to-br opacity-80",
-                item.accent,
-              )}
-            />
-            <h3 className="mt-4 font-display font-bold text-foreground">
-              {item.name}
-            </h3>
-            <p className="mt-1 text-xs uppercase tracking-wider text-muted">
-              {categoryLabels[item.category]} · {item.rarity}
-            </p>
-            {item.owned && (
+      {loading ? (
+        <p className="text-sm text-muted">{t("loading")}</p>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {items.map((item, i) => (
+            <motion.article
+              key={item.id}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: Math.min(i * 0.02, 0.4) }}
+              className="relative overflow-hidden rounded-card glass p-5"
+            >
+              <InventoryItemArt
+                imageUrl={item.imageUrl}
+                accent={item.accent}
+                className="h-20"
+              />
+              <h3 className="mt-4 font-display font-bold text-foreground line-clamp-2">
+                {item.name}
+              </h3>
+              <p className="mt-1 text-xs uppercase tracking-wider text-muted">
+                {categoryLabels[item.category]} · {item.rarity}
+              </p>
               <Button
                 type="button"
                 variant={item.equipped ? "outline" : "primary"}
                 size="sm"
                 className="mt-4 w-full"
-                confirm={confirmPresets.equipSkin(item.name)}
-                onClick={() => {}}
+                disabled={
+                  equippingId === item.id ||
+                  unequippingId === item.id ||
+                  (!item.equipped && !item.owned)
+                }
+                confirm={
+                  item.equipped
+                    ? confirmPresets.unequipSkin(item.name)
+                    : confirmPresets.equipSkin(item.name)
+                }
+                onClick={() =>
+                  item.equipped
+                    ? handleUnequip(item.id, item.weaponId)
+                    : handleEquip(item)
+                }
               >
-                {item.equipped ? t("equipped") : t("equip")}
+                {item.equipped
+                  ? unequippingId === item.id
+                    ? t("unequipping")
+                    : t("unequip")
+                  : equippingId === item.id
+                    ? t("equipping")
+                    : t("equip")}
               </Button>
-            )}
-          </motion.article>
-        ))}
+            </motion.article>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-6 flex items-center justify-center gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={page <= 1 || loading}
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+        >
+          {t("prevPage")}
+        </Button>
+        <span className="text-sm text-muted">
+          {page} / {totalPages}
+        </span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={page >= totalPages || loading}
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+        >
+          {t("nextPage")}
+        </Button>
       </div>
     </section>
   );
@@ -124,29 +406,29 @@ export function InventorySection() {
 
 export function InventoryPreview() {
   const t = useTranslations("inventory");
-  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [loadout, setLoadout] = useState<LoadoutResponse | null>(null);
 
   useEffect(() => {
-    fetch("/api/inventory", { credentials: "same-origin" })
-      .then((r) => (r.ok ? r.json() : { items: [] }))
-      .then((data) => setItems(data.items ?? []))
-      .catch(() => setItems([]));
+    fetch("/api/inventory/loadout", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => setLoadout(data))
+      .catch(() => setLoadout(null));
   }, []);
 
-  const equipped = items.filter((i) => i.equipped);
+  const equipped = loadout?.items ?? [];
 
   if (equipped.length === 0) {
-    return (
-      <p className="text-sm text-muted">{t("noneEquipped")}</p>
-    );
+    return <p className="text-sm text-muted">{t("noneEquipped")}</p>;
   }
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {equipped.slice(0, 6).map((item) => (
-        <div key={item.id} className="rounded-xl glass p-3">
-          <div
-            className={cn("h-12 rounded-lg bg-gradient-to-br", item.accent)}
+        <div key={item.catalogSkinId} className="rounded-xl glass p-3">
+          <InventoryItemArt
+            imageUrl={item.imageUrl}
+            accent={item.accent}
+            className="h-12"
           />
           <p className="mt-2 text-sm font-semibold text-foreground truncate">
             {item.name}

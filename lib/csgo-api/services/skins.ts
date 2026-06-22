@@ -12,6 +12,11 @@ import type {
   unequipSkinSchema,
 } from "@/lib/csgo-api/schemas";
 import type { z } from "zod";
+import {
+  formatClutchSkinsKeyValues,
+  type SkinExportWeapon,
+} from "@/lib/csgo-api/skin-export-format";
+import { steamIdForGamePlugin } from "@/lib/steam/steam-id";
 
 type CreateCatalogInput = z.infer<typeof createSkinCatalogSchema>;
 type GiveSkinInput = z.infer<typeof giveSkinSchema>;
@@ -154,30 +159,10 @@ export async function unequipPlayerSkin(steamId: string, input: UnequipInput) {
   return { ok: true };
 }
 
-function formatKeyValuesExport(
-  steamId: string,
-  weapons: Array<{
-    weaponId: string;
-    paintkit: number;
-    wear: string;
-    seed: number;
-    stattrak: boolean;
-    stattrakCount: number;
-  }>,
-): string {
-  const lines: string[] = [`"${steamId}"`, "{"];
-  for (const w of weapons) {
-    lines.push(`    "${w.weaponId}"`, "    {");
-    lines.push(`        "paintkit"    "${w.paintkit}"`);
-    lines.push(`        "wear"        "${WEAR_FLOAT[w.wear] ?? "0.15"}"`);
-    lines.push(`        "seed"        "${w.seed}"`);
-    if (w.stattrak) {
-      lines.push(`        "stattrak"    "${w.stattrakCount || 0}"`);
-    }
-    lines.push("    }");
-  }
-  lines.push("}");
-  return lines.join("\n");
+function formatKeyValuesExport(steamId: string, weapons: SkinExportWeapon[]): string {
+  return formatClutchSkinsKeyValues([
+    { steamId: steamIdForGamePlugin(steamId), weapons },
+  ]);
 }
 
 export async function exportPlayerSkins(steamId: string): Promise<string> {
@@ -200,15 +185,30 @@ export async function exportPlayerSkins(steamId: string): Promise<string> {
 }
 
 export async function exportAllPlayerSkins(): Promise<string> {
-  const steamIds = await prisma.csgoPlayerSkin.findMany({
+  const equipped = await prisma.csgoPlayerSkin.findMany({
     where: { equipped: true },
-    distinct: ["steamId"],
-    select: { steamId: true },
+    include: { skin: true },
   });
 
-  const blocks: string[] = [];
-  for (const { steamId } of steamIds) {
-    blocks.push(await exportPlayerSkins(steamId));
+  const bySteam = new Map<string, SkinExportWeapon[]>();
+  for (const row of equipped) {
+    const list = bySteam.get(row.steamId) ?? [];
+    list.push({
+      weaponId: row.skin.weaponId,
+      paintkit: row.skin.paintkit,
+      wear: row.wear,
+      seed: row.seed,
+      stattrak: row.stattrak,
+      stattrakCount: row.stattrakCount,
+      nametag: row.nametag,
+    });
+    bySteam.set(row.steamId, list);
   }
-  return blocks.join("\n\n");
+
+  const loadouts = [...bySteam.entries()].map(([steamId, weapons]) => ({
+    steamId: steamIdForGamePlugin(steamId),
+    weapons,
+  }));
+
+  return formatClutchSkinsKeyValues(loadouts);
 }

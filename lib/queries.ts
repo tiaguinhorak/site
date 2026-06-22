@@ -6,6 +6,8 @@ import {
   inventoryCategoryFromDb,
   inventoryRarityFromDb,
 } from "@/lib/profile";
+import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
+import { resolveCatalogIdForInventoryItem } from "@/lib/inventory/catalog-links";
 
 export async function getGameModesWithRooms() {
   return prisma.gameMode.findMany({
@@ -56,21 +58,41 @@ export async function getStoreItems() {
 }
 
 export async function getUserInventory(userId: string) {
-  const rows = await prisma.userInventoryItem.findMany({
-    where: { userId },
-    include: { inventoryItem: true },
-    orderBy: { inventoryItem: { sortOrder: "asc" } },
-  });
+  const [catalog, userRows] = await Promise.all([
+    prisma.inventoryItem.findMany({
+      include: { catalogSkin: true },
+      orderBy: { sortOrder: "asc" },
+    }),
+    prisma.userInventoryItem.findMany({
+      where: { userId },
+    }),
+  ]);
 
-  return rows.map((row) => ({
-    id: row.inventoryItem.id,
-    name: row.inventoryItem.name,
-    category: inventoryCategoryFromDb(row.inventoryItem.category),
-    rarity: inventoryRarityFromDb(row.inventoryItem.rarity),
-    accent: row.inventoryItem.accent,
-    equipped: row.equipped,
-    owned: row.owned,
-  }));
+  const userByItemId = new Map(
+    userRows.map((row) => [row.inventoryItemId, row]),
+  );
+
+  return catalog.map((item) => {
+    const ownedRow = userByItemId.get(item.id);
+    const catalogId = resolveCatalogIdForInventoryItem(item.name, item.catalogSkinId);
+    return {
+      id: item.id,
+      name: item.name,
+      category: inventoryCategoryFromDb(item.category),
+      rarity: inventoryRarityFromDb(item.rarity),
+      accent: item.accent,
+      imageUrl:
+        item.imageUrl ??
+        item.catalogSkin?.imageUrl ??
+        catalogSkinImageUrl(catalogId) ??
+        null,
+      paintkitName: item.catalogSkin?.paintkitName ?? null,
+      weaponId: item.catalogSkin?.weaponId ?? null,
+      catalogLinked: Boolean(catalogId),
+      equipped: ownedRow?.equipped ?? false,
+      owned: ownedRow?.owned ?? false,
+    };
+  });
 }
 
 export async function getPublicServers(options?: { syncLive?: boolean }) {
