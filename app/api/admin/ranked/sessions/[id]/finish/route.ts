@@ -9,7 +9,7 @@ import { adminAbandonRankedSession } from "@/lib/ranked/admin-session";
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(request: NextRequest, { params }: Params) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "admin-ranked-session-finish",
     RATE_LIMITS.profile.limit,

@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "auth-complete-profile-draft",
     RATE_LIMITS.profile.limit,
@@ -108,7 +108,7 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "auth-complete-profile",
     RATE_LIMITS.profile.limit,

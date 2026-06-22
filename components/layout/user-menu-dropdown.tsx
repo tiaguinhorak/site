@@ -24,6 +24,7 @@ import { secureApi } from "@/lib/api/client";
 import { useUser } from "@/lib/hooks/use-user";
 import { getAvatarInitials } from "@/lib/profile";
 import { useTheme } from "@/lib/theme";
+import { AvatarImage } from "@/components/ui/avatar-image";
 import { cn } from "@/lib/utils";
 
 type UserMenuDropdownProps = {
@@ -78,8 +79,7 @@ export function UserMenuDropdown({ align = "right", className }: UserMenuDropdow
       >
         <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[linear-gradient(135deg,var(--primary-soft),var(--primary))] text-xs font-bold text-white">
           {avatarSrc ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatarSrc} alt="" className="h-full w-full object-cover" />
+            <AvatarImage src={avatarSrc} size={32} className="rounded-lg" />
           ) : (
             initials
           )}
@@ -107,8 +107,7 @@ export function UserMenuDropdown({ align = "right", className }: UserMenuDropdow
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[linear-gradient(135deg,var(--primary-soft),var(--primary))] font-display text-sm font-bold text-white">
               {avatarSrc ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatarSrc} alt="" className="h-full w-full object-cover" />
+                <AvatarImage src={avatarSrc} size={44} className="rounded-xl" />
               ) : (
                 initials
               )}

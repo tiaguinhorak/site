@@ -4,6 +4,7 @@ import { Crown, Loader2, Lock, Swords, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import type { RankedPartyMemberView, RankedPartyView } from "@/lib/ranked/party-shared";
+import { AvatarImage } from "@/components/ui/avatar-image";
 import { cn } from "@/lib/utils";
 
 const RANKED_SLOTS = 5;
@@ -35,8 +36,7 @@ function MemberAvatar({
         )}
       >
         {player?.avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={player.avatarUrl} alt="" className="h-full w-full object-cover" />
+          <AvatarImage src={player.avatarUrl} size={40} className="rounded-full" />
         ) : player ? (
           player.avatarInitials
         ) : (

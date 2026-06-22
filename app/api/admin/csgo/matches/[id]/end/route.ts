@@ -14,7 +14,7 @@ import { abandonRankedSessionsForCsgoMatch } from "@/lib/ranked/reconcile-stale-
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(request: NextRequest, { params }: Params) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "admin-csgo-match-end",
     RATE_LIMITS.profile.limit,

@@ -27,7 +27,7 @@ const EXT_MAP: Record<string, string> = {
 };
 
 export async function POST(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "admin-upload",
     RATE_LIMITS.profile.limit,

@@ -15,7 +15,7 @@ import { kickMemberFromParty, RankedPartyError } from "@/lib/ranked/party-servic
 const schema = z.object({ userId: z.string().min(1) });
 
 export async function POST(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "ranked-party-kick",
     RATE_LIMITS.profile.limit,

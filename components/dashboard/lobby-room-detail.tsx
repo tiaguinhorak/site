@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { AvatarImage } from "@/components/ui/avatar-image";
 import { Input } from "@/components/ui/input";
 import { MapPicker } from "@/components/admin/pickers/map-picker";
 import { secureApi } from "@/lib/api/client";
@@ -300,8 +301,7 @@ export function LobbyRoomDetail({ roomId }: { roomId: string }) {
                   >
                     <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-primary/15 text-xs font-bold">
                       {member.avatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={member.avatarUrl} alt="" className="h-full w-full object-cover" />
+                        <AvatarImage src={member.avatarUrl} size={36} className="rounded-full" />
                       ) : (
                         member.avatarInitials
                       )}

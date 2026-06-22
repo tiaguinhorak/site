@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import { redisGetJson, redisSetJson, redisDel } from "@/lib/redis/cache";
 import { syncCsgoSkinCatalogWithClient } from "@/lib/inventory/sync-csgo-catalog-core";
 
 /** Full CSGO-API import is ~2000+; kgns !ws-only is typically ~1200–1700. */
@@ -42,6 +43,13 @@ async function catalogHealthCheck(): Promise<{ needsRefresh: boolean; total: num
  */
 export async function ensureCatalogSynced(): Promise<{ synced: number; alreadyPopulated: boolean }> {
   const now = Date.now();
+
+  const redisCached = await redisGetJson<CatalogReadyCache>("catalog:ready");
+  if (redisCached?.ready && now - redisCached.at < READY_CACHE_MS) {
+    catalogReadyCache = redisCached;
+    return { synced: redisCached.count, alreadyPopulated: true };
+  }
+
   if (
     catalogReadyCache?.ready &&
     now - catalogReadyCache.at < READY_CACHE_MS
@@ -52,6 +60,7 @@ export async function ensureCatalogSynced(): Promise<{ synced: number; alreadyPo
   const health = await catalogHealthCheck();
   if (!health.needsRefresh) {
     catalogReadyCache = { ready: true, count: health.total, at: now };
+    await redisSetJson("catalog:ready", catalogReadyCache, READY_CACHE_MS / 1000);
     return { synced: health.total, alreadyPopulated: true };
   }
 
@@ -63,10 +72,12 @@ export async function ensureCatalogSynced(): Promise<{ synced: number; alreadyPo
 
   const result = await syncInFlight;
   catalogReadyCache = { ready: true, count: result.synced, at: Date.now() };
+  await redisSetJson("catalog:ready", catalogReadyCache, READY_CACHE_MS / 1000);
   return { synced: result.synced, alreadyPopulated: false };
 }
 
 /** Clears in-memory ready cache (e.g. after manual npm run sync:skins). */
-export function invalidateCatalogReadyCache(): void {
+export async function invalidateCatalogReadyCache(): Promise<void> {
   catalogReadyCache = null;
+  await redisDel("catalog:ready");
 }

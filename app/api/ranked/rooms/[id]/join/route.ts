@@ -17,7 +17,7 @@ type Params = { params: Promise<{ id: string }> };
 const schema = z.object({ password: z.string().max(32).optional() });
 
 export async function POST(request: NextRequest, { params }: Params) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "ranked-room-join",
     RATE_LIMITS.profile.limit,

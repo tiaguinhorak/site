@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "ranked-party",
     RATE_LIMITS.profile.limit,
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "ranked-party-update",
     RATE_LIMITS.profile.limit,
@@ -100,7 +100,7 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "ranked-party-disband",
     RATE_LIMITS.profile.limit,

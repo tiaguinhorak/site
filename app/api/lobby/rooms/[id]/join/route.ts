@@ -15,7 +15,7 @@ import { enrichUserLobbyRoom } from "@/lib/lobby/enrich-user-rooms";
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(request: NextRequest, { params }: Params) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "lobby-join",
     RATE_LIMITS.profile.limit,

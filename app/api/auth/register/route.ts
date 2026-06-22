@@ -16,7 +16,7 @@ import {
 } from "@/lib/i18n/api-route";
 
 export async function POST(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "auth-register",
     RATE_LIMITS.auth.limit,

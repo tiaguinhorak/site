@@ -52,6 +52,13 @@ const nextConfig: NextConfig = {
   },
   allowedDevOrigins: ["*.ngrok-free.dev", "*.ngrok.io", "*.ngrok.app"],
   images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "avatars.steamstatic.com", pathname: "/**" },
+      { protocol: "https", hostname: "steamcdn-a.akamaihd.net", pathname: "/**" },
+      { protocol: "https", hostname: "community.akamai.steamstatic.com", pathname: "/**" },
+      { protocol: "https", hostname: "community.cloudflare.steamstatic.com", pathname: "/**" },
+      { protocol: "https", hostname: "raw.githubusercontent.com", pathname: "/**" },
+    ],
     localPatterns: [
       { pathname: "/logo-clutchclube.png" },
       { pathname: "/logo-CB.png" },

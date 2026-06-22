@@ -9,7 +9,7 @@ import { RATE_LIMITS } from "@/lib/security/constants";
 import { applyRankedQueueDodge } from "@/lib/ranked/queue-restriction";
 
 export async function POST(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "ranked-queue-dodge",
     RATE_LIMITS.profile.limit,

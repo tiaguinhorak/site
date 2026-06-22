@@ -9,7 +9,7 @@ import { RATE_LIMITS } from "@/lib/security/constants";
 import { leaveParty, RankedPartyError } from "@/lib/ranked/party-service";
 
 export async function POST(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "ranked-party-leave",
     RATE_LIMITS.profile.limit,

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { redisGetJson, redisSetJson } from "@/lib/redis/cache";
+
 type CacheEntry<T> = {
   value: T;
   expiresAt: number;
@@ -14,6 +16,13 @@ export async function cached<T>(
   loader: () => Promise<T>,
 ): Promise<T> {
   const now = Date.now();
+  const ttlSeconds = Math.ceil(ttlMs / 1000);
+
+  const redisHit = await redisGetJson<T>(`cache:${key}`);
+  if (redisHit !== null) {
+    return redisHit;
+  }
+
   const hit = cache.get(key);
   if (hit && hit.expiresAt > now) {
     return hit.value as T;
@@ -25,8 +34,9 @@ export async function cached<T>(
   }
 
   const promise = loader()
-    .then((value) => {
+    .then(async (value) => {
       cache.set(key, { value, expiresAt: Date.now() + ttlMs });
+      await redisSetJson(`cache:${key}`, value, ttlSeconds);
       inflight.delete(key);
       return value;
     })

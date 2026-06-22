@@ -9,7 +9,7 @@ import { RATE_LIMITS } from "@/lib/security/constants";
 import { simulateRankedMatchForAdmin } from "@/lib/ranked/simulate-match";
 
 export async function POST(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "admin-ranked-simulate",
     RATE_LIMITS.profile.limit,

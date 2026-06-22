@@ -7,7 +7,7 @@ import { RATE_LIMITS } from "@/lib/security/constants";
 import { reconcileAllStaleRankedSessions } from "@/lib/ranked/reconcile-stale-sessions";
 
 export async function POST(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "admin-ranked-cleanup",
     RATE_LIMITS.profile.limit,

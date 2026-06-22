@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "notifications-mark-all",
     RATE_LIMITS.profile.limit,

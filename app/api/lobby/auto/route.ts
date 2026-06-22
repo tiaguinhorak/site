@@ -16,7 +16,7 @@ const autoSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "lobby-auto",
     RATE_LIMITS.profile.limit,

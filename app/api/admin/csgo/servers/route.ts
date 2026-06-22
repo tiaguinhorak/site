@@ -24,7 +24,7 @@ const registerSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "admin-csgo-server-register",
     RATE_LIMITS.profile.limit,

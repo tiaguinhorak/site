@@ -10,6 +10,7 @@ import {
   type LobbyPlayer,
   type LobbyRoomEnriched,
 } from "@/lib/lobby";
+import { AvatarImage } from "@/components/ui/avatar-image";
 import { cn } from "@/lib/utils";
 
 function LevelBadge({ level, tier }: { level: number; tier: "low" | "mid" | "high" }) {
@@ -37,8 +38,7 @@ function PlayerAvatar({ player }: { player: LobbyPlayer }) {
         )}
       >
         {player.avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={player.avatarUrl} alt="" className="h-full w-full object-cover" />
+          <AvatarImage src={player.avatarUrl} size={44} className="rounded-full" />
         ) : (
           player.avatarInitials
         )}

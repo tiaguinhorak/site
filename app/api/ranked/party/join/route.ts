@@ -15,7 +15,7 @@ import { joinPartyByInviteCode, RankedPartyError } from "@/lib/ranked/party-serv
 const schema = z.object({ inviteCode: z.string().min(4).max(64) });
 
 export async function POST(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "ranked-party-join",
     RATE_LIMITS.profile.limit,

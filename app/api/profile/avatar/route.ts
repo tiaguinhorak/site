@@ -18,7 +18,7 @@ const MAX_AVATAR_BYTES = 512_000;
 const ALLOWED_TYPES = new Set(["image/webp", "image/jpeg", "image/png"]);
 
 export async function POST(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "profile-avatar-upload",
     RATE_LIMITS.profile.limit,
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "profile-avatar-source",
     RATE_LIMITS.profile.limit,
@@ -108,7 +108,7 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "profile-avatar-delete",
     RATE_LIMITS.profile.limit,

@@ -11,7 +11,7 @@ import { leaveLobbyRoom, LobbyRoomError } from "@/lib/lobby/rooms-service";
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(request: NextRequest, { params }: Params) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "lobby-leave",
     RATE_LIMITS.profile.limit,

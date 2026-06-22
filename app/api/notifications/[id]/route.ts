@@ -13,7 +13,7 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "notifications-mark-one",
     RATE_LIMITS.profile.limit,

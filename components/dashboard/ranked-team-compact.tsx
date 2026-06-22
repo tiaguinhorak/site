@@ -21,6 +21,7 @@ import {
 } from "@/components/providers/ranked-party-provider";
 import { RANKED_MAP_LABELS } from "@/lib/ranked/constants";
 import type { RankedPartyMemberView, RankedPartyView } from "@/lib/ranked/party-shared";
+import { AvatarImage } from "@/components/ui/avatar-image";
 import { cn } from "@/lib/utils";
 
 function CompactSlot({
@@ -48,8 +49,11 @@ function CompactSlot({
         )}
       >
         {player?.avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={player.avatarUrl} alt="" className="h-full w-full object-cover" />
+          <AvatarImage
+            src={player.avatarUrl}
+            size={large ? 48 : 40}
+            className={large ? "rounded-xl" : "rounded-lg"}
+          />
         ) : player ? (
           player.avatarInitials
         ) : (

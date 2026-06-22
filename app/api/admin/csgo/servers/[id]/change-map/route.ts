@@ -20,7 +20,7 @@ const bodySchema = z.object({
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(request: NextRequest, { params }: Params) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "admin-csgo-server-change-map",
     RATE_LIMITS.profile.limit,

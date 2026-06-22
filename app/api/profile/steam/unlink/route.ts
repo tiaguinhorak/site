@@ -10,7 +10,7 @@ import { serializeUser } from "@/lib/serializers";
 import { buildUserSteamUnlink } from "@/lib/steam/sync-user";
 
 export async function POST(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "profile-steam-unlink",
     RATE_LIMITS.profile.limit,

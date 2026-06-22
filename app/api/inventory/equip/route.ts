@@ -25,7 +25,7 @@ const equipSchema = z
   });
 
 export async function POST(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "inventory-equip",
     RATE_LIMITS.profile.limit,

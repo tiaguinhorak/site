@@ -19,7 +19,7 @@ import {
 type Params = { params: Promise<{ id: string }> };
 
 export async function DELETE(request: NextRequest, { params }: Params) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "admin-csgo-server-delete",
     RATE_LIMITS.profile.limit,

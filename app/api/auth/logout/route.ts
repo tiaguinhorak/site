@@ -7,7 +7,7 @@ import { RATE_LIMITS } from "@/lib/security/constants";
 import { clearSessionCookie } from "@/lib/security/session";
 
 export async function POST(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "auth-logout",
     RATE_LIMITS.auth.limit,

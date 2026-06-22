@@ -3,7 +3,7 @@ import { API_REQUEST_HEADER } from "@/lib/brand";
 import { defaultLocale, isLocale, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
 import { apiErrorMessage } from "@/lib/i18n/server";
 import { LIMITS } from "./constants";
-import { checkRateLimit, getClientIp } from "./rate-limit";
+import { checkRateLimit, checkRateLimitAsync, getClientIp } from "./rate-limit";
 import { isPlainObject } from "./sanitize";
 import { readSessionFromCookieHeader } from "./session";
 
@@ -61,16 +61,16 @@ export function assertCsrfHeader(request: NextRequest): NextResponse | null {
   return null;
 }
 
-export function assertRateLimit(
+export async function assertRateLimit(
   request: NextRequest,
   namespace: string,
   limit: number,
   windowMs: number,
-): NextResponse | null {
+): Promise<NextResponse | null> {
   const locale = localeFromRequest(request);
   const ip = getClientIp(request.headers);
   const key = `${namespace}:${ip}`;
-  const result = checkRateLimit(key, limit, windowMs);
+  const result = await checkRateLimitAsync(key, limit, windowMs);
   if (!result.allowed) {
     return NextResponse.json(
       { error: apiErrorMessage(locale, "rateLimit") },
@@ -144,19 +144,19 @@ export function requireSession(request: NextRequest): {
   return { session: { userId: session.userId }, error: null };
 }
 
-export function applyApiGuards(
+export async function applyApiGuards(
   request: NextRequest,
   namespace: string,
   limit: number,
   windowMs: number,
-): NextResponse | null {
+): Promise<NextResponse | null> {
   const originError = assertSameOrigin(request);
   if (originError) return originError;
 
   const csrfError = assertCsrfHeader(request);
   if (csrfError) return csrfError;
 
-  const rateError = assertRateLimit(request, namespace, limit, windowMs);
+  const rateError = await assertRateLimit(request, namespace, limit, windowMs);
   if (rateError) return rateError;
 
   return null;

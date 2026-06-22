@@ -19,7 +19,7 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "admin-game-mode-room-create",
     RATE_LIMITS.profile.limit,

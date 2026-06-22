@@ -20,7 +20,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: NextRequest, { params }: Params) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "lobby-start-match",
     RATE_LIMITS.profile.limit,

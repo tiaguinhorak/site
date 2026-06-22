@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { RemoteImage } from "@/components/ui/remote-image";
 
 type InventoryItemArtProps = {
   imageUrl?: string | null;
@@ -14,18 +15,17 @@ export function InventoryItemArt({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl bg-black/25 ring-1 ring-white/5",
+        "relative overflow-hidden rounded-xl bg-black/25 ring-1 ring-white/5",
         className,
       )}
     >
       {imageUrl ? (
-        <img
+        <RemoteImage
           src={imageUrl}
           alt=""
-          className="h-full w-full object-contain object-center p-2"
-          referrerPolicy="no-referrer"
-          loading="lazy"
-          decoding="async"
+          fill
+          sizes="(max-width: 640px) 50vw, 120px"
+          className="object-contain object-center p-2"
         />
       ) : (
         <div className={cn("h-full w-full bg-gradient-to-br opacity-90", accent)} />

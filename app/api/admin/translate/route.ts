@@ -20,7 +20,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "admin-translate",
     RATE_LIMITS.profile.limit,

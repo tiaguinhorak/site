@@ -11,7 +11,7 @@ import {
 import { RATE_LIMITS } from "@/lib/security/constants";
 
 export async function POST(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "admin-csgo-server-bootstrap",
     RATE_LIMITS.profile.limit,

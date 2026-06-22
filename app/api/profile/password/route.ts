@@ -13,7 +13,7 @@ import {
 } from "@/lib/security/schemas";
 
 export async function POST(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "profile-password",
     RATE_LIMITS.profile.limit,

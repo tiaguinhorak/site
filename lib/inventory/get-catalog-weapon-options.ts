@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import { redisGetJson, redisSetJson } from "@/lib/redis/cache";
 import type { InventoryCategoryKey } from "@/lib/profile";
 
 export type CatalogWeaponOption = {
@@ -23,6 +24,13 @@ export async function getCatalogWeaponOptions(
     return cached.options;
   }
 
+  const redisKey = `weapon-options:${category}`;
+  const redisCached = await redisGetJson<CatalogWeaponOption[]>(redisKey);
+  if (redisCached) {
+    weaponOptionsCache.set(category, { at: now, options: redisCached });
+    return redisCached;
+  }
+
   const where = category !== "all" ? { category } : {};
 
   const rows = await prisma.csgoSkinCatalog.findMany({
@@ -38,5 +46,6 @@ export async function getCatalogWeaponOptions(
   }));
 
   weaponOptionsCache.set(category, { at: now, options });
+  await redisSetJson(redisKey, options, WEAPON_OPTIONS_CACHE_MS / 1000);
   return options;
 }

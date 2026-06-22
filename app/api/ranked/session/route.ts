@@ -52,7 +52,7 @@ const cancelSchema = z.object({ sessionId: z.string().min(1) });
 const sessionIdSchema = z.object({ sessionId: z.string().min(1) });
 
 export async function POST(request: NextRequest) {
-  const guardError = applyApiGuards(
+  const guardError = await applyApiGuards(
     request,
     "ranked-session",
     RATE_LIMITS.profile.limit,
