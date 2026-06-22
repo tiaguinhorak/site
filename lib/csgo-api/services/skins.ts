@@ -220,6 +220,38 @@ export async function getPlayerLoadoutForSync(steamId64: string): Promise<Player
   };
 }
 
+/** All equipped loadouts for api-csgo bulk sync (JSON — no KeyValues file). */
+export async function getAllEquippedLoadoutsForSync(): Promise<PlayerLoadoutSyncPayload[]> {
+  const equipped = await prisma.csgoPlayerSkin.findMany({
+    where: { equipped: true },
+    include: { skin: true },
+  });
+
+  const bySteam = new Map<string, PlayerLoadoutSyncPayload["weapons"]>();
+
+  for (const row of equipped) {
+    if (row.skin.paintkit <= 0) continue;
+
+    const weapons = bySteam.get(row.steamId) ?? [];
+    weapons.push({
+      weaponId: row.skin.weaponId,
+      paintkit: row.skin.paintkit,
+      wear: parseFloat(WEAR_FLOAT[row.wear] ?? "0.15"),
+      seed: row.seed,
+      stattrak: row.stattrak,
+      stattrakCount: row.stattrakCount,
+      nametag: row.nametag,
+      defIndex: row.skin.weaponDefIndex ?? undefined,
+    });
+    bySteam.set(row.steamId, weapons);
+  }
+
+  return [...bySteam.entries()].map(([steamId64, weapons]) => ({
+    steamId: steamIdForGamePlugin(steamId64),
+    weapons,
+  }));
+}
+
 export async function exportAllPlayerSkins(): Promise<string> {
   const equipped = await prisma.csgoPlayerSkin.findMany({
     where: { equipped: true },
