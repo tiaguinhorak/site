@@ -13,9 +13,10 @@ export async function getCatalogWeaponOptions(
 ): Promise<CatalogWeaponOption[]> {
   const where = category !== "all" ? { category } : {};
 
-  const rows = await prisma.csgoSkinCatalog.groupBy({
-    by: ["weaponId", "weaponName"],
+  const rows = await prisma.csgoSkinCatalog.findMany({
     where,
+    select: { weaponId: true, weaponName: true },
+    distinct: ["weaponId"],
     orderBy: { weaponName: "asc" },
   });
 
