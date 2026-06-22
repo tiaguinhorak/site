@@ -846,7 +846,14 @@
     "loadoutHint": "After equipping, run VPS sync or wait for cron. In-game: respawn or sm_reloadclutchskins.",
     "loadoutSidebarTitle": "Equipped",
     "weaponFilterLabel": "Filter by weapon",
-    "closePreview": "Close preview"
+    "closePreview": "Close preview",
+    "rarityLegendTitle": "Rarities",
+    "rarityMythic": "Mythic",
+    "rarityLegendary": "Legendary",
+    "rarityEpic": "Epic",
+    "rarityRare": "Rare",
+    "rarityUncommon": "Uncommon",
+    "rarityCommon": "Common"
   },
   "lobby": {
     "statusAll": "All",

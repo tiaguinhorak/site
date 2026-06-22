@@ -6,6 +6,9 @@ import { useTranslations } from "next-intl";
 import { LayoutGrid, Swords, Hand, Crosshair, Target, Zap, Boxes } from "lucide-react";
 import { InventoryItemArt } from "@/components/dashboard/inventory-item-art";
 import { SkinPreviewModal, type SkinPreviewData } from "@/components/skins/skin-preview-modal";
+import { SkinRarityBadge } from "@/components/skins/skin-rarity-badge";
+import { SkinRarityLegend } from "@/components/skins/skin-rarity-legend";
+import { SkinRarityLine } from "@/components/skins/skin-rarity-line";
 import type { InventoryCategoryKey } from "@/lib/profile";
 import type { PublicSkinGroup } from "@/lib/inventory/get-public-player-skins";
 import { cn } from "@/lib/utils";
@@ -79,7 +82,9 @@ export function PublicProfileSkins({ groups }: { groups: PublicSkinGroup[] }) {
         </p>
       ) : (
         <>
-          <div className="mt-5 flex flex-wrap gap-2">
+          <SkinRarityLegend className="mt-5" />
+
+          <div className="mt-4 flex flex-wrap gap-2">
             {tabs.map((tab) => {
               const Icon = CATEGORY_ICON[tab.id];
               const isActive = active === tab.id;
@@ -121,9 +126,10 @@ export function PublicProfileSkins({ groups }: { groups: PublicSkinGroup[] }) {
                   {group.items.map((item) => (
                     <article
                       key={item.id}
-                      className="relative flex flex-col overflow-hidden rounded-xl glass p-3"
+                      className="relative flex flex-col overflow-hidden rounded-xl glass"
                     >
-                      <div className="relative">
+                      <SkinRarityLine accent={item.accent} rarity={item.rarity} />
+                      <div className="relative p-3">
                         <InventoryItemArt
                           imageUrl={item.imageUrl}
                           accent={item.accent}
@@ -141,23 +147,23 @@ export function PublicProfileSkins({ groups }: { groups: PublicSkinGroup[] }) {
                             })
                           }
                         />
-                        <span
-                          className={cn(
-                            "absolute inset-x-0 bottom-0 h-1 bg-linear-to-r",
-                            item.accent,
-                          )}
-                          aria-hidden
-                        />
                         {item.stattrak && (
-                          <span className="absolute left-2 top-2 rounded bg-amber-500/90 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-black">
+                          <span className="absolute left-5 top-5 rounded bg-amber-500/90 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-black">
                             ST
                           </span>
                         )}
                       </div>
-                      <p className="mt-2 line-clamp-1 text-xs font-semibold text-foreground">
-                        {item.weaponName}
-                      </p>
-                      <p className="line-clamp-1 text-[11px] text-muted">{item.paintkitName}</p>
+                      <div className="border-t border-white/5 px-3 pb-3">
+                        <p className="line-clamp-1 text-xs font-semibold text-foreground">
+                          {item.weaponName}
+                        </p>
+                        <p className="line-clamp-1 text-[11px] text-muted">{item.paintkitName}</p>
+                        <SkinRarityBadge
+                          rarity={item.rarity}
+                          accent={item.accent}
+                          className="mt-2"
+                        />
+                      </div>
                     </article>
                   ))}
                 </div>

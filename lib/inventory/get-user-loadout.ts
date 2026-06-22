@@ -14,6 +14,7 @@ export type UserLoadoutItem = {
   paintkit: number;
   paintkitName: string;
   imageUrl: string | null;
+  rarity: string;
   accent: string;
   equippedAt: string;
 };
@@ -46,6 +47,7 @@ export async function getUserServerLoadout(userId: string) {
     paintkit: row.skin.paintkit,
     paintkitName: row.skin.paintkitName,
     imageUrl: row.skin.imageUrl ?? catalogSkinImageUrl(row.skinId) ?? null,
+    rarity: row.skin.rarity,
     accent: rarityAccent(row.skin.rarity),
     equippedAt: row.createdAt.toISOString(),
   }));

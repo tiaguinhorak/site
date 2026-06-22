@@ -26,6 +26,9 @@ import {
   SkinPreviewModal,
   type SkinPreviewData,
 } from "@/components/skins/skin-preview-modal";
+import { SkinRarityBadge } from "@/components/skins/skin-rarity-badge";
+import { SkinRarityLegend } from "@/components/skins/skin-rarity-legend";
+import { SkinRarityLine } from "@/components/skins/skin-rarity-line";
 
 type CatalogSkin = {
   id: string;
@@ -48,6 +51,7 @@ type LoadoutItem = {
   weaponId: string;
   paintkit: number;
   imageUrl: string | null;
+  rarity: string;
   accent: string;
   equippedAt: string;
 };
@@ -146,9 +150,11 @@ function EquippedSidebar({
                 />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-medium text-foreground">{item.name}</p>
-                  <p className="truncate text-[10px] text-muted">
-                    {item.weaponId.replace(/^weapon_/, "")}
-                  </p>
+                  <SkinRarityBadge
+                    rarity={item.rarity}
+                    accent={item.accent}
+                    className="mt-1"
+                  />
                 </div>
                 <Button
                   type="button"
@@ -376,6 +382,7 @@ export function InventorySection() {
       name: item.name,
       imageUrl: item.imageUrl,
       accent: item.accent,
+      rarity: item.rarity,
       equipped: true,
       owned: true,
     });
@@ -454,6 +461,8 @@ export function InventorySection() {
                 </select>
               </div>
             )}
+
+            <SkinRarityLegend className="mt-3 border-t border-border/50 pt-3" />
           </div>
 
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
@@ -508,58 +517,64 @@ export function InventorySection() {
                 <article
                   key={item.id}
                   className={cn(
-                    "relative flex flex-col overflow-hidden rounded-card glass p-3",
+                    "relative flex flex-col overflow-hidden rounded-card glass",
                     item.equipped && "ring-1 ring-emerald-400/35",
                   )}
                 >
-                  <InventoryItemArt
-                    imageUrl={item.imageUrl}
-                    accent={item.accent}
-                    className="h-28 w-full"
-                    onClick={() => openCatalogPreview(item)}
-                    priority={false}
-                  />
-                  <h3 className="mt-2 line-clamp-2 text-sm font-bold text-foreground">
-                    {item.name}
-                  </h3>
-                  <p className="mt-0.5 text-[10px] uppercase tracking-wider text-muted">
-                    {categoryLabels[item.category]} · {item.rarity}
-                  </p>
-                  <Button
-                    type="button"
-                    variant={item.equipped ? "outline" : "primary"}
-                    size="sm"
-                    className="mt-3 w-full"
-                    disabled={
-                      equippingId === item.id ||
-                      unequippingId === item.id ||
-                      (!item.equipped && !item.owned)
-                        ? true
-                        : undefined
-                    }
-                    confirm={
-                      item.equipped
-                        ? confirmPresets.unequipSkin(item.name)
-                        : confirmPresets.equipSkin(item.name)
-                    }
-                    onClick={() =>
-                      item.equipped
-                        ? handleUnequip(item.id, item.weaponId)
-                        : handleEquip(item)
-                    }
-                  >
-                    {item.equipped
-                      ? unequippingId === item.id
-                        ? t("unequipping")
-                        : t("unequip")
-                      : equippingId === item.id
-                        ? t("equipping")
-                        : !item.owned
-                          ? t("equipUnavailable")
-                          : t("equip")}
-                  </Button>
+                  <SkinRarityLine accent={item.accent} rarity={item.rarity} />
+                  <div className="flex flex-col p-3">
+                    <InventoryItemArt
+                      imageUrl={item.imageUrl}
+                      accent={item.accent}
+                      className="h-28 w-full"
+                      onClick={() => openCatalogPreview(item)}
+                      priority={false}
+                    />
+                    <h3 className="mt-2 line-clamp-2 text-sm font-bold text-foreground">
+                      {item.name}
+                    </h3>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] uppercase tracking-wider text-muted">
+                        {categoryLabels[item.category]}
+                      </span>
+                      <SkinRarityBadge rarity={item.rarity} accent={item.accent} />
+                    </div>
+                    <Button
+                      type="button"
+                      variant={item.equipped ? "outline" : "primary"}
+                      size="sm"
+                      className="mt-3 w-full"
+                      disabled={
+                        equippingId === item.id ||
+                        unequippingId === item.id ||
+                        (!item.equipped && !item.owned)
+                          ? true
+                          : undefined
+                      }
+                      confirm={
+                        item.equipped
+                          ? confirmPresets.unequipSkin(item.name)
+                          : confirmPresets.equipSkin(item.name)
+                      }
+                      onClick={() =>
+                        item.equipped
+                          ? handleUnequip(item.id, item.weaponId)
+                          : handleEquip(item)
+                      }
+                    >
+                      {item.equipped
+                        ? unequippingId === item.id
+                          ? t("unequipping")
+                          : t("unequip")
+                        : equippingId === item.id
+                          ? t("equipping")
+                          : !item.owned
+                            ? t("equipUnavailable")
+                            : t("equip")}
+                    </Button>
+                  </div>
                   {item.equipped && (
-                    <span className="absolute right-2 top-2 inline-flex items-center gap-0.5 rounded-full bg-emerald-500/90 px-1.5 py-0.5 text-[9px] font-bold uppercase text-black">
+                    <span className="absolute right-2 top-3 inline-flex items-center gap-0.5 rounded-full bg-emerald-500/90 px-1.5 py-0.5 text-[9px] font-bold uppercase text-black">
                       <CheckCircle2 className="h-3 w-3" />
                     </span>
                   )}

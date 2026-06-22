@@ -846,7 +846,14 @@
     "loadoutHint": "Tras equipar, ejecuta el sync en la VPS o espera el cron. En el juego: respawn o sm_reloadclutchskins.",
     "loadoutSidebarTitle": "Equipadas",
     "weaponFilterLabel": "Filtrar por arma",
-    "closePreview": "Cerrar vista"
+    "closePreview": "Cerrar vista",
+    "rarityLegendTitle": "Rarezas",
+    "rarityMythic": "Mítico",
+    "rarityLegendary": "Legendario",
+    "rarityEpic": "Épico",
+    "rarityRare": "Raro",
+    "rarityUncommon": "Poco común",
+    "rarityCommon": "Común"
   },
   "lobby": {
     "statusAll": "Todos",

@@ -6,6 +6,8 @@ import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { RemoteImage } from "@/components/ui/remote-image";
+import { SkinRarityBadge } from "@/components/skins/skin-rarity-badge";
+import { SkinRarityLine } from "@/components/skins/skin-rarity-line";
 import { cn } from "@/lib/utils";
 
 export type SkinPreviewData = {
@@ -81,34 +83,41 @@ export function SkinPreviewModal({
           <X className="h-5 w-5" />
         </button>
 
-        <div
-          className={cn("relative aspect-[4/3] bg-black/30", !skin.imageUrl && "bg-linear-to-br", skin.accent)}
-        >
-          {skin.imageUrl ? (
-            <RemoteImage
-              src={skin.imageUrl}
-              alt=""
-              fill
-              sizes="(max-width: 768px) 100vw, 512px"
-              priority
-              className="object-contain p-6"
-            />
-          ) : null}
-          <span
-            className={cn("absolute inset-x-0 bottom-0 h-1.5 bg-linear-to-r", skin.accent)}
-            aria-hidden
-          />
+        <div className="relative">
+          <SkinRarityLine accent={skin.accent} rarity={skin.rarity} />
+          <div
+            className={cn(
+              "relative aspect-[4/3] bg-black/30",
+              !skin.imageUrl && "bg-linear-to-br",
+              skin.accent,
+            )}
+          >
+            {skin.imageUrl ? (
+              <RemoteImage
+                src={skin.imageUrl}
+                alt=""
+                fill
+                sizes="(max-width: 768px) 100vw, 512px"
+                priority
+                className="object-contain p-6"
+              />
+            ) : null}
+          </div>
+          <SkinRarityLine accent={skin.accent} rarity={skin.rarity} position="bottom" />
         </div>
 
         <div className="p-5 sm:p-6">
           <h2 id="skin-preview-title" className="font-display text-xl font-bold text-foreground">
             {skin.name}
           </h2>
-          {(skin.category || skin.rarity) && (
-            <p className="mt-1 text-xs uppercase tracking-wider text-muted">
-              {[skin.category, skin.rarity].filter(Boolean).join(" · ")}
-            </p>
-          )}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {skin.category && (
+              <span className="text-xs uppercase tracking-wider text-muted">{skin.category}</span>
+            )}
+            {skin.rarity && (
+              <SkinRarityBadge rarity={skin.rarity} accent={skin.accent} size="md" />
+            )}
+          </div>
           {skin.paintkitName && skin.weaponName && (
             <p className="mt-2 text-sm text-muted">
               {skin.weaponName} — {skin.paintkitName}
