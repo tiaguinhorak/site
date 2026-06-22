@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getAvatarInitials } from "@/lib/profile";
+import { getDefaultAvatarPresetUrl, resolveUserAvatarUrl } from "@/lib/profile/avatar";
 import { flagFromCountryCode } from "@/lib/profile/countries";
 import {
   LOBBY_DISPLAY_SLOTS,
@@ -45,6 +46,7 @@ type DbSteamUser = {
   steamPersonaName: string | null;
   steamAvatarUrl: string | null;
   avatarUrl: string | null;
+  avatarPreset: string | null;
   country: string;
   steamCountryCode: string | null;
   steamLinkedAt: Date | null;
@@ -88,11 +90,9 @@ function buildLobbyPlayer(
     dbUser?.nickname ??
     `Player_${steamId.slice(-4)}`;
 
-  const avatarUrl =
-    steamProfile?.avatarUrl ??
-    dbUser?.avatarUrl ??
-    dbUser?.steamAvatarUrl ??
-    null;
+  const avatarUrl = dbUser
+    ? resolveUserAvatarUrl(dbUser)
+    : steamProfile?.avatarUrl ?? getDefaultAvatarPresetUrl();
 
   const elo = dbUser?.elo ?? 1000 + (hashString(steamId) % 800);
 
@@ -133,6 +133,7 @@ export async function buildLobbyRooms(
       steamPersonaName: true,
       steamAvatarUrl: true,
       avatarUrl: true,
+      avatarPreset: true,
       country: true,
       steamCountryCode: true,
       steamLinkedAt: true,

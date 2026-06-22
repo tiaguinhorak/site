@@ -57,7 +57,7 @@ export function serializeUser(user: User): UserProfile {
       ? "custom"
       : user.steamAvatarUrl
         ? "steam"
-        : "initials";
+        : "preset";
 
   return {
     id: user.id,

@@ -22,10 +22,9 @@ import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { secureApi } from "@/lib/api/client";
 import { useUser } from "@/lib/hooks/use-user";
-import { getAvatarInitials } from "@/lib/profile";
+import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
 import { useTheme } from "@/lib/theme";
 import { AvatarImage } from "@/components/ui/avatar-image";
-import { ClutchAvatarFallback } from "@/components/ui/clutch-avatar-fallback";
 import { cn } from "@/lib/utils";
 
 type UserMenuDropdownProps = {
@@ -52,8 +51,8 @@ export function UserMenuDropdown({ align = "right", className }: UserMenuDropdow
     elite: t("planElite"),
   };
 
-  const initials = getAvatarInitials("", "", user.nickname);
-  const avatarSrc = user.avatarUrl ?? user.steamAvatarUrl;
+  const avatarSrc =
+    user.avatarUrl ?? user.steamAvatarUrl ?? getDefaultAvatarPresetUrl();
   const planLabel = planLabels[user.plan ?? "free"] ?? t("planFree");
   const isDark = resolvedTheme === "dark";
 
@@ -79,11 +78,7 @@ export function UserMenuDropdown({ align = "right", className }: UserMenuDropdow
         )}
       >
         <div className="flex h-8 w-8 shrink-0 overflow-hidden rounded-lg">
-          {avatarSrc ? (
-            <AvatarImage src={avatarSrc} size={32} className="rounded-lg" />
-          ) : (
-            <ClutchAvatarFallback initials={initials} className="h-8 w-8 rounded-lg text-xs" />
-          )}
+          <AvatarImage src={avatarSrc} size={32} className="rounded-lg" />
         </div>
         <span className="hidden max-w-[100px] truncate font-display text-sm font-semibold text-foreground sm:block">
           {user.nickname}
@@ -107,11 +102,7 @@ export function UserMenuDropdown({ align = "right", className }: UserMenuDropdow
         <div className="border-b border-border/80 p-4">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 shrink-0 overflow-hidden rounded-xl">
-              {avatarSrc ? (
-                <AvatarImage src={avatarSrc} size={44} className="rounded-xl" />
-              ) : (
-                <ClutchAvatarFallback initials={initials} className="h-11 w-11 rounded-xl text-sm" />
-              )}
+              <AvatarImage src={avatarSrc} size={44} className="rounded-xl" />
             </div>
             <div className="min-w-0">
               <p className="truncate font-display text-sm font-bold text-foreground">

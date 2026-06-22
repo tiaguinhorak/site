@@ -67,6 +67,8 @@ const nextConfig: NextConfig = {
       { pathname: "/apple-icon.png" },
       { pathname: "/web-app-manifest-192x192.png" },
       { pathname: "/web-app-manifest-512x512.png" },
+      { pathname: "/uploads/**" },
+      { pathname: "/avatars/**" },
     ],
   },
   async headers() {

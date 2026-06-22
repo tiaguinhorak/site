@@ -15,6 +15,7 @@ import {
   createSessionToken,
 } from "@/lib/security/session";
 import { steamPersonaToNickname } from "@/lib/steam/nickname";
+import { resolveUserAvatarUrl } from "@/lib/profile/avatar";
 import { serializeUser } from "@/lib/serializers";
 import {
   jsonErrorKey,
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
     steamPersonaName: user.steamPersonaName,
     steamId: user.steamId,
     steamProfileUrl: user.steamProfileUrl,
-    avatarUrl: user.avatarUrl ?? user.steamAvatarUrl,
+    avatarUrl: resolveUserAvatarUrl(user),
     country: user.country,
     firstName: user.firstName,
     lastName: user.lastName,

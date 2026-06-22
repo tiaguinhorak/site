@@ -4,10 +4,12 @@ import { useRef } from "react";
 import { Camera, Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { ClutchAvatarFallback } from "@/components/ui/clutch-avatar-fallback";
 import { SteamIcon } from "@/components/ui/icons";
-import { getAvatarInitials } from "@/lib/profile";
-import { avatarPresets, avatarPresetUrl } from "@/lib/profile/avatar-presets";
+import {
+  DEFAULT_AVATAR_PRESET,
+  avatarPresets,
+  avatarPresetUrl,
+} from "@/lib/profile/avatar-presets";
 import {
   type AvatarDraft,
   getAvatarPreview,
@@ -38,9 +40,12 @@ export function ProfileAvatarPicker({
   const activePresetId =
     draft.kind === "preset"
       ? draft.presetId
-      : draft.kind === "unchanged"
-        ? profile.avatarPreset
-        : null;
+      : draft.kind === "remove"
+        ? DEFAULT_AVATAR_PRESET
+        : draft.kind === "unchanged"
+          ? profile.avatarPreset ??
+            (profile.avatarSource === "preset" ? DEFAULT_AVATAR_PRESET : null)
+          : null;
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -69,9 +74,7 @@ export function ProfileAvatarPicker({
                 alt={t("photoAlt")}
                 className="h-full w-full object-cover"
               />
-            ) : (
-              <ClutchAvatarFallback initials={preview.initials} className="h-full w-full" />
-            )}
+            ) : null}
             <span className="absolute inset-0 flex items-center justify-center bg-[rgb(0_0_0/0.45)] opacity-0 transition-opacity group-hover:opacity-100">
               <Camera className="h-6 w-6 text-white" />
             </span>

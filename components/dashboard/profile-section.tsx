@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SteamIcon } from "@/components/ui/icons";
-import { ClutchAvatarFallback } from "@/components/ui/clutch-avatar-fallback";
+import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
 import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button";
 import { ProfileAvatarPicker } from "@/components/dashboard/profile-avatar-picker";
@@ -268,19 +268,12 @@ export function ProfileSection() {
 
           <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center">
             <div className="flex h-20 w-20 shrink-0 overflow-hidden rounded-2xl shadow-lg">
-              {profile.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={profile.avatarUrl}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <ClutchAvatarFallback
-                  initials={profile.avatarInitials}
-                  className="h-full w-full rounded-2xl text-2xl"
-                />
-              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={profile.avatarUrl ?? getDefaultAvatarPresetUrl()}
+                alt=""
+                className="h-full w-full object-cover"
+              />
             </div>
 
             <div className="flex-1 min-w-0">

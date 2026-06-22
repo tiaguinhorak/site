@@ -21,10 +21,9 @@ import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { secureApi } from "@/lib/api/client";
 import { useUser } from "@/lib/hooks/use-user";
-import { getAvatarInitials } from "@/lib/profile";
 import { useTheme } from "@/lib/theme";
 import { AvatarImage } from "@/components/ui/avatar-image";
-import { ClutchAvatarFallback } from "@/components/ui/clutch-avatar-fallback";
+import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -43,8 +42,8 @@ export function AccountDropdown({ className }: Props) {
 
   if (!user) return null;
 
-  const initials = getAvatarInitials(user.firstName, user.lastName, user.nickname);
   const isDark = resolvedTheme === "dark";
+  const avatarSrc = user.avatarUrl ?? getDefaultAvatarPresetUrl();
 
   const links = [
     { href: "/dashboard/perfil", label: t("profile"), icon: UserRound },
@@ -64,11 +63,7 @@ export function AccountDropdown({ className }: Props) {
         className="flex items-center gap-2 rounded-xl glass-chip py-1.5 pl-1.5 pr-2.5 transition-colors hover:glow-ring-contained"
       >
         <div className="flex h-8 w-8 shrink-0 overflow-hidden rounded-lg">
-          {user.avatarUrl ? (
-            <AvatarImage src={user.avatarUrl} size={32} className="rounded-lg" />
-          ) : (
-            <ClutchAvatarFallback initials={initials} className="h-8 w-8 rounded-lg text-xs" />
-          )}
+          <AvatarImage src={avatarSrc} size={32} className="rounded-lg" />
         </div>
         <span className="hidden max-w-[88px] truncate font-display text-sm font-semibold text-foreground md:block">
           {user.nickname}
@@ -89,11 +84,7 @@ export function AccountDropdown({ className }: Props) {
         <div className="border-b border-border/80 p-4">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 shrink-0 overflow-hidden rounded-xl">
-              {user.avatarUrl ? (
-                <AvatarImage src={user.avatarUrl} size={44} className="rounded-xl" />
-              ) : (
-                <ClutchAvatarFallback initials={initials} className="h-11 w-11 rounded-xl text-sm" />
-              )}
+              <AvatarImage src={avatarSrc} size={44} className="rounded-xl" />
             </div>
             <div className="min-w-0">
               <p className="truncate font-display text-sm font-bold text-foreground">

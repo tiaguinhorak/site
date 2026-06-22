@@ -11,7 +11,7 @@ import {
   type LobbyRoomEnriched,
 } from "@/lib/lobby";
 import { AvatarImage } from "@/components/ui/avatar-image";
-import { ClutchAvatarFallback } from "@/components/ui/clutch-avatar-fallback";
+import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
 import { cn } from "@/lib/utils";
 
 function LevelBadge({ level, tier }: { level: number; tier: "low" | "mid" | "high" }) {
@@ -38,14 +38,11 @@ function PlayerAvatar({ player }: { player: LobbyPlayer }) {
           player.steamVerified ? "border-primary" : "border-border",
         )}
       >
-        {player.avatarUrl ? (
-          <AvatarImage src={player.avatarUrl} size={44} className="rounded-full" />
-        ) : (
-          <ClutchAvatarFallback
-            initials={player.avatarInitials}
-            className="h-full w-full rounded-full text-[10px]"
-          />
-        )}
+        <AvatarImage
+          src={player.avatarUrl ?? getDefaultAvatarPresetUrl()}
+          size={44}
+          className="rounded-full"
+        />
       </div>
       {player.steamVerified && (
         <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">

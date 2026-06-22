@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { getAvatarInitials } from "@/lib/profile";
+import { resolveUserAvatarUrl } from "@/lib/profile/avatar";
 import { planPriorityWeight } from "@/lib/plan-priority";
 import { assertCanJoinLobby, PlayStateError } from "@/lib/play-state";
 import {
@@ -69,6 +70,7 @@ const lobbyInclude = {
       id: true,
       nickname: true,
       avatarUrl: true,
+      avatarPreset: true,
       steamAvatarUrl: true,
       steamLinkedAt: true,
       elo: true,
@@ -83,6 +85,7 @@ const lobbyInclude = {
           id: true,
           nickname: true,
           avatarUrl: true,
+          avatarPreset: true,
           steamAvatarUrl: true,
           steamPersonaName: true,
           steamLinkedAt: true,
@@ -150,7 +153,7 @@ function serializeLobbyRoom(
     id: m.user.id,
     nickname: m.user.nickname,
     level: eloToLobbyLevel(m.user.elo),
-    avatarUrl: m.user.avatarUrl ?? m.user.steamAvatarUrl,
+    avatarUrl: resolveUserAvatarUrl(m.user),
     avatarInitials: getAvatarInitials("", "", m.user.nickname),
     steamVerified: Boolean(m.user.steamLinkedAt),
     slotIndex: m.slotIndex,

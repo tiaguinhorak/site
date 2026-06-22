@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import type { RankedPartyMemberView, RankedPartyView } from "@/lib/ranked/party-shared";
 import { AvatarImage } from "@/components/ui/avatar-image";
-import { ClutchAvatarFallback } from "@/components/ui/clutch-avatar-fallback";
+import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
 import { cn } from "@/lib/utils";
 
 const RANKED_SLOTS = 5;
@@ -36,12 +36,11 @@ function MemberAvatar({
             : "bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)] text-muted ring-border/60",
         )}
       >
-        {player?.avatarUrl ? (
-          <AvatarImage src={player.avatarUrl} size={40} className="rounded-full" />
-        ) : player ? (
-          <ClutchAvatarFallback
-            initials={player.avatarInitials}
-            className="h-full w-full rounded-full text-[10px]"
+        {player ? (
+          <AvatarImage
+            src={player.avatarUrl ?? getDefaultAvatarPresetUrl()}
+            size={40}
+            className="rounded-full"
           />
         ) : (
           <Users className="h-4 w-4" />

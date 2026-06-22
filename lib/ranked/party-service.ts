@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import { getAvatarInitials } from "@/lib/profile";
+import { resolveUserAvatarUrl } from "@/lib/profile/avatar";
 import { assertCanJoinRankedParty, PlayStateError } from "@/lib/play-state";
 import { RANKED_TEAM_SIZE } from "@/lib/ranked";
 import { RANKED_CHALLENGE_TTL_MS } from "@/lib/ranked/constants";
@@ -38,6 +39,7 @@ export const partyInclude = {
       nickname: true,
       elo: true,
       avatarUrl: true,
+      avatarPreset: true,
       steamAvatarUrl: true,
       plan: true,
       steamLinkedAt: true,
@@ -52,6 +54,7 @@ export const partyInclude = {
           nickname: true,
           elo: true,
           avatarUrl: true,
+          avatarPreset: true,
           steamAvatarUrl: true,
         },
       },
@@ -80,7 +83,7 @@ function serializeMember(
     id: member.user.id,
     nickname: member.user.nickname,
     elo: member.user.elo,
-    avatarUrl: member.user.avatarUrl ?? member.user.steamAvatarUrl,
+    avatarUrl: resolveUserAvatarUrl(member.user),
     avatarInitials: getAvatarInitials("", "", member.user.nickname),
     slotIndex: member.slotIndex,
     isLeader: isLeaderMember,

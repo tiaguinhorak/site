@@ -21,6 +21,8 @@ export const avatarPresets: AvatarPreset[] = [
 
 export const avatarPresetIds = avatarPresets.map((p) => p.id);
 
+export const DEFAULT_AVATAR_PRESET = "viper";
+
 export function getAvatarPreset(id: string): AvatarPreset | undefined {
   return avatarPresets.find((p) => p.id === id);
 }
