@@ -633,6 +633,8 @@ model CsgoSkinCatalog {
   inventoryItems  InventoryItem[]
 
   @@index([weaponId])
+  @@index([category])
+  @@index([category, weaponName])
 }
 
 model CsgoPlayerSkin {

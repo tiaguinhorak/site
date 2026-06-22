@@ -48,24 +48,9 @@ export async function getCatalogSkinsForUser(
   const limit = Math.min(MAX_LIMIT, Math.max(1, options.limit ?? DEFAULT_LIMIT));
   const search = options.search?.trim() ?? "";
   const category = options.category ?? "all";
-
   const weaponFilter = options.weaponId?.trim() ?? "";
 
-  await ensureCatalogSynced();
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { steamId: true },
-  });
-
-  const equippedIds = new Set<string>();
-  if (user?.steamId) {
-    const equipped = await prisma.csgoPlayerSkin.findMany({
-      where: { steamId: user.steamId, equipped: true },
-      select: { skinId: true },
-    });
-    for (const row of equipped) equippedIds.add(row.skinId);
-  }
+  const { synced: catalogTotal } = await ensureCatalogSynced();
 
   const where = {
     ...(category !== "all" ? { category } : {}),
@@ -80,15 +65,29 @@ export async function getCatalogSkinsForUser(
       : {}),
   };
 
-  const catalogTotal = await prisma.csgoSkinCatalog.count();
-  const total = await prisma.csgoSkinCatalog.count({ where });
-  const rows = await prisma.csgoSkinCatalog.findMany({
-    where,
-    orderBy: [{ weaponName: "asc" }, { paintkitName: "asc" }],
-    skip: (page - 1) * limit,
-    take: limit,
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { steamId: true },
   });
 
+  const [equippedRows, total, rows, weaponOptions] = await Promise.all([
+    user?.steamId
+      ? prisma.csgoPlayerSkin.findMany({
+          where: { steamId: user.steamId, equipped: true },
+          select: { skinId: true },
+        })
+      : Promise.resolve([]),
+    prisma.csgoSkinCatalog.count({ where }),
+    prisma.csgoSkinCatalog.findMany({
+      where,
+      orderBy: [{ weaponName: "asc" }, { paintkitName: "asc" }],
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    page === 1 ? getCatalogWeaponOptions(category) : Promise.resolve([]),
+  ]);
+
+  const equippedIds = new Set(equippedRows.map((row) => row.skinId));
   const allSkins = isAllSkinsEquipEnabled();
 
   const items: CatalogSkinRow[] = rows.map((row) => ({
@@ -105,9 +104,6 @@ export async function getCatalogSkinsForUser(
     equipped: equippedIds.has(row.id),
     owned: allSkins,
   }));
-
-  const weaponOptions =
-    page === 1 ? await getCatalogWeaponOptions(category) : [];
 
   return {
     items,
