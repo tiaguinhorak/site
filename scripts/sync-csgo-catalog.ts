@@ -5,14 +5,16 @@ import "dotenv/config";
  * O site NÃO chama API externa ao abrir inventário; só lê CsgoSkinCatalog no banco.
  */
 import { createScriptPrismaClient } from "../lib/prisma-script";
-import { invalidateCatalogReadyCache } from "../lib/inventory/ensure-catalog-synced";
+import { clearCatalogMemoryCaches } from "../lib/inventory/catalog-ready-cache";
+import { invalidateCatalogRedisKeys } from "../lib/redis/script-cache";
 import { syncCsgoSkinCatalogWithClient } from "../lib/inventory/sync-csgo-catalog-core";
 
 async function main() {
   const prisma = createScriptPrismaClient();
   console.log("Syncing CS:GO skin catalog → Postgres (one-time cache)…");
   const result = await syncCsgoSkinCatalogWithClient(prisma);
-  await invalidateCatalogReadyCache();
+  clearCatalogMemoryCaches();
+  await invalidateCatalogRedisKeys();
   console.log(
     `Done. ${result.synced} skins upserted (ws-only: ${result.wsOnly ? "yes" : "all"}).`,
   );
