@@ -1,13 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { Chakra_Petch, Manrope } from "next/font/google";
-import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ConfirmProvider } from "@/components/providers/confirm-provider";
 import { BrowserNotificationListener } from "@/components/notifications/browser-notification-listener";
 import { UserProvider } from "@/components/providers/user-provider";
-import { intlGetMessageFallback, intlOnError } from "@/lib/i18n/intl-fallbacks";
+import { IntlClientProvider } from "@/components/providers/intl-client-provider";
 import { SITE_NAME, SITE_TAGLINE } from "@/lib/brand";
 import { BRAND_ASSETS } from "@/lib/brand-assets";
 import { THEME_INIT_SCRIPT } from "@/lib/theme-script";
@@ -113,12 +112,7 @@ export default async function RootLayout({
       <body
         className={`${chakra.variable} ${manrope.variable} min-h-dvh antialiased`}
       >
-        <NextIntlClientProvider
-          locale={locale}
-          messages={messages}
-          onError={intlOnError}
-          getMessageFallback={intlGetMessageFallback}
-        >
+        <IntlClientProvider locale={locale} messages={messages}>
           <ThemeProvider
             defaultTheme="dark"
             enableSystem
@@ -131,7 +125,7 @@ export default async function RootLayout({
               </UserProvider>
             </ConfirmProvider>
           </ThemeProvider>
-        </NextIntlClientProvider>
+        </IntlClientProvider>
       </body>
     </html>
   );
