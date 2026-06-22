@@ -2,9 +2,10 @@
 
 import { motion } from "motion/react";
 import { ShieldCheck, Gamepad2, Wifi, Users, LayoutDashboard } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { ButtonLink } from "@/components/ui/button";
 import { SteamIcon } from "@/components/ui/icons";
-import { confirmPresets } from "@/lib/confirm-presets";
+import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { useAuthSession } from "@/lib/hooks/use-auth-session";
 import { skinNames } from "@/lib/profile";
 
@@ -26,6 +27,8 @@ const item = {
 
 export function Hero({ stats }: { stats: StatView[] }) {
   const { authenticated, steamLinked } = useAuthSession();
+  const t = useTranslations("hero");
+  const confirmPresets = useConfirmPresets();
 
   return (
     <section className="relative isolate overflow-hidden pb-20 pt-36 sm:pt-44">
@@ -55,7 +58,7 @@ export function Hero({ stats }: { stats: StatView[] }) {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
               </span>
-              65 servidores online agora
+              {t("badge")}
             </span>
           </motion.div>
 
@@ -63,9 +66,9 @@ export function Hero({ stats }: { stats: StatView[] }) {
             variants={item}
             className="mt-7 font-display text-5xl font-bold leading-[0.95] tracking-tight text-foreground sm:text-7xl md:text-8xl"
           >
-            DOMINE O
+            {t("titleLine1")}
             <span className="block text-gradient animate-shine bg-[length:200%_auto]">
-              SERVIDOR
+              {t("titleLine2")}
             </span>
           </motion.h1>
 
@@ -73,8 +76,7 @@ export function Hero({ stats }: { stats: StatView[] }) {
             variants={item}
             className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted"
           >
-            Você tem a mira. Nós fornecemos o ambiente. A rede competitiva de CS2
-            com retakes, deathmatch, ranking por ELO e skins liberadas.
+            {t("subtitle")}
           </motion.p>
 
           <motion.div
@@ -90,7 +92,7 @@ export function Hero({ stats }: { stats: StatView[] }) {
                   className="w-full sm:w-auto"
                 >
                   <LayoutDashboard className="h-5 w-5" />
-                  Ir ao Dashboard
+                  {t("goDashboard")}
                 </ButtonLink>
               ) : (
                 <ButtonLink
@@ -100,7 +102,7 @@ export function Hero({ stats }: { stats: StatView[] }) {
                   className="w-full sm:w-auto"
                 >
                   <SteamIcon className="h-5 w-5" />
-                  Vincular Steam
+                  {t("linkSteam")}
                 </ButtonLink>
               )
             ) : (
@@ -111,7 +113,7 @@ export function Hero({ stats }: { stats: StatView[] }) {
                 className="w-full sm:w-auto"
               >
                 <SteamIcon className="h-5 w-5" />
-                Entrar com Steam
+                {t("signInSteam")}
               </ButtonLink>
             )}
             <ButtonLink
@@ -122,7 +124,7 @@ export function Hero({ stats }: { stats: StatView[] }) {
               confirm={confirmPresets.downloadAnticheat}
             >
               <ShieldCheck className="h-5 w-5 text-primary" />
-              Baixar Anticheat
+              {t("downloadAnticheat")}
             </ButtonLink>
           </motion.div>
 
@@ -137,10 +139,10 @@ export function Hero({ stats }: { stats: StatView[] }) {
               </span>
               <div className="text-left">
                 <p className="font-display text-sm font-semibold text-foreground">
-                  Quick Connect
+                  {t("quickConnect")}
                 </p>
                 <p className="text-xs text-muted">
-                  Melhor servidor por ping e ocupação
+                  {t("quickConnectDesc")}
                 </p>
               </div>
             </div>
@@ -165,16 +167,16 @@ export function Hero({ stats }: { stats: StatView[] }) {
                 steamLinked ? (
                   <>
                     <LayoutDashboard className="h-4 w-4" />
-                    Ir ao Dashboard
+                    {t("goDashboard")}
                   </>
                 ) : (
                   <>
                     <SteamIcon className="h-4 w-4" />
-                    Vincular Steam
+                    {t("linkSteam")}
                   </>
                 )
               ) : (
-                "Conectar agora"
+                t("connectNow")
               )}
             </ButtonLink>
           </motion.div>

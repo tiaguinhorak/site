@@ -3,4 +3,4 @@ export function hasSteamLinked(user: { steamId: string | null }): boolean {
 }
 
 export const STEAM_REQUIRED_MESSAGE =
-  "Vincule sua conta Steam para usar o anticheat e entrar nos servidores.";
+  "Vincule sua conta Steam para jogar nos servidores e entrar na fila ranqueada.";

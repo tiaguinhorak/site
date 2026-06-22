@@ -4,28 +4,27 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Mail,
-  Phone,
   User,
+  Lock,
   Loader2,
   ArrowRight,
   LogIn,
   UserPlus,
   RefreshCw,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { CountryPicker } from "@/components/ui/country-picker";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Button } from "@/components/ui/button";
 import { HoneypotField } from "@/components/ui/honeypot-field";
 import { SteamIcon } from "@/components/ui/icons";
 import { SteamDataNotice } from "@/components/auth/steam-data-notice";
 import { secureApi } from "@/lib/api/client";
-import { confirmPresets } from "@/lib/confirm-presets";
-import {
-  steamCompleteProfileSchema,
-  formatZodErrors,
-  firstZodError,
-} from "@/lib/security/schemas";
-import { formatPhoneBR, sanitizeText } from "@/lib/security/sanitize";
+import { useConfirmPresets } from "@/lib/use-confirm-presets";
+import { formatZodErrors, firstZodError, steamCompleteProfileSchema } from "@/lib/security/schemas";
+import { sanitizeText } from "@/lib/security/sanitize";
+import { buildPhoneValue, extractNationalDigits } from "@/lib/profile/phone";
 import type { UserProfile } from "@/lib/serializers";
 
 const EMAIL_DRAFT_KEY = "clutchclube-complete-profile-email";
@@ -46,6 +45,8 @@ type SteamPreview = {
 export function SteamCompleteProfileForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations("steamComplete");
+  const confirmPresets = useConfirmPresets();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -53,6 +54,8 @@ export function SteamCompleteProfileForm() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<SteamPreview | null>(null);
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
@@ -93,14 +96,14 @@ export function SteamCompleteProfileForm() {
     const steam = searchParams.get("steam");
     const error = searchParams.get("error");
     if (steam === "connected") {
-      setStatusMessage("Nova conta Steam conectada. Continue o cadastro abaixo.");
+      setStatusMessage(t("statusConnected"));
       loadProfile().then((data) => {
         if (data) setPreview(data);
       });
     } else if (error === "steam_already_linked") {
-      setFormError("Esta conta Steam já está vinculada a outro usuário clutchclube.");
+      setFormError(t("errAlreadyLinked"));
     }
-  }, [searchParams, loadProfile]);
+  }, [searchParams, loadProfile, t]);
 
   const saveDraft = useCallback(
     (fields: {
@@ -149,6 +152,8 @@ export function SteamCompleteProfileForm() {
       lastName,
       phone,
       country,
+      password,
+      confirmPassword,
       website: honeypot,
     });
 
@@ -194,7 +199,7 @@ export function SteamCompleteProfileForm() {
   if (!preview) {
     return (
       <p className="text-center text-sm text-muted">
-        Não foi possível carregar seus dados Steam.
+        {t("loadError")}
       </p>
     );
   }
@@ -218,9 +223,9 @@ export function SteamCompleteProfileForm() {
         </div>
         <div className="min-w-0 flex-1">
           <p className="font-display text-sm font-semibold text-foreground">
-            {preview.steamPersonaName ?? "Conta Steam"}
+            {preview.steamPersonaName ?? t("steamAccount")}
           </p>
-          <p className="text-xs text-muted">Conta Steam conectada</p>
+          <p className="text-xs text-muted">{t("steamConnected")}</p>
           {preview.steamId && (
             <p className="mt-0.5 font-mono text-[10px] text-muted">
               {preview.steamId}
@@ -238,7 +243,7 @@ export function SteamCompleteProfileForm() {
           }}
         >
           <RefreshCw className="h-4 w-4" />
-          <span className="hidden sm:inline">Trocar Steam</span>
+          <span className="hidden sm:inline">{t("switchSteam")}</span>
         </Button>
       </div>
 
@@ -263,7 +268,7 @@ export function SteamCompleteProfileForm() {
 
         {draftSaved && (
           <p className="text-xs text-emerald-400" role="status">
-            Progresso salvo automaticamente.
+            {t("draftSaved")}
           </p>
         )}
 
@@ -277,21 +282,20 @@ export function SteamCompleteProfileForm() {
         )}
 
         <Input
-          label="Nickname (Steam)"
+          label={t("nicknameLabel")}
           value={preview.nickname}
           readOnly
           className="cursor-not-allowed opacity-80"
           icon={<User className="h-4.5 w-4.5" />}
         />
         <p className="text-xs text-muted">
-          Importado do nome público da Steam (
-          {preview.steamPersonaName ?? preview.nickname}).
+          {t("nicknameHint", { name: preview.steamPersonaName ?? preview.nickname })}
         </p>
 
         <Input
-          label="E-mail"
+          label={t("emailLabel")}
           type="email"
-          placeholder="voce@exemplo.com"
+          placeholder={t("emailPlaceholder")}
           autoComplete="email"
           maxLength={254}
           value={email}
@@ -300,45 +304,72 @@ export function SteamCompleteProfileForm() {
           icon={<Mail className="h-4.5 w-4.5" />}
         />
 
+        <Input
+          label={t("passwordLabel")}
+          type="password"
+          placeholder={t("passwordPlaceholder")}
+          autoComplete="new-password"
+          maxLength={128}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          error={fieldErrors.password}
+          icon={<Lock className="h-4.5 w-4.5" />}
+        />
+        <Input
+          label={t("confirmPasswordLabel")}
+          type="password"
+          placeholder={t("confirmPasswordPlaceholder")}
+          autoComplete="new-password"
+          maxLength={128}
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          error={fieldErrors.confirmPassword}
+          icon={<Lock className="h-4.5 w-4.5" />}
+        />
+        <p className="-mt-2 text-xs text-muted">
+          {t("passwordHint")}
+        </p>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
-            label="Nome"
+            label={t("firstNameLabel")}
             value={firstName}
             maxLength={64}
             onChange={(e) =>
               setFirstName(sanitizeText(e.target.value, 64))
             }
             error={fieldErrors.firstName}
-            placeholder="Seu nome"
+            placeholder={t("firstNamePlaceholder")}
             icon={<User className="h-4.5 w-4.5" />}
           />
           <Input
-            label="Sobrenome"
+            label={t("lastNameLabel")}
             value={lastName}
             maxLength={64}
             onChange={(e) =>
               setLastName(sanitizeText(e.target.value, 64))
             }
             error={fieldErrors.lastName}
-            placeholder="Seu sobrenome"
+            placeholder={t("lastNamePlaceholder")}
           />
         </div>
 
-        <Input
-          label="Telefone"
-          type="tel"
-          placeholder="+55 (11) 98765-4321"
-          autoComplete="tel"
+        <PhoneInput
           value={phone}
-          onChange={(e) => setPhone(formatPhoneBR(e.target.value))}
+          countryCode={country}
+          onChange={setPhone}
+          onCountryChange={setCountry}
           error={fieldErrors.phone}
-          icon={<Phone className="h-4.5 w-4.5" />}
         />
 
         <div className="relative">
           <CountryPicker
             value={country}
-            onChange={setCountry}
+            onChange={(code) => {
+              const national = extractNationalDigits(phone, country);
+              setCountry(code);
+              if (national) setPhone(buildPhoneValue(national, code));
+            }}
             error={fieldErrors.country}
             id="complete-profile-country"
           />
@@ -354,20 +385,19 @@ export function SteamCompleteProfileForm() {
             <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
             <>
-              Finalizar cadastro
+              {t("finish")}
               <ArrowRight className="h-4 w-4" />
             </>
           )}
         </Button>
       </form>
 
-      <div className="rounded-xl border border-border p-4 space-y-3">
+      <div className="rounded-xl glass p-4 space-y-3">
         <p className="font-display text-xs font-semibold uppercase tracking-wider text-muted">
-          Outras opções
+          {t("otherOptions")}
         </p>
         <p className="text-xs text-muted">
-          Se conectou a Steam errada ou prefere outra forma de entrar, use uma das
-          opções abaixo. O progresso deste formulário fica salvo nesta conta.
+          {t("otherOptionsDesc")}
         </p>
         <div className="grid gap-2 sm:grid-cols-2">
           <Button
@@ -379,7 +409,7 @@ export function SteamCompleteProfileForm() {
             onClick={() => leaveForAuth("/login")}
           >
             <LogIn className="h-4 w-4" />
-            Entrar em outra conta
+            {t("loginOther")}
           </Button>
           <Button
             type="button"
@@ -390,7 +420,7 @@ export function SteamCompleteProfileForm() {
             onClick={() => leaveForAuth("/register")}
           >
             <UserPlus className="h-4 w-4" />
-            Criar com e-mail
+            {t("createEmail")}
           </Button>
         </div>
       </div>

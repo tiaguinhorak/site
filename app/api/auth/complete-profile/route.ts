@@ -2,19 +2,13 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
   applyApiGuards,
-  jsonError,
   parseJsonBody,
   requireSession,
 } from "@/lib/security/api-guard";
+import { hashPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/prisma";
 import { RATE_LIMITS } from "@/lib/security/constants";
 import { formatPhoneBR, sanitizeEmail, sanitizeText } from "@/lib/security/sanitize";
-import {
-  steamCompleteProfileSchema,
-  steamProfileDraftSchema,
-  formatZodErrors,
-  firstZodError,
-} from "@/lib/security/schemas";
 import { sessionOptionsFromUser } from "@/lib/auth/session-options";
 import {
   applySessionCookie,
@@ -22,6 +16,12 @@ import {
 } from "@/lib/security/session";
 import { steamPersonaToNickname } from "@/lib/steam/nickname";
 import { serializeUser } from "@/lib/serializers";
+import {
+  jsonErrorKey,
+  validationSchemasForRequest,
+  zodErrorResponse,
+  apiErrFromRequest,
+} from "@/lib/i18n/api-route";
 
 export async function GET(request: NextRequest) {
   const { session, error: sessionError } = requireSession(request);
@@ -31,11 +31,11 @@ export async function GET(request: NextRequest) {
     where: { id: session!.userId },
   });
   if (!user) {
-    return jsonError(404, "Usuário não encontrado.");
+    return jsonErrorKey(request, 404, "userNotFound");
   }
 
   if (user.email) {
-    return jsonError(400, "Perfil já completado.");
+    return jsonErrorKey(request, 400, "profileAlreadyComplete");
   }
 
   return NextResponse.json({
@@ -69,24 +69,19 @@ export async function PATCH(request: NextRequest) {
     where: { id: session!.userId },
   });
   if (!currentUser) {
-    return jsonError(404, "Usuário não encontrado.");
+    return jsonErrorKey(request, 404, "userNotFound");
   }
   if (currentUser.email) {
-    return jsonError(400, "Perfil já completado.");
+    return jsonErrorKey(request, 400, "profileAlreadyComplete");
   }
 
   const { data, error: parseError } = await parseJsonBody(request);
   if (parseError) return parseError;
 
-  const parsed = steamProfileDraftSchema.safeParse(data);
+  const schemas = validationSchemasForRequest(request);
+  const parsed = schemas.steamProfileDraftSchema.safeParse(data);
   if (!parsed.success) {
-    return NextResponse.json(
-      {
-        error: firstZodError(parsed.error),
-        fieldErrors: formatZodErrors(parsed.error),
-      },
-      { status: 400 },
-    );
+    return zodErrorResponse(request, parsed.error);
   }
 
   const update: Record<string, string> = {};
@@ -128,28 +123,23 @@ export async function POST(request: NextRequest) {
     where: { id: session!.userId },
   });
   if (!currentUser) {
-    return jsonError(404, "Usuário não encontrado.");
+    return jsonErrorKey(request, 404, "userNotFound");
   }
   if (currentUser.email) {
-    return jsonError(400, "Perfil já completado.");
+    return jsonErrorKey(request, 400, "profileAlreadyComplete");
   }
 
   const { data, error: parseError } = await parseJsonBody(request);
   if (parseError) return parseError;
 
-  const parsed = steamCompleteProfileSchema.safeParse(data);
+  const schemas = validationSchemasForRequest(request);
+  const parsed = schemas.steamCompleteProfileSchema.safeParse(data);
   if (!parsed.success) {
-    return NextResponse.json(
-      {
-        error: firstZodError(parsed.error),
-        fieldErrors: formatZodErrors(parsed.error),
-      },
-      { status: 400 },
-    );
+    return zodErrorResponse(request, parsed.error);
   }
 
   if (parsed.data.website) {
-    return jsonError(400, "Requisição inválida.");
+    return jsonErrorKey(request, 400, "invalidRequest");
   }
 
   const email = sanitizeEmail(parsed.data.email);
@@ -163,17 +153,20 @@ export async function POST(request: NextRequest) {
   if (emailTaken) {
     return NextResponse.json(
       {
-        error: "Este e-mail já está cadastrado.",
-        fieldErrors: { email: "E-mail já cadastrado." },
+        error: apiErrFromRequest(request, "emailAlreadyRegistered"),
+        fieldErrors: { email: apiErrFromRequest(request, "emailInUseField") },
       },
       { status: 409 },
     );
   }
 
+  const passwordHash = await hashPassword(parsed.data.password);
+
   const user = await prisma.user.update({
     where: { id: session!.userId },
     data: {
       email,
+      passwordHash,
       firstName: sanitizeText(parsed.data.firstName, 64),
       lastName: sanitizeText(parsed.data.lastName, 64),
       phone: formatPhoneBR(parsed.data.phone),

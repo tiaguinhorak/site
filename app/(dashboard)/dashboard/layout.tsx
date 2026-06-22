@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 
-export const metadata: Metadata = {
-  title: "Dashboard — clutchclube",
-  description: "Área do jogador clutchclube. Modos, perfil, notícias e suporte.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("meta");
+  return {
+    title: t("dashboardTitle"),
+    description: t("dashboardDescription"),
+  };
+}
 
 export default function DashboardLayout({
   children,

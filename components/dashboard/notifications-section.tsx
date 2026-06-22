@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import { CheckCheck } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/lib/hooks/use-notifications";
 import { cn } from "@/lib/utils";
@@ -14,9 +15,19 @@ const notificationTypeStyles: Record<string, string> = {
 };
 
 export function NotificationsSection() {
+  const t = useTranslations("notifications");
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications({
     pollMs: 60000,
   });
+
+  function typeLabel(type: string) {
+    const key = `type.${type}` as "type.system";
+    try {
+      return t(key);
+    } catch {
+      return type;
+    }
+  }
 
   return (
     <section className="space-y-4">
@@ -33,7 +44,7 @@ export function NotificationsSection() {
             }}
           >
             <CheckCheck className="h-4 w-4" />
-            Marcar todas como lidas
+            {t("markAllRead")}
           </Button>
         </div>
       )}
@@ -62,7 +73,7 @@ export function NotificationsSection() {
                   notificationTypeStyles[n.type] ?? notificationTypeStyles.system,
                 )}
               >
-                {n.type}
+                {typeLabel(n.type)}
               </span>
               <div className="min-w-0 flex-1">
                 <p className="font-display font-semibold text-foreground">{n.title}</p>
@@ -77,7 +88,7 @@ export function NotificationsSection() {
         ))}
         {notifications.length === 0 && (
           <li className="px-5 py-12 text-center text-sm text-muted">
-            Sem notificações
+            {t("empty")}
           </li>
         )}
       </ul>

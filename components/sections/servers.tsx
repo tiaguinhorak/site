@@ -2,10 +2,14 @@
 
 import { motion } from "motion/react";
 import { Signal, Play, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { SectionHeading } from "@/components/ui/reveal";
 import { ButtonLink } from "@/components/ui/button";
-import { confirmPresets } from "@/lib/confirm-presets";
+import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { useAuthSession } from "@/lib/hooks/use-auth-session";
+import { formatConnectAddress, steamConnectUrl } from "@/lib/servers/connect";
+import { formatMapLabel } from "@/lib/servers/maps";
+import { useLiveServerStats } from "@/lib/hooks/use-live-server-stats";
 import { cn } from "@/lib/utils";
 
 export type ServerRowView = {
@@ -15,6 +19,9 @@ export type ServerRowView = {
   players: number;
   slots: number;
   ping: number;
+  host?: string | null;
+  port?: number | null;
+  isLiveSynced?: boolean;
 };
 
 function pingColor(ping: number) {
@@ -30,7 +37,11 @@ export function Servers({
   embedded?: boolean;
   servers: ServerRowView[];
 }) {
+  const t = useTranslations("marketing");
+  const confirmPresets = useConfirmPresets();
   const { authenticated, steamLinked } = useAuthSession();
+  const hasLiveServers = servers.some((server) => server.isLiveSynced);
+  const { statsByKey } = useLiveServerStats(hasLiveServers);
 
   const connectHref = authenticated
     ? steamLinked
@@ -47,14 +58,14 @@ export function Servers({
         {!embedded && (
           <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end">
             <SectionHeading
-              eyebrow="Ao vivo"
+              eyebrow={t("servidoresEyebrow")}
               title={
                 <>
-                  Servidores de{" "}
-                  <span className="text-gradient">alta performance</span>
+                  {t("servidoresTitleA")}{" "}
+                  <span className="text-gradient">{t("servidoresTitleB")}</span>
                 </>
               }
-              description="Hospedados em São Paulo com links dedicados de 10 Gbps e 18ms de ping médio no Brasil."
+              description={t("servidoresDesc")}
             />
             <ButtonLink
               href={authenticated ? "/dashboard" : "/register"}
@@ -62,7 +73,7 @@ export function Servers({
               size="md"
               className="shrink-0"
             >
-              Ver todos os 65 servidores
+              {t("viewAllServers", { count: 65 })}
               <ChevronRight className="h-4 w-4" />
             </ButtonLink>
           </div>
@@ -79,21 +90,30 @@ export function Servers({
           )}
         >
           <div className="hidden grid-cols-[1.6fr_1fr_1fr_1.2fr_0.8fr_auto] gap-4 border-b border-border px-6 py-4 font-display text-xs font-semibold uppercase tracking-wider text-muted md:grid">
-            <span>Servidor</span>
-            <span>Mapa</span>
-            <span>Modo</span>
-            <span>Jogadores</span>
-            <span>Ping</span>
-            <span className="text-right">Ação</span>
+            <span>{t("colServer")}</span>
+            <span>{t("colMap")}</span>
+            <span>{t("colMode")}</span>
+            <span>{t("colPlayers")}</span>
+            <span>{t("colPing")}</span>
+            <span className="text-right">{t("colAction")}</span>
           </div>
 
           <ul>
             {servers.map((server, i) => {
-              const full = server.players >= server.slots;
-              const pct = Math.min((server.players / server.slots) * 100, 100);
+              const connectAddress = formatConnectAddress(server.host, server.port);
+              const liveStat = connectAddress ? statsByKey[connectAddress] : undefined;
+              const players = liveStat?.players ?? server.players;
+              const slots = liveStat?.slots ?? server.slots;
+              const ping = liveStat?.ping ?? server.ping;
+              const mapLabel = formatMapLabel(liveStat?.map ?? server.map);
+              const isOffline = liveStat ? !liveStat.online : server.map === "offline";
+              const full = players >= slots && slots > 0;
+              const pct = slots > 0 ? Math.min((players / slots) * 100, 100) : 0;
+              const steamUrl = steamConnectUrl(server.host, server.port);
+              const canDirectConnect = Boolean(connectAddress && steamUrl && !isOffline);
               return (
                 <motion.li
-                  key={server.name}
+                  key={server.isLiveSynced ? `${server.name}-${connectAddress}` : server.name}
                   initial={{ opacity: 0 }}
                   whileInView={{ opacity: 1 }}
                   viewport={{ once: true }}
@@ -104,17 +124,22 @@ export function Servers({
                     <span
                       className={cn(
                         "h-2.5 w-2.5 shrink-0 rounded-full",
-                        full ? "bg-rose-500" : "bg-emerald-400",
-                        !full && "animate-pulse-glow",
+                        isOffline ? "bg-zinc-500" : full ? "bg-rose-500" : "bg-emerald-400",
+                        !full && !isOffline && "animate-pulse-glow",
                       )}
                     />
                     <span className="font-display text-sm font-semibold text-foreground">
                       {server.name}
                     </span>
+                    {canDirectConnect && (
+                      <span className="hidden font-mono text-[10px] text-muted lg:inline">
+                        {connectAddress}
+                      </span>
+                    )}
                   </div>
 
                   <span className="hidden font-mono text-sm text-muted md:block">
-                    {server.map}
+                    {mapLabel}
                   </span>
 
                   <span className="hidden md:block">
@@ -132,7 +157,7 @@ export function Servers({
                         />
                       </div>
                       <span className="font-mono text-sm text-foreground">
-                        {server.players}/{server.slots}
+                        {isOffline ? "—" : `${players}/${slots}`}
                       </span>
                     </div>
                   </div>
@@ -140,30 +165,47 @@ export function Servers({
                   <span
                     className={cn(
                       "hidden items-center gap-1 font-mono text-sm md:flex",
-                      pingColor(server.ping),
+                      isOffline ? "text-muted" : pingColor(ping),
                     )}
                   >
                     <Signal className="h-3.5 w-3.5" />
-                    {server.ping}ms
+                    {isOffline ? "—" : `${ping}ms`}
                   </span>
 
                   <div className="col-span-2 mt-2 md:col-auto md:mt-0 md:text-right">
-                    <ButtonLink
-                      href={connectHref}
-                      variant={full ? "outline" : "primary"}
-                      size="sm"
-                      className="w-full md:w-auto"
-                      confirm={
-                        authenticated
-                          ? full
-                            ? confirmPresets.joinQueue(server.name)
-                            : confirmPresets.connectServer(server.name, server.mode)
-                          : undefined
-                      }
-                    >
-                      <Play className="h-3.5 w-3.5" />
-                      {full ? "Fila" : "Conectar"}
-                    </ButtonLink>
+                    {canDirectConnect ? (
+                      <ButtonLink
+                        href={steamUrl!}
+                        variant="primary"
+                        size="sm"
+                        className="w-full md:w-auto"
+                        confirm={
+                          authenticated
+                            ? confirmPresets.connectServer(server.name, server.mode)
+                            : undefined
+                        }
+                      >
+                        <Play className="h-3.5 w-3.5" />
+                        {t("connect")}
+                      </ButtonLink>
+                    ) : (
+                      <ButtonLink
+                        href={connectHref}
+                        variant={full ? "outline" : "primary"}
+                        size="sm"
+                        className="w-full md:w-auto"
+                        confirm={
+                          authenticated
+                            ? full
+                              ? confirmPresets.joinQueue(server.name)
+                              : confirmPresets.connectServer(server.name, server.mode)
+                            : undefined
+                        }
+                      >
+                        <Play className="h-3.5 w-3.5" />
+                        {full ? t("queue") : t("connect")}
+                      </ButtonLink>
+                    )}
                   </div>
                 </motion.li>
               );

@@ -18,3 +18,9 @@ export function punishmentTypeLabel(type: PunishmentType): string {
     }
   }
 }
+
+export function punishmentServerLabel(serverName: string): string | null {
+  if (serverName === "ranked_queue") return "Fila rankeada";
+  if (!serverName.trim()) return null;
+  return serverName;
+}

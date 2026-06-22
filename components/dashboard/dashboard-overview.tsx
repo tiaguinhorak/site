@@ -3,19 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Flame } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { ButtonLink } from "@/components/ui/button";
-import { GameModesSection } from "@/components/dashboard/game-modes-section";
+import { PlayModePicker } from "@/components/dashboard/play-mode-picker";
+import { RANKED_ANTICHEAT_REQUIRED } from "@/lib/ranked";
 import { InventoryPreview } from "@/components/dashboard/inventory-section";
-import { confirmPresets } from "@/lib/confirm-presets";
+import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { useUser } from "@/lib/hooks/use-user";
 import { cn } from "@/lib/utils";
-
-const quickLinks = [
-  { href: "/dashboard/inventario", label: "Inventário completo", description: "Trocar facas, luvas e skins" },
-  { href: "/dashboard/loja", label: "Loja", description: "Novos pacotes e cosméticos" },
-  { href: "/dashboard/anticheat", label: "Anticheat", description: "Download e instalação" },
-  { href: "/dashboard/suporte", label: "Suporte", description: "Ajuda e atendimento" },
-];
 
 const notificationTypeStyles: Record<string, string> = {
   system: "bg-violet-500/15 text-violet-400",
@@ -26,6 +21,16 @@ const notificationTypeStyles: Record<string, string> = {
 
 export function DashboardOverview() {
   const { user } = useUser();
+  const t = useTranslations("overview");
+  const confirmPresets = useConfirmPresets();
+  const quickLinks = [
+    { href: "/dashboard/lobby", label: t("quick.lobbyLabel"), description: t("quick.lobbyDesc") },
+    { href: "/dashboard/ranked", label: t("quick.rankedLabel"), description: t("quick.rankedDesc") },
+    { href: "/dashboard/inventario", label: t("quick.inventoryLabel"), description: t("quick.inventoryDesc") },
+    { href: "/dashboard/loja", label: t("quick.storeLabel"), description: t("quick.storeDesc") },
+    { href: "/dashboard/anticheat", label: t("quick.anticheatLabel"), description: t("quick.anticheatDesc") },
+    { href: "/dashboard/suporte", label: t("quick.supportLabel"), description: t("quick.supportDesc") },
+  ];
   const [notifications, setNotifications] = useState<
     Array<{ id: string; title: string; body: string; time: string; read: boolean; type: string }>
   >([]);
@@ -51,10 +56,10 @@ export function DashboardOverview() {
 
   const quickStats = user
     ? [
-        { label: "Rank global", value: `#${user.rank}` },
-        { label: "ELO", value: user.elo },
-        { label: "K/D", value: user.kd.toFixed(2) },
-        { label: "Plano", value: user.plan },
+        { label: t("statRank"), value: `#${user.rank}` },
+        { label: t("statElo"), value: user.elo },
+        { label: t("statKd"), value: user.kd.toFixed(2) },
+        { label: t("statPlan"), value: user.plan },
       ]
     : [];
 
@@ -74,32 +79,19 @@ export function DashboardOverview() {
       )}
 
       <div>
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="font-display text-xl font-bold text-foreground sm:text-2xl">
-              Modos de jogo
-            </h2>
-            <p className="mt-1 text-sm text-muted">
-              Conecte direto ao melhor servidor — sem sair da visão geral.
-            </p>
-          </div>
-          <Link href="/dashboard/modos" className="text-sm font-medium text-primary hover:underline">
-            Ver todos os modos
-          </Link>
-        </div>
-        <GameModesSection />
+        <PlayModePicker />
       </div>
 
       <div>
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="font-display text-xl font-bold text-foreground sm:text-2xl">
-              Equipado agora
+              {t("equippedNow")}
             </h2>
-            <p className="mt-1 text-sm text-muted">Suas skins ativas nos servidores clutchclube.</p>
+            <p className="mt-1 text-sm text-muted">{t("equippedDesc")}</p>
           </div>
           <Link href="/dashboard/inventario" className="text-sm font-medium text-primary hover:underline">
-            Inventário completo
+            {t("fullInventory")}
           </Link>
         </div>
         <InventoryPreview />
@@ -129,7 +121,7 @@ export function DashboardOverview() {
               </p>
             </div>
             <ButtonLink href="/dashboard/loja" variant="primary" size="lg" className="shrink-0">
-              Ver na loja
+              {t("viewInStore")}
               <ArrowRight className="h-4 w-4" />
             </ButtonLink>
           </div>
@@ -140,10 +132,10 @@ export function DashboardOverview() {
         <div>
           <div className="mb-6 flex items-end justify-between gap-3">
             <h2 className="font-display text-xl font-bold text-foreground sm:text-2xl">
-              Notificações recentes
+              {t("recentNotifications")}
             </h2>
             <Link href="/dashboard/notificacoes" className="text-sm font-medium text-primary hover:underline">
-              Ver todas
+              {t("viewAll")}
             </Link>
           </div>
           <ul className="overflow-hidden rounded-card glass-strong">
@@ -172,7 +164,7 @@ export function DashboardOverview() {
 
       <div>
         <h2 className="mb-6 font-display text-xl font-bold text-foreground sm:text-2xl">
-          Acesso rápido
+          {t("quickAccess")}
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">
           {quickLinks.map((link) => (
@@ -189,29 +181,30 @@ export function DashboardOverview() {
       </div>
 
       {user?.plan === "free" && (
-        <div className="rounded-card border border-primary/30 bg-[color-mix(in_srgb,var(--primary)_10%,transparent)] p-6">
-          <h3 className="font-display text-lg font-bold text-foreground">Upgrade Premium</h3>
-          <p className="mt-2 text-sm text-muted">
-            Slot reservado, +10k skins e prioridade no Quick Connect.
-          </p>
-          <ButtonLink href="/dashboard/premium" variant="primary" size="sm" className="mt-4">
-            Ver planos
-          </ButtonLink>
+        <div className="rounded-card glass p-6">
+          <h3 className="font-display text-lg font-bold text-foreground">{t("subscribeTitle")}</h3>
+          <p className="mt-2 text-sm text-muted">{t("subscribeDesc")}</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <ButtonLink href="/dashboard/ranked" variant="primary" size="sm">
+              {t("rankedMode")}
+            </ButtonLink>
+            <ButtonLink href="/dashboard/premium" variant="outline" size="sm">
+              {t("viewPlans")}
+            </ButtonLink>
+          </div>
         </div>
       )}
 
-      {user && !user.anticheatInstalled && (
-        <div className="flex flex-col items-start justify-between gap-3 rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 sm:flex-row sm:items-center">
-          <p className="text-sm text-foreground">
-            Anticheat não detectado. Instale para jogar no modo competitivo.
-          </p>
+      {RANKED_ANTICHEAT_REQUIRED && user && !user.anticheatInstalled && (
+        <div className="flex flex-col items-start justify-between gap-3 rounded-xl glass border border-amber-400/30 p-4 sm:flex-row sm:items-center">
+          <p className="text-sm text-foreground">{t("anticheatNotDetected")}</p>
           <ButtonLink
             href="/dashboard/anticheat"
             variant="outline"
             size="sm"
             confirm={confirmPresets.downloadAnticheat}
           >
-            Instalar agora
+            {t("installNow")}
           </ButtonLink>
         </div>
       )}

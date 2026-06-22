@@ -18,7 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { secureApi } from "@/lib/api/client";
 import { confirmPresets } from "@/lib/confirm-presets";
-import { punishmentTypeLabel } from "@/lib/admin/punishment-labels";
+import { punishmentTypeLabel, punishmentServerLabel } from "@/lib/admin/punishment-labels";
+import { AdminRankedQueuePanel } from "@/components/admin/admin-ranked-queue-panel";
 import type { PunishmentType } from "@/lib/generated/prisma/client";
 import { cn } from "@/lib/utils";
 
@@ -246,6 +247,7 @@ export function AdminUserDetail({ userId }: { userId: string }) {
         title: notifyForm.title,
         body: notifyForm.body,
         type: notifyForm.type,
+        autoTranslate: true,
       },
     });
     setSaving(false);
@@ -478,7 +480,23 @@ export function AdminUserDetail({ userId }: { userId: string }) {
         )}
 
         {tab === "punicoes" && (
-          <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          <div className="mt-6 space-y-6">
+            <AdminRankedQueuePanel
+              userId={userId}
+              nickname={user.nickname}
+              onSuccess={async (msg) => {
+                setFormError(null);
+                setFormSuccess(msg);
+                const refreshed = await loadUser();
+                if (refreshed) setUser(refreshed);
+              }}
+              onError={(msg) => {
+                setFormSuccess(null);
+                setFormError(msg);
+              }}
+            />
+
+            <div className="grid gap-6 lg:grid-cols-2">
             <div className="rounded-xl border border-border p-4 space-y-3">
               <h3 className="flex items-center gap-2 font-display font-bold">
                 <Gavel className="h-4 w-4 text-primary" />
@@ -537,6 +555,11 @@ export function AdminUserDetail({ userId }: { userId: string }) {
                         )}
                       </div>
                       <p className="text-muted">{p.reason}</p>
+                      {punishmentServerLabel(p.serverName) && (
+                        <p className="mt-1 text-xs text-primary/80">
+                          {punishmentServerLabel(p.serverName)}
+                        </p>
+                      )}
                       <p className="mt-1 text-xs text-muted">
                         {p.admin.nickname} · {new Date(p.createdAt).toLocaleString("pt-BR")}
                         {p.expiresAt && ` · expira ${new Date(p.expiresAt).toLocaleDateString("pt-BR")}`}
@@ -546,6 +569,7 @@ export function AdminUserDetail({ userId }: { userId: string }) {
                   ))
                 )}
               </ul>
+            </div>
             </div>
           </div>
         )}

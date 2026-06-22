@@ -23,7 +23,18 @@ export type AuditAction =
   | "GAME_MODE_ROOM_CREATE"
   | "GAME_MODE_ROOM_UPDATE"
   | "GAME_MODE_ROOM_DELETE"
-  | "MEDIA_UPLOAD";
+  | "MEDIA_UPLOAD"
+  | "RANKED_QUEUE_RESTRICT"
+  | "RANKED_QUEUE_CLEAR"
+  | "CSGO_SERVER_REGISTER"
+  | "CSGO_SERVER_START"
+  | "CSGO_SERVER_STOP"
+  | "CSGO_SERVER_CHANGE_MAP"
+  | "CSGO_SERVER_DELETE"
+  | "CSGO_MATCH_CANCEL"
+  | "CSGO_MATCH_END"
+  | "RANKED_SIMULATE"
+  | "RANKED_STALE_CLEANUP";
 
 export async function logAdminAction(params: {
   adminId: string;

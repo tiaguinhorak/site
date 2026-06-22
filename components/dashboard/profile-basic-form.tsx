@@ -1,15 +1,16 @@
 "use client";
 
-import { Mail, Phone, User, Lock } from "lucide-react";
+import { Mail, User, Lock } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { CountryPicker } from "@/components/ui/country-picker";
+import { PhoneInput } from "@/components/ui/phone-input";
 import type { UserProfile } from "@/lib/serializers";
-import { confirmPresets } from "@/lib/confirm-presets";
-import { getCountry } from "@/lib/profile/countries";
+import { useConfirmPresets } from "@/lib/use-confirm-presets";
+import { buildPhoneValue, extractNationalDigits } from "@/lib/profile/phone";
 import {
-  formatPhoneBR,
   sanitizeNickname,
   sanitizeText,
 } from "@/lib/security/sanitize";
@@ -19,7 +20,8 @@ type ProfileBasicFormProps = {
   fieldErrors: Record<string, string>;
   saving: boolean;
   onChange: (updates: Partial<UserProfile>) => void;
-  onSave: () => void;
+  onSave?: () => void;
+  hideSave?: boolean;
 };
 
 export function ProfileBasicForm({
@@ -28,9 +30,11 @@ export function ProfileBasicForm({
   saving,
   onChange,
   onSave,
+  hideSave = false,
 }: ProfileBasicFormProps) {
+  const t = useTranslations("profileForm");
+  const confirmPresets = useConfirmPresets();
   const steamLocked = profile.steamLinked;
-  const dial = getCountry(profile.country)?.dial ?? "+55";
 
   return (
     <form
@@ -40,7 +44,7 @@ export function ProfileBasicForm({
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
-          label="Nome"
+          label={t("firstName")}
           icon={<User className="h-4 w-4" />}
           value={profile.firstName}
           maxLength={64}
@@ -48,24 +52,24 @@ export function ProfileBasicForm({
             onChange({ firstName: sanitizeText(e.target.value, 64) })
           }
           error={fieldErrors.firstName}
-          placeholder="Seu nome"
+          placeholder={t("firstNamePlaceholder")}
         />
         <Input
-          label="Sobrenome"
+          label={t("lastName")}
           value={profile.lastName}
           maxLength={64}
           onChange={(e) =>
             onChange({ lastName: sanitizeText(e.target.value, 64) })
           }
           error={fieldErrors.lastName}
-          placeholder="Seu sobrenome"
+          placeholder={t("lastNamePlaceholder")}
         />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <Input
-            label="Nickname (in-game)"
+            label={t("nickname")}
             value={profile.nickname}
             maxLength={24}
             readOnly={steamLocked}
@@ -79,13 +83,13 @@ export function ProfileBasicForm({
           {steamLocked && (
             <p className="mt-1.5 flex items-center gap-1 text-xs text-muted">
               <Lock className="h-3 w-3" />
-              Definido pela Steam — não editável
+              {t("nicknameSteamLocked")}
             </p>
           )}
         </div>
         <div>
           <Input
-            label="E-mail"
+            label={t("email")}
             type="email"
             icon={<Mail className="h-4 w-4" />}
             value={profile.email}
@@ -94,12 +98,12 @@ export function ProfileBasicForm({
             disabled={steamLocked}
             onChange={(e) => onChange({ email: e.target.value })}
             error={fieldErrors.email}
-            placeholder="voce@exemplo.com"
+            placeholder={t("emailPlaceholder")}
           />
           {steamLocked && (
             <p className="mt-1.5 flex items-center gap-1 text-xs text-muted">
               <Lock className="h-3 w-3" />
-              Vinculado à conta Steam
+              {t("emailSteamLocked")}
             </p>
           )}
         </div>
@@ -109,63 +113,65 @@ export function ProfileBasicForm({
         <div className="relative">
           <CountryPicker
             value={profile.country}
-            onChange={(code) => onChange({ country: code })}
+            onChange={(code) => {
+              const national = extractNationalDigits(profile.phone, profile.country);
+              onChange({
+                country: code,
+                phone: national ? buildPhoneValue(national, code) : profile.phone,
+              });
+            }}
             error={fieldErrors.country}
           />
         </div>
         <div>
-          <Input
-            label="Telefone"
-            type="tel"
-            icon={<Phone className="h-4 w-4" />}
+          <PhoneInput
             value={profile.phone}
-            onChange={(e) =>
-              onChange({ phone: formatPhoneBR(e.target.value) })
-            }
+            countryCode={profile.country}
+            onChange={(phone) => onChange({ phone })}
+            onCountryChange={(country) => onChange({ country })}
             error={fieldErrors.phone}
-            placeholder={`${dial} (11) 98765-4321`}
+            hint={t("phoneHint")}
           />
-          <p className="mt-1.5 text-xs text-muted">
-            Privado — não aparece no perfil público
-          </p>
         </div>
       </div>
 
       <Textarea
-        label="Bio pública"
+        label={t("bio")}
         value={profile.bio}
         onChange={(e) =>
           onChange({ bio: sanitizeText(e.target.value, 280) })
         }
         error={fieldErrors.bio}
-        placeholder="Fale sobre seu estilo de jogo, modos favoritos..."
+        placeholder={t("bioPlaceholder")}
         maxLength={280}
         rows={4}
       />
       <p className="text-xs text-muted">
-        {profile.bio.length}/280 · visível no{" "}
+        {t("bioCounter", { count: profile.bio.length })}
         <a
           href={`/player/${profile.nickname}`}
           className="text-primary hover:underline"
           target="_blank"
           rel="noopener noreferrer"
         >
-          perfil público
+          {t("publicProfile")}
         </a>
       </p>
 
-      <div className="flex justify-end border-t border-border pt-6">
-        <Button
-          type="button"
-          variant="primary"
-          size="md"
-          disabled={saving}
-          confirm={confirmPresets.editProfile}
-          onClick={onSave}
-        >
-          {saving ? "Salvando..." : "Salvar informações"}
-        </Button>
-      </div>
+      {!hideSave && (
+        <div className="flex justify-end border-t border-border pt-6">
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
+            disabled={saving}
+            confirm={confirmPresets.editProfile}
+            onClick={onSave}
+          >
+            {saving ? t("saving") : t("save")}
+          </Button>
+        </div>
+      )}
     </form>
   );
 }

@@ -1,26 +1,28 @@
 import { Trophy, Calendar, Target } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
-export function SeasonInfo() {
+export async function SeasonInfo() {
+  const t = await getTranslations("seasonInfo");
   return (
     <div className="grid w-full min-w-0 grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
       {[
         {
           icon: Trophy,
-          label: "Temporada atual",
-          value: "Season 8",
-          detail: "Ranking global resetado em 1 de junho",
+          label: t("currentSeasonLabel"),
+          value: t("currentSeasonValue"),
+          detail: t("currentSeasonDetail"),
         },
         {
           icon: Calendar,
-          label: "Duração",
-          value: "90 dias",
-          detail: "Próximo reset estimado para setembro",
+          label: t("durationLabel"),
+          value: t("durationValue"),
+          detail: t("durationDetail"),
         },
         {
           icon: Target,
-          label: "Modalidades",
-          value: "5 modos",
-          detail: "Retakes, DM, Duels, Wingman e 5x5",
+          label: t("modesLabel"),
+          value: t("modesValue"),
+          detail: t("modesDetail"),
         },
       ].map((item) => {
         const Icon = item.icon;

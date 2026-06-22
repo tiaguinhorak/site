@@ -3,12 +3,15 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { Crown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { ButtonLink } from "@/components/ui/button";
-import { confirmPresets } from "@/lib/confirm-presets";
+import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { useUser } from "@/lib/hooks/use-user";
 
 export function UpgradeSection() {
   const { user } = useUser();
+  const t = useTranslations("upgrade");
+  const confirmPresets = useConfirmPresets();
   const [plan, setPlan] = useState<{
     name: string;
     price: string;
@@ -52,7 +55,7 @@ export function UpgradeSection() {
           <div className="flex items-center gap-2 text-primary">
             <Crown className="h-5 w-5" />
             <span className="font-display text-sm font-semibold uppercase tracking-wider">
-              Upgrade
+              {t("badge")}
             </span>
           </div>
           <h2 className="mt-3 font-display text-3xl font-bold text-foreground">
@@ -72,7 +75,7 @@ export function UpgradeSection() {
           className="shrink-0"
           confirm={confirmPresets.subscribePremium(plan.name)}
         >
-          Assinar {plan.name}
+          {t("subscribe", { name: plan.name })}
         </ButtonLink>
       </div>
     </motion.section>

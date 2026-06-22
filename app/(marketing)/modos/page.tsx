@@ -1,5 +1,6 @@
 import { getMarketingGameModes } from "@/lib/queries";
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 import { GameModes } from "@/components/sections/game-modes";
 import { CallToAction } from "@/components/sections/cta";
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ModosPage() {
+  const t = await getTranslations("marketing");
   const dbModes = await getMarketingGameModes();
   const modes = dbModes.map((m) => ({
     name: m.name,
@@ -23,27 +25,27 @@ export default async function ModosPage() {
   return (
     <>
       <MarketingPageShell
-        eyebrow="Modos de jogo"
+        eyebrow={t("modosEyebrow")}
         title={
           <>
-            Para cada estilo,{" "}
-            <span className="text-gradient">o modo certo</span>
+            {t("modosTitleA")}{" "}
+            <span className="text-gradient">{t("modosTitleB")}</span>
           </>
         }
-        description="Do iniciante ao profissional. Escolha como quer treinar e evolua a cada round."
+        description={t("modosDesc")}
       >
         <GameModes embedded modes={modes} />
         <div className="mt-10 flex flex-col items-center justify-between gap-4 rounded-card glass p-6 sm:flex-row">
           <div>
             <p className="font-display text-lg font-bold text-foreground">
-              Pronto para jogar?
+              {t("modosReadyTitle")}
             </p>
             <p className="mt-1 text-sm text-muted">
-              Crie sua conta e conecte ao melhor servidor em um clique.
+              {t("modosReadyDesc")}
             </p>
           </div>
           <ButtonLink href="/register" variant="primary" size="md">
-            Criar conta grátis
+            {t("createAccountFree")}
           </ButtonLink>
         </div>
       </MarketingPageShell>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, User, Loader2, ArrowRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { HoneypotField } from "@/components/ui/honeypot-field";
@@ -17,6 +18,7 @@ import { sanitizeNickname } from "@/lib/security/sanitize";
 
 export function RegisterForm() {
   const router = useRouter();
+  const t = useTranslations("authForm");
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -68,13 +70,13 @@ export function RegisterForm() {
         className={`relative inline-flex h-13 w-full items-center justify-center gap-2 rounded-xl font-display text-sm font-semibold uppercase tracking-wide glass text-foreground transition-all hover:glow-ring hover:-translate-y-0.5 ${loading ? "pointer-events-none opacity-50" : ""}`}
       >
         <SteamIcon className="h-5 w-5 text-primary" />
-        Criar conta com Steam
+        {t("registerSteam")}
       </a>
 
       <div className="my-6 flex items-center gap-4">
         <span className="h-px flex-1 bg-border" />
         <span className="text-xs uppercase tracking-wider text-muted">
-          ou preencha os dados
+          {t("orFill")}
         </span>
         <span className="h-px flex-1 bg-border" />
       </div>
@@ -96,8 +98,8 @@ export function RegisterForm() {
         )}
 
         <Input
-          label="Nickname"
-          placeholder="Seu nick in-game"
+          label={t("nickname")}
+          placeholder={t("nicknamePlaceholder")}
           autoComplete="username"
           maxLength={24}
           value={nickname}
@@ -106,9 +108,9 @@ export function RegisterForm() {
           icon={<User className="h-4.5 w-4.5" />}
         />
         <Input
-          label="E-mail"
+          label={t("email")}
           type="email"
-          placeholder="voce@exemplo.com"
+          placeholder={t("emailPlaceholder")}
           autoComplete="email"
           maxLength={254}
           value={email}
@@ -117,9 +119,9 @@ export function RegisterForm() {
           icon={<Mail className="h-4.5 w-4.5" />}
         />
         <Input
-          label="Senha"
+          label={t("password")}
           type="password"
-          placeholder="Mín. 8 caracteres, maiúscula, minúscula e número"
+          placeholder={t("newPasswordPlaceholder")}
           autoComplete="new-password"
           maxLength={128}
           value={password}
@@ -128,9 +130,9 @@ export function RegisterForm() {
           icon={<Lock className="h-4.5 w-4.5" />}
         />
         <Input
-          label="Confirmar senha"
+          label={t("confirmPassword")}
           type="password"
-          placeholder="Repita a senha"
+          placeholder={t("confirmPlaceholder")}
           autoComplete="new-password"
           maxLength={128}
           value={confirmPassword}
@@ -144,7 +146,7 @@ export function RegisterForm() {
             <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
             <>
-              Criar minha conta
+              {t("createAccount")}
               <ArrowRight className="h-4 w-4" />
             </>
           )}

@@ -2,9 +2,10 @@
 
 import { motion } from "motion/react";
 import { Play } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { SteamRequiredCard } from "@/components/dashboard/steam-required-card";
-import { confirmPresets } from "@/lib/confirm-presets";
+import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { useUser } from "@/lib/hooks/use-user";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +27,8 @@ export type GameModeView = {
 
 export function GameModeRoomsSection({ mode }: { mode: GameModeView }) {
   const { user, loading } = useUser();
+  const t = useTranslations("modeRooms");
+  const confirmPresets = useConfirmPresets();
 
   const totalPlayers = mode.rooms.reduce((sum, room) => sum + room.players, 0);
   const totalSlots = mode.rooms.reduce((sum, room) => sum + room.slots, 0);
@@ -33,7 +36,7 @@ export function GameModeRoomsSection({ mode }: { mode: GameModeView }) {
   if (loading) {
     return (
       <div className="rounded-card glass p-8 text-center text-muted">
-        Carregando salas...
+        {t("loading")}
       </div>
     );
   }
@@ -41,8 +44,8 @@ export function GameModeRoomsSection({ mode }: { mode: GameModeView }) {
   if (!user?.steamLinked) {
     return (
       <SteamRequiredCard
-        title="Steam necessária para entrar"
-        description="Vincule sua conta Steam para conectar aos servidores e aparecer no ranking."
+        title={t("steamTitle")}
+        description={t("steamDesc")}
       />
     );
   }
@@ -55,11 +58,11 @@ export function GameModeRoomsSection({ mode }: { mode: GameModeView }) {
             <span className="font-mono font-semibold text-foreground">
               {totalPlayers}
             </span>
-            <span className="text-muted"> / {totalSlots} jogadores online</span>
+            <span className="text-muted">{t("slashPlayers", { total: totalSlots })}</span>
           </span>
         </div>
         <span className="hidden h-4 w-px bg-border sm:block" aria-hidden />
-        <span className="text-sm text-muted">{mode.rooms.length} salas ativas</span>
+        <span className="text-sm text-muted">{t("activeRooms", { count: mode.rooms.length })}</span>
       </div>
 
       <ul className="flex w-full min-w-0 flex-col gap-3 sm:gap-4">
@@ -123,7 +126,7 @@ export function GameModeRoomsSection({ mode }: { mode: GameModeView }) {
                     onClick={() => {}}
                   >
                     <Play className="h-3.5 w-3.5" />
-                    {full ? "Fila" : "Entrar"}
+                    {full ? t("queue") : t("enter")}
                   </Button>
                 </div>
               </div>

@@ -86,6 +86,23 @@ export async function DELETE(
   });
   if (!existing) return jsonError(404, "Sala não encontrada.");
 
+  const linkedLobby = await prisma.lobbyRoom.findFirst({
+    where: { catalogRoomId: id },
+    include: { rankedMatch: true },
+  });
+
+  if (linkedLobby?.rankedMatch) {
+    const { abandonRankedSessionInternal } = await import(
+      "@/lib/ranked/reconcile-stale-sessions"
+    );
+    await abandonRankedSessionInternal(linkedLobby.rankedMatch.id, "cancel");
+  } else if (linkedLobby?.status === "in_match") {
+    await prisma.lobbyRoom.update({
+      where: { id: linkedLobby.id },
+      data: { status: "open", matchId: null },
+    });
+  }
+
   await prisma.gameModeRoom.delete({ where: { id } });
 
   await logAdminAction({

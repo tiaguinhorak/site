@@ -46,7 +46,7 @@ export function Input({
           aria-invalid={error ? true : undefined}
           aria-describedby={errorId}
           className={cn(
-            "h-12 w-full rounded-xl border bg-[color-mix(in_srgb,var(--background-soft)_70%,transparent)] px-4 text-sm text-foreground placeholder:text-muted/60 transition-all duration-200 outline-none",
+            "h-12 w-full rounded-xl glass-input px-4 text-sm text-foreground placeholder:text-muted/60 transition-all duration-200 outline-none",
             "focus:ring-2 focus:ring-[color-mix(in_srgb,var(--primary)_30%,transparent)]",
             error
               ? "border-rose-500/60 focus:border-rose-500"

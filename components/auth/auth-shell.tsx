@@ -4,14 +4,9 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { Check, ShieldCheck, Trophy, Zap } from "lucide-react";
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { Logo } from "@/components/ui/logo";
 import { cn } from "@/lib/utils";
-
-const perks = [
-  { icon: Zap, text: "Quick Connect ao melhor servidor em um clique" },
-  { icon: Trophy, text: "Ranking competitivo com ELO e estatísticas" },
-  { icon: ShieldCheck, text: "Anticheat próprio e partidas justas" },
-];
 
 export function AuthShell({
   eyebrow,
@@ -28,6 +23,12 @@ export function AuthShell({
   footer: ReactNode;
   compact?: boolean;
 }) {
+  const t = useTranslations("auth");
+  const perks = [
+    { icon: Zap, text: t("perk1") },
+    { icon: Trophy, text: t("perk2") },
+    { icon: ShieldCheck, text: t("perk3") },
+  ];
   return (
     <section
       className={cn(
@@ -74,12 +75,11 @@ export function AuthShell({
           <div className="relative">
             <Logo />
             <h2 className="mt-8 font-display text-3xl font-bold leading-tight text-foreground xl:text-4xl">
-              Treine como os{" "}
-              <span className="text-gradient">profissionais.</span>
+              {t("trainTitle")}{" "}
+              <span className="text-gradient">{t("trainHighlight")}</span>
             </h2>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted">
-              Junte-se a milhares de jogadores na rede competitiva de CS2 mais
-              completa do Brasil.
+              {t("trainSubtitle")}
             </p>
 
             <ul className="mt-8 space-y-4">
@@ -97,13 +97,13 @@ export function AuthShell({
             </ul>
           </div>
 
-          <div className="relative mt-8 flex items-center gap-3 rounded-xl border border-border p-4">
+          <div className="relative mt-8 flex items-center gap-3 rounded-xl glass p-4">
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-400">
               <Check className="h-4 w-4" />
             </span>
             <p className="text-xs text-muted">
-              <span className="font-semibold text-foreground">+50.000</span>{" "}
-              jogadores ativos · 65 servidores online
+              <span className="font-semibold text-foreground">{t("playersBadge")}</span>{" "}
+              {t("playersOnline")}
             </p>
           </div>
         </motion.aside>
@@ -131,13 +131,13 @@ export function AuthShell({
 
           {!compact && (
             <p className="mt-4 text-center text-xs text-muted/80 sm:mt-6">
-              Ao continuar, você concorda com os{" "}
+              {t("termsPrefix")}{" "}
               <Link href="#" className="text-primary hover:underline">
-                Termos
+                {t("terms")}
               </Link>{" "}
-              e a{" "}
+              {t("and")}{" "}
               <Link href="#" className="text-primary hover:underline">
-                Política de Privacidade
+                {t("privacy")}
               </Link>
               .
             </p>

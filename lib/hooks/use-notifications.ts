@@ -53,6 +53,13 @@ export function useNotifications(options?: { pollMs?: number; enabled?: boolean 
     return () => window.clearInterval(id);
   }, [enabled, options?.pollMs, refresh]);
 
+  useEffect(() => {
+    if (!enabled) return;
+    const onRefresh = () => void refresh();
+    window.addEventListener("clutch:notifications-refresh", onRefresh);
+    return () => window.removeEventListener("clutch:notifications-refresh", onRefresh);
+  }, [enabled, refresh]);
+
   const markRead = useCallback(async (id: string) => {
     const result = await secureApi(`/api/notifications/${id}`, {
       method: "PATCH",

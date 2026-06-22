@@ -12,8 +12,10 @@ import {
   ArrowLeft,
   LayoutDashboard,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Logo } from "@/components/ui/logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { UserMenuDropdown } from "@/components/layout/user-menu-dropdown";
 import { ButtonLink } from "@/components/ui/button";
@@ -30,8 +32,10 @@ type NavbarProps = {
 export function Navbar({ variant = "default" }: NavbarProps) {
   const pathname = usePathname();
   const { authenticated } = useAuthSession();
-  const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const tNav = useTranslations("nav");
+  const tBar = useTranslations("navbar");
+  const tCommon = useTranslations("common");
   const isAuthPage =
     variant === "auth" ||
     pathname === "/login" ||
@@ -41,29 +45,18 @@ export function Navbar({ variant = "default" }: NavbarProps) {
   const mobileMenuHidden = isAuthPage ? "sm:hidden" : "lg:hidden";
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 16);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
   }, [open]);
 
-  const navGlass = open || scrolled;
-
   return (
     <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-4">
       <nav
         className={cn(
           "relative z-[52] mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-2xl px-3 py-2.5 transition-all duration-500 sm:px-5",
-          navGlass
-            ? "glass-strong glow-ring"
-            : "border border-transparent bg-transparent",
+          "glass-strong glow-ring",
         )}
       >
         <Logo className="shrink-0" />
@@ -83,7 +76,7 @@ export function Navbar({ variant = "default" }: NavbarProps) {
                         : "text-muted hover:text-foreground",
                     )}
                   >
-                    {link.label}
+                    {tNav(link.i18nKey)}
                   </Link>
                 </li>
               );
@@ -100,8 +93,8 @@ export function Navbar({ variant = "default" }: NavbarProps) {
               className="normal-case tracking-normal"
             >
               <ArrowLeft className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Voltar ao site</span>
-              <span className="sm:hidden">Voltar</span>
+              <span className="hidden sm:inline">{tNav("backToSite")}</span>
+              <span className="sm:hidden">{tCommon("back")}</span>
             </ButtonLink>
           )}
 
@@ -114,7 +107,7 @@ export function Navbar({ variant = "default" }: NavbarProps) {
                 className="hidden xl:inline-flex"
               >
                 <ShieldCheck className="h-4 w-4" />
-                Anticheat
+                {tNav("anticheat")}
               </ButtonLink>
               {authenticated && (
                 <>
@@ -133,10 +126,10 @@ export function Navbar({ variant = "default" }: NavbarProps) {
               {!authenticated && (
                 <>
                   <ButtonLink href="/login" variant="outline" size="sm">
-                    Entrar
+                    {tBar("login")}
                   </ButtonLink>
                   <ButtonLink href="/register" variant="primary" size="sm">
-                    Criar conta
+                    {tBar("register")}
                   </ButtonLink>
                 </>
               )}
@@ -150,11 +143,14 @@ export function Navbar({ variant = "default" }: NavbarProps) {
             </>
           )}
 
-          <ThemeToggle />
+          {(!authenticated || isAuthPage) && (
+            <LanguageSwitcher className="hidden sm:block" />
+          )}
+          {(!authenticated || isAuthPage) && <ThemeToggle />}
 
           <button
             type="button"
-            aria-label={open ? "Fechar menu" : "Abrir menu"}
+            aria-label={open ? tNav("closeMenu") : tNav("openMenu")}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
             className={cn(
@@ -172,12 +168,12 @@ export function Navbar({ variant = "default" }: NavbarProps) {
           <>
             <motion.button
               type="button"
-              aria-label="Fechar menu"
+              aria-label={tNav("closeMenu")}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className={cn("glass-scrim fixed inset-0 z-[48]", mobileMenuHidden)}
+              className={cn("scrim-dismiss fixed inset-0 z-[48]", mobileMenuHidden)}
               onClick={() => setOpen(false)}
             />
 
@@ -200,7 +196,7 @@ export function Navbar({ variant = "default" }: NavbarProps) {
                         onClick={() => setOpen(false)}
                         className="block rounded-xl px-4 py-3 text-base font-medium text-foreground transition-colors hover:bg-[color-mix(in_srgb,var(--primary)_14%,transparent)]"
                       >
-                        {link.label}
+                        {tNav(link.i18nKey)}
                       </Link>
                     </li>
                   ))}
@@ -219,7 +215,7 @@ export function Navbar({ variant = "default" }: NavbarProps) {
                       onClick={() => setOpen(false)}
                     >
                       <LayoutDashboard className="h-4 w-4" />
-                      Dashboard
+                      {tBar("dashboard")}
                     </ButtonLink>
                   </div>
                 ) : (
@@ -231,7 +227,7 @@ export function Navbar({ variant = "default" }: NavbarProps) {
                       onClick={() => setOpen(false)}
                     >
                       <LogIn className="h-4 w-4" />
-                      Entrar
+                      {tBar("login")}
                     </ButtonLink>
                     <ButtonLink
                       href="/register"
@@ -239,7 +235,7 @@ export function Navbar({ variant = "default" }: NavbarProps) {
                       size="md"
                       onClick={() => setOpen(false)}
                     >
-                      Criar conta
+                      {tBar("register")}
                     </ButtonLink>
                   </div>
                 )}
@@ -254,8 +250,14 @@ export function Navbar({ variant = "default" }: NavbarProps) {
                   onClick={() => setOpen(false)}
                 >
                   <ShieldCheck className="h-4 w-4" />
-                  Baixar Anticheat
+                  {tBar("downloadAnticheat")}
                 </ButtonLink>
+              )}
+
+              {!isAuthPage && !authenticated && (
+                <div className="mt-2 flex justify-center py-1 lg:hidden">
+                  <LanguageSwitcher variant="inline" />
+                </div>
               )}
             </motion.div>
           </>

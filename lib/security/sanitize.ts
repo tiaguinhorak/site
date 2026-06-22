@@ -31,7 +31,7 @@ export function sanitizeNickname(value: string): string {
 }
 
 export function sanitizePhoneDigits(value: string): string {
-  return value.replace(/\D/g, "").slice(0, 13);
+  return value.replace(/\D/g, "").slice(0, 15);
 }
 
 export function formatPhoneBR(value: string): string {

@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { syncCsgoPublicServers } from "@/lib/csgo-api/sync-public-servers";
+import { queryCsgoServersLive } from "@/lib/csgo-api/query-live-server";
 import { formatPriceCents } from "@/lib/serializers";
 import {
   inventoryCategoryFromDb,
@@ -32,7 +34,20 @@ export async function getUserNotifications(userId: string) {
 
 export async function getNewsArticles() {
   return prisma.newsArticle.findMany({
+    where: { archivedAt: null },
     orderBy: { publishedAt: "desc" },
+    include: {
+      author: { select: { nickname: true, avatarUrl: true } },
+    },
+  });
+}
+
+export async function getNewsArticleBySlug(slug: string) {
+  return prisma.newsArticle.findFirst({
+    where: { slug, archivedAt: null },
+    include: {
+      author: { select: { nickname: true, avatarUrl: true } },
+    },
   });
 }
 
@@ -58,8 +73,47 @@ export async function getUserInventory(userId: string) {
   }));
 }
 
-export async function getPublicServers() {
-  return prisma.publicServer.findMany({ orderBy: { sortOrder: "asc" } });
+export async function getPublicServers(options?: { syncLive?: boolean }) {
+  if (options?.syncLive) {
+    await syncCsgoPublicServers();
+  }
+
+  const rows = await prisma.publicServer.findMany({
+    orderBy: [{ isLiveSynced: "desc" }, { sortOrder: "asc" }],
+  });
+
+  const liveTargets = rows
+    .filter(
+      (row): row is typeof row & { host: string; port: number } =>
+        row.isLiveSynced && row.host != null && row.port != null,
+    )
+    .map((row) => ({ host: row.host, port: row.port }));
+
+  if (liveTargets.length === 0) return rows;
+
+  const liveByKey = await queryCsgoServersLive(liveTargets);
+
+  return rows.map((row) => {
+    if (!row.isLiveSynced || !row.host || !row.port) return row;
+
+    const live = liveByKey.get(`${row.host}:${row.port}`);
+    if (!live?.online) {
+      return { ...row, map: "offline", players: 0, ping: 0 };
+    }
+
+    return {
+      ...row,
+      map: live.mapRaw ?? live.map,
+      players: live.players,
+      slots: live.slots,
+      ping: live.ping,
+    };
+  });
+}
+
+export async function getLiveSyncedServers() {
+  const { fetchLiveServerStats } = await import("@/lib/csgo-api/live-server-stats");
+  return fetchLiveServerStats();
 }
 
 export async function getLeaderboard() {

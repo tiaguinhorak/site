@@ -2,22 +2,20 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
   applyApiGuards,
-  jsonError,
   parseJsonBody,
 } from "@/lib/security/api-guard";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/prisma";
 import { RATE_LIMITS } from "@/lib/security/constants";
-import {
-  loginSchema,
-  registerSchema,
-  formatZodErrors,
-  firstZodError,
-} from "@/lib/security/schemas";
+import { formatZodErrors } from "@/lib/security/schemas";
 import { sessionOptionsFromUser } from "@/lib/auth/session-options";
 import { createSessionToken, applySessionCookie } from "@/lib/security/session";
-
 import { isUserBanned } from "@/lib/admin/punishments";
+import {
+  jsonErrorKey,
+  validationSchemasForRequest,
+  zodErrorResponse,
+} from "@/lib/i18n/api-route";
 
 export async function POST(request: NextRequest) {
   const guardError = applyApiGuards(
@@ -31,15 +29,10 @@ export async function POST(request: NextRequest) {
   const { data, error: parseError } = await parseJsonBody(request);
   if (parseError) return parseError;
 
-  const parsed = loginSchema.safeParse(data);
+  const schemas = validationSchemasForRequest(request);
+  const parsed = schemas.loginSchema.safeParse(data);
   if (!parsed.success) {
-    return NextResponse.json(
-      {
-        error: firstZodError(parsed.error),
-        fieldErrors: formatZodErrors(parsed.error),
-      },
-      { status: 400 },
-    );
+    return zodErrorResponse(request, parsed.error);
   }
 
   const user = await prisma.user.findUnique({
@@ -47,16 +40,16 @@ export async function POST(request: NextRequest) {
   });
 
   if (!user?.passwordHash) {
-    return jsonError(401, "E-mail ou senha incorretos.");
+    return jsonErrorKey(request, 401, "invalidCredentials");
   }
 
   const valid = await verifyPassword(parsed.data.password, user.passwordHash);
   if (!valid) {
-    return jsonError(401, "E-mail ou senha incorretos.");
+    return jsonErrorKey(request, 401, "invalidCredentials");
   }
 
   if (await isUserBanned(user.id)) {
-    return jsonError(403, "Conta suspensa. Entre em contato com o suporte.");
+    return jsonErrorKey(request, 403, "accountSuspended");
   }
 
   const token = createSessionToken(user.id, sessionOptionsFromUser(user));

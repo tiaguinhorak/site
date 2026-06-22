@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { ButtonLink } from "@/components/ui/button";
 import { resolveIcon } from "@/lib/icon-map";
 import { findGradientByClasses } from "@/lib/admin/content-presets";
@@ -16,6 +17,7 @@ type GameModeCard = {
 };
 
 export function GameModesSection() {
+  const t = useTranslations("gameModes");
   const [modes, setModes] = useState<GameModeCard[]>([]);
 
   useEffect(() => {
@@ -66,10 +68,7 @@ export function GameModesSection() {
               </h3>
 
               <p className="mt-2 text-sm text-muted">
-                <span className="font-mono font-semibold text-foreground">
-                  {mode.totalPlayers}
-                </span>
-                {" jogadores online"}
+                {t("playersOnline", { count: mode.totalPlayers })}
               </p>
 
               <ButtonLink
@@ -78,7 +77,7 @@ export function GameModesSection() {
                 size="sm"
                 className="mt-5 w-full"
               >
-                Entrar
+                {t("enter")}
               </ButtonLink>
             </div>
           </motion.article>

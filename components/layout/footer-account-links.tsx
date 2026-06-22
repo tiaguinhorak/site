@@ -1,22 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useAuthSession } from "@/lib/hooks/use-auth-session";
 
 export function FooterAccountLinks() {
   const { authenticated } = useAuthSession();
+  const t = useTranslations("auth.accountLinks");
 
   const links = authenticated
     ? [
-        { label: "Dashboard", href: "/dashboard" },
-        { label: "Inventário", href: "/dashboard/inventario" },
-        { label: "Perfil", href: "/dashboard/perfil" },
-        { label: "Baixar anticheat", href: "/anticheat" },
+        { label: t("dashboard"), href: "/dashboard" },
+        { label: t("inventory"), href: "/dashboard/inventario" },
+        { label: t("profile"), href: "/dashboard/perfil" },
+        { label: t("downloadAnticheat"), href: "/anticheat" },
       ]
     : [
-        { label: "Entrar", href: "/login" },
-        { label: "Criar conta", href: "/register" },
-        { label: "Baixar anticheat", href: "/anticheat" },
+        { label: t("login"), href: "/login" },
+        { label: t("register"), href: "/register" },
+        { label: t("downloadAnticheat"), href: "/anticheat" },
       ];
 
   return (

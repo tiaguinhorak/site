@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, Loader2, ArrowRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { HoneypotField } from "@/components/ui/honeypot-field";
@@ -17,6 +18,7 @@ import {
 
 export function LoginForm() {
   const router = useRouter();
+  const t = useTranslations("authForm");
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -61,12 +63,12 @@ export function LoginForm() {
 
   return (
     <div>
-      <ButtonLinkSteam mode="login" disabled={loading} />
+      <ButtonLinkSteam mode="login" disabled={loading} label={t("signInSteam")} />
 
       <div className="my-6 flex items-center gap-4">
         <span className="h-px flex-1 bg-border" />
         <span className="text-xs uppercase tracking-wider text-muted">
-          ou com e-mail
+          {t("orEmail")}
         </span>
         <span className="h-px flex-1 bg-border" />
       </div>
@@ -88,9 +90,9 @@ export function LoginForm() {
         )}
 
         <Input
-          label="E-mail"
+          label={t("email")}
           type="email"
-          placeholder="voce@exemplo.com"
+          placeholder={t("emailPlaceholder")}
           autoComplete="email"
           maxLength={254}
           value={email}
@@ -99,9 +101,9 @@ export function LoginForm() {
           icon={<Mail className="h-4.5 w-4.5" />}
         />
         <Input
-          label="Senha"
+          label={t("password")}
           type="password"
-          placeholder="••••••••"
+          placeholder={t("passwordPlaceholder")}
           autoComplete="current-password"
           maxLength={128}
           value={password}
@@ -118,10 +120,10 @@ export function LoginForm() {
               onChange={(e) => setRemember(e.target.checked)}
               className="h-4 w-4 rounded border-border accent-[var(--primary)]"
             />
-            Lembrar de mim
+            {t("remember")}
           </label>
           <Link href="#" className="text-sm text-primary hover:underline">
-            Esqueceu a senha?
+            {t("forgot")}
           </Link>
         </div>
 
@@ -130,7 +132,7 @@ export function LoginForm() {
             <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
             <>
-              Entrar
+              {t("signIn")}
               <ArrowRight className="h-4 w-4" />
             </>
           )}

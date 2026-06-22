@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 import { SeasonInfo } from "@/components/marketing/season-info";
 import { Leaderboard } from "@/components/sections/leaderboard";
@@ -11,18 +12,19 @@ export const metadata: Metadata = {
 };
 
 export default async function RankingPage() {
+  const t = await getTranslations("marketing");
   const leaderboard = await getLeaderboard();
 
   return (
     <>
       <MarketingPageShell
-        eyebrow="Season 8"
+        eyebrow={t("rankingEyebrow")}
         title={
           <>
-            Os <span className="text-gradient">melhores</span> da temporada
+            {t("rankingTitleA")} <span className="text-gradient">{t("rankingTitleB")}</span> {t("rankingTitleC")}
           </>
         }
-        description="Ranking competitivo com ELO, K/D e estatísticas detalhadas. Suba de posição a cada partida."
+        description={t("rankingDesc")}
       >
         <SeasonInfo />
         <div className="mt-10">

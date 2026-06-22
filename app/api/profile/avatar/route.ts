@@ -11,6 +11,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { RATE_LIMITS } from "@/lib/security/constants";
 import { avatarSourceSchema, firstZodError } from "@/lib/security/schemas";
+import { jsonErrorKey } from "@/lib/i18n/api-route";
 import { serializeUser } from "@/lib/serializers";
 
 const MAX_AVATAR_BYTES = 512_000;
@@ -32,15 +33,15 @@ export async function POST(request: NextRequest) {
   const file = formData.get("file");
 
   if (!(file instanceof File)) {
-    return jsonError(400, "Arquivo inválido.");
+    return jsonErrorKey(request, 400, "invalidFile");
   }
 
   if (!ALLOWED_TYPES.has(file.type)) {
-    return jsonError(400, "Formato não suportado. Use WebP, JPG ou PNG.");
+    return jsonErrorKey(request, 400, "avatarFormatUnsupported");
   }
 
   if (file.size > MAX_AVATAR_BYTES) {
-    return jsonError(400, "Arquivo muito grande. Máximo 500 KB após compressão.");
+    return jsonErrorKey(request, 400, "avatarTooLarge");
   }
 
   const uploadDir = path.join(process.cwd(), "public", "uploads", "avatars");

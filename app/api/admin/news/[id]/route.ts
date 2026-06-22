@@ -13,6 +13,10 @@ import {
   firstZodError,
 } from "@/lib/security/schemas";
 import { logAdminAction } from "@/lib/admin/audit";
+import {
+  buildPublishedNewsTranslations,
+  resolvePublishedNewsSlug,
+} from "@/lib/admin/news-publish";
 import { adminNewsUpdateSchema } from "@/lib/admin/schemas";
 
 export async function PATCH(
@@ -45,9 +49,46 @@ export async function PATCH(
     );
   }
 
-  const updateData: Record<string, unknown> = { ...parsed.data };
+  const updateData: Record<string, unknown> = {};
+
+  if (parsed.data.title !== undefined) updateData.title = parsed.data.title;
+  if (parsed.data.excerpt !== undefined) updateData.excerpt = parsed.data.excerpt;
+  if (parsed.data.body !== undefined) updateData.body = parsed.data.body;
+  if (parsed.data.category !== undefined) updateData.category = parsed.data.category;
+  if (parsed.data.imageAccent !== undefined) updateData.imageAccent = parsed.data.imageAccent;
+  if (parsed.data.imageUrl !== undefined) updateData.imageUrl = parsed.data.imageUrl;
+  if (parsed.data.featured !== undefined) updateData.featured = parsed.data.featured;
   if (parsed.data.publishedAt) {
     updateData.publishedAt = new Date(parsed.data.publishedAt);
+  }
+
+  if (parsed.data.archived !== undefined) {
+    updateData.archivedAt = parsed.data.archived ? new Date() : null;
+  }
+
+  const nextTitle = (updateData.title as string | undefined) ?? existing.title;
+  const nextExcerpt = (updateData.excerpt as string | undefined) ?? existing.excerpt;
+  const nextBody = (updateData.body as string | undefined) ?? existing.body;
+
+  const contentChanged =
+    parsed.data.title !== undefined ||
+    parsed.data.excerpt !== undefined ||
+    parsed.data.body !== undefined;
+
+  if (contentChanged) {
+    updateData.translations = await buildPublishedNewsTranslations(
+      nextTitle,
+      nextExcerpt,
+      nextBody,
+    );
+  }
+
+  if (parsed.data.slug !== undefined || contentChanged) {
+    updateData.slug = resolvePublishedNewsSlug(
+      parsed.data.slug ?? existing.slug,
+      nextTitle,
+      existing.id.slice(-8),
+    );
   }
 
   const article = await prisma.newsArticle.update({

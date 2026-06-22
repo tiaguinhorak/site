@@ -1,11 +1,13 @@
+import { getTranslations } from "next-intl/server";
 import { DashboardPageShell } from "@/components/dashboard/dashboard-page-shell";
 import { InventorySection } from "@/components/dashboard/inventory-section";
 
-export default function InventarioPage() {
+export default async function InventarioPage() {
+  const t = await getTranslations("pageHeaders");
   return (
     <DashboardPageShell
-      title="Inventário"
-      description="Equipe facas, luvas, rifles e agentes nos servidores clutchclube."
+      title={t("inventoryTitle")}
+      description={t("inventoryDesc")}
     >
       <InventorySection />
     </DashboardPageShell>

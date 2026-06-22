@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import { ArrowUpRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { SectionHeading } from "@/components/ui/reveal";
 import { resolveIcon } from "@/lib/icon-map";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,7 @@ export function GameModes({
   embedded?: boolean;
   modes: MarketingGameModeView[];
 }) {
+  const t = useTranslations("marketing");
   return (
     <section
       id={embedded ? undefined : "modos"}
@@ -29,14 +31,14 @@ export function GameModes({
       <div className={cn(embedded ? "" : "mx-auto max-w-6xl px-4 sm:px-6")}>
         {!embedded && (
           <SectionHeading
-            eyebrow="Modos de jogo"
+            eyebrow={t("modosEyebrow")}
             title={
               <>
-                Para cada estilo,{" "}
-                <span className="text-gradient">o modo certo</span>
+                {t("modosTitleA")}{" "}
+                <span className="text-gradient">{t("modosTitleB")}</span>
               </>
             }
-            description="Do iniciante ao profissional. Escolha como quer treinar e evolua a cada round."
+            description={t("modosDesc")}
           />
         )}
 
@@ -84,7 +86,7 @@ export function GameModes({
                     {mode.description}
                   </p>
                   <span className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-foreground opacity-0 transition-all duration-300 group-hover:opacity-100">
-                    Jogar
+                    {t("play")}
                     <ArrowUpRight className="h-4 w-4 text-primary" />
                   </span>
                 </div>

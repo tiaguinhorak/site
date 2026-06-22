@@ -1,12 +1,17 @@
 import type { Metadata, Viewport } from "next";
 import { Chakra_Petch, Manrope } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ConfirmProvider } from "@/components/providers/confirm-provider";
 import { BrowserNotificationListener } from "@/components/notifications/browser-notification-listener";
+import { RankedPartyProvider } from "@/components/providers/ranked-party-provider";
+import { RealtimeProvider } from "@/components/providers/realtime-provider";
 import { UserProvider } from "@/components/providers/user-provider";
 import { SITE_NAME, SITE_TAGLINE } from "@/lib/brand";
 import { BRAND_ASSETS } from "@/lib/brand-assets";
+import { THEME_INIT_SCRIPT } from "@/lib/theme-script";
 
 const chakra = Chakra_Petch({
   variable: "--font-chakra",
@@ -90,29 +95,43 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
+      <head>
+        <script
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
+        />
+      </head>
       <body
         className={`${chakra.variable} ${manrope.variable} min-h-dvh antialiased`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <ConfirmProvider>
-            <UserProvider>
-              <BrowserNotificationListener />
-              {children}
-            </UserProvider>
-          </ConfirmProvider>
-        </ThemeProvider>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <ThemeProvider
+            defaultTheme="dark"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <ConfirmProvider>
+              <UserProvider>
+                <RealtimeProvider>
+                  <RankedPartyProvider>
+                    <BrowserNotificationListener />
+                    {children}
+                  </RankedPartyProvider>
+                </RealtimeProvider>
+              </UserProvider>
+            </ConfirmProvider>
+          </ThemeProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

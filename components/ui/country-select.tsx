@@ -27,7 +27,7 @@ export function CountrySelect({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={cn(
-          "h-12 w-full rounded-xl border border-border bg-[color-mix(in_srgb,var(--background-soft)_70%,transparent)] px-4 text-sm text-foreground outline-none transition-all",
+          "h-12 w-full rounded-xl glass-input px-4 text-sm text-foreground outline-none transition-all",
           "focus:border-primary focus:ring-2 focus:ring-[color-mix(in_srgb,var(--primary)_30%,transparent)]",
           error && "border-rose-500/60",
         )}

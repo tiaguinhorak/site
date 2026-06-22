@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { supportChannels } from "@/lib/support-channels";
-import { confirmPresets } from "@/lib/confirm-presets";
 import { cn } from "@/lib/utils";
 
 export function SupportSection() {
   const [channels] = useState(supportChannels);
+  const t = useTranslations("support");
 
   return (
     <section className="grid gap-4 sm:grid-cols-2">
@@ -38,9 +39,9 @@ export function SupportSection() {
                 <Icon className="h-5 w-5" />
               </div>
               <h3 className="mt-4 font-display text-lg font-bold text-foreground">
-                {channel.title}
+                {t(`${channel.id}Title`)}
               </h3>
-              <p className="mt-2 text-sm text-muted">{channel.description}</p>
+              <p className="mt-2 text-sm text-muted">{t(`${channel.id}Desc`)}</p>
               <a
                 href={channel.href}
                 className="mt-4 inline-flex text-sm font-semibold text-primary hover:underline"
@@ -49,7 +50,7 @@ export function SupportSection() {
                   e.preventDefault();
                 }}
               >
-                {channel.action}
+                {t(`${channel.id}Action`)}
               </a>
             </div>
           </motion.article>

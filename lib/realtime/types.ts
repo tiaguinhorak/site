@@ -1,0 +1,35 @@
+export type RealtimeInvalidateScope =
+  | "full"
+  | "session"
+  | "party"
+  | "rooms"
+  | "chat"
+  | "activity";
+
+export type RealtimeChannel =
+  | { kind: "user"; userId: string }
+  | { kind: "party"; partyId: string }
+  | { kind: "ranked_rooms" }
+  | { kind: "lobby_rooms" };
+
+export type RealtimeEvent =
+  | { type: "connected"; at: number }
+  | { type: "ping"; at: number }
+  | { type: "invalidate"; scope: RealtimeInvalidateScope; at: number };
+
+export function channelKey(channel: RealtimeChannel): string {
+  switch (channel.kind) {
+    case "user":
+      return `user:${channel.userId}`;
+    case "party":
+      return `party:${channel.partyId}`;
+    case "ranked_rooms":
+      return "ranked_rooms";
+    case "lobby_rooms":
+      return "lobby_rooms";
+    default: {
+      const _exhaustive: never = channel;
+      return _exhaustive;
+    }
+  }
+}

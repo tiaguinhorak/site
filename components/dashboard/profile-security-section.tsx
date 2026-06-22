@@ -9,10 +9,11 @@ import {
   Check,
   Smartphone,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { secureApi } from "@/lib/api/client";
-import { confirmPresets } from "@/lib/confirm-presets";
+import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import {
   passwordChangeSchema,
   mfaVerifySchema,
@@ -42,12 +43,16 @@ export function ProfileSecuritySection({
   mfaEnabled,
   onMfaChange,
 }: ProfileSecuritySectionProps) {
+  const t = useTranslations("security");
+  const tc = useTranslations("common");
+  const confirmPresets = useConfirmPresets();
   const [mfaStep, setMfaStep] = useState<MfaStep>("idle");
   const [verifyCode, setVerifyCode] = useState("");
   const [verifyError, setVerifyError] = useState("");
   const [copiedSecret, setCopiedSecret] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
+  const [passwordTone, setPasswordTone] = useState<"ok" | "err">("ok");
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     current: "",
@@ -85,6 +90,7 @@ export function ProfileSecuritySection({
 
     if (!parsed.success) {
       setPasswordErrors(formatZodErrors(parsed.error));
+      setPasswordTone("err");
       setPasswordMessage(firstZodError(parsed.error));
       return;
     }
@@ -98,12 +104,14 @@ export function ProfileSecuritySection({
 
     if (!result.ok) {
       if (result.fieldErrors) setPasswordErrors(result.fieldErrors);
+      setPasswordTone("err");
       setPasswordMessage(result.error);
       return;
     }
 
     setPasswordForm({ current: "", new: "", confirm: "" });
-    setPasswordMessage("Senha alterada com sucesso.");
+    setPasswordTone("ok");
+    setPasswordMessage(t("passwordChanged"));
   }
 
   function handleDisableMfa() {
@@ -121,17 +129,17 @@ export function ProfileSecuritySection({
   return (
     <div className="space-y-8">
       {/* Senha */}
-      <section className="rounded-card border border-border p-5 sm:p-6">
+      <section className="rounded-card glass p-5 sm:p-6">
         <div className="mb-6 flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--primary)_15%,transparent)] text-primary">
             <KeyRound className="h-5 w-5" />
           </div>
           <div>
             <h3 className="font-display text-lg font-bold text-foreground">
-              Alterar senha
+              {t("changePasswordTitle")}
             </h3>
             <p className="mt-1 text-sm text-muted">
-              Use uma senha forte com letras, números e símbolos.
+              {t("changePasswordDesc")}
             </p>
           </div>
         </div>
@@ -140,7 +148,7 @@ export function ProfileSecuritySection({
           <p
             className={cn(
               "mb-4 rounded-xl border px-4 py-3 text-sm",
-              passwordMessage.includes("sucesso")
+              passwordTone === "ok"
                 ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-400"
                 : "border-rose-500/30 bg-rose-500/10 text-rose-400",
             )}
@@ -152,7 +160,7 @@ export function ProfileSecuritySection({
 
         <div className="space-y-4">
           <Input
-            label="Senha atual"
+            label={t("currentPassword")}
             type="password"
             maxLength={128}
             value={passwordForm.current}
@@ -163,7 +171,7 @@ export function ProfileSecuritySection({
           />
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
-              label="Nova senha"
+              label={t("newPassword")}
               type="password"
               maxLength={128}
               value={passwordForm.new}
@@ -173,7 +181,7 @@ export function ProfileSecuritySection({
               error={passwordErrors.newPassword}
             />
             <Input
-              label="Confirmar nova senha"
+              label={t("confirmPassword")}
               type="password"
               maxLength={128}
               value={passwordForm.confirm}
@@ -194,13 +202,13 @@ export function ProfileSecuritySection({
             confirm={confirmPresets.changePassword}
             onClick={handlePasswordChange}
           >
-            {changingPassword ? "Alterando..." : "Alterar senha"}
+            {changingPassword ? t("changing") : t("changePassword")}
           </Button>
         </div>
       </section>
 
       {/* MFA */}
-      <section className="rounded-card border border-border p-5 sm:p-6">
+      <section className="rounded-card glass p-5 sm:p-6">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-3">
             <div
@@ -219,10 +227,10 @@ export function ProfileSecuritySection({
             </div>
             <div>
               <h3 className="font-display text-lg font-bold text-foreground">
-                Autenticação em dois fatores (2FA)
+                {t("mfaTitle")}
               </h3>
               <p className="mt-1 text-sm text-muted">
-                Proteja sua conta com um código extra ao fazer login.
+                {t("mfaDesc")}
               </p>
               <span
                 className={cn(
@@ -232,7 +240,7 @@ export function ProfileSecuritySection({
                     : "bg-muted/20 text-muted",
                 )}
               >
-                {mfaEnabled ? "Ativo" : "Desativado"}
+                {mfaEnabled ? t("active") : t("disabled")}
               </span>
             </div>
           </div>
@@ -245,7 +253,7 @@ export function ProfileSecuritySection({
               confirm={confirmPresets.disableMfa}
               onClick={handleDisableMfa}
             >
-              Desativar 2FA
+              {t("disable2fa")}
             </Button>
           ) : mfaStep === "idle" ? (
             <Button
@@ -256,25 +264,24 @@ export function ProfileSecuritySection({
               onClick={startMfaSetup}
             >
               <Smartphone className="h-4 w-4" />
-              Ativar 2FA
+              {t("enable2fa")}
             </Button>
           ) : null}
         </div>
 
         {mfaEnabled && (
-          <div className="space-y-4 rounded-xl border border-emerald-400/25 bg-emerald-400/5 p-4">
+          <div className="space-y-4 rounded-xl glass border border-emerald-400/25 p-4">
             <p className="text-sm font-medium text-foreground">
-              Códigos de recuperação
+              {t("recoveryCodes")}
             </p>
             <p className="text-xs text-muted">
-              Guarde estes códigos em um lugar seguro. Use se perder acesso ao
-              app autenticador.
+              {t("recoveryCodesDesc")}
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
               {MOCK_BACKUP_CODES.map((code) => (
                 <code
                   key={code}
-                  className="rounded-lg border border-border bg-[color-mix(in_srgb,var(--background-soft)_80%,transparent)] px-3 py-2 font-mono text-sm text-foreground"
+                  className="rounded-lg glass-input px-3 py-2 font-mono text-sm text-foreground"
                 >
                   {code}
                 </code>
@@ -284,13 +291,13 @@ export function ProfileSecuritySection({
         )}
 
         {!mfaEnabled && mfaStep === "setup" && (
-          <div className="space-y-6 rounded-xl border border-border bg-[color-mix(in_srgb,var(--background-soft)_50%,transparent)] p-4 sm:p-5">
+          <div className="space-y-6 rounded-xl glass p-4 sm:p-5">
             <div>
               <p className="font-display text-sm font-semibold text-foreground">
-                1. Escaneie o QR code
+                {t("step1")}
               </p>
               <p className="mt-1 text-xs text-muted">
-                Use Google Authenticator, Authy ou outro app compatível.
+                {t("step1Desc")}
               </p>
             </div>
 
@@ -314,10 +321,10 @@ export function ProfileSecuritySection({
 
               <div className="min-w-0 flex-1">
                 <p className="text-xs text-muted">
-                  Ou insira a chave manualmente:
+                  {t("orManual")}
                 </p>
                 <div className="mt-2 flex items-center gap-2">
-                  <code className="rounded-lg border border-border px-3 py-2 font-mono text-sm text-foreground">
+                  <code className="rounded-lg glass-input px-3 py-2 font-mono text-sm text-foreground">
                     {MFA_SECRET}
                   </code>
                   <Button
@@ -325,7 +332,7 @@ export function ProfileSecuritySection({
                     variant="ghost"
                     size="sm"
                     onClick={copySecret}
-                    aria-label="Copiar chave"
+                    aria-label={t("copyKey")}
                   >
                     {copiedSecret ? (
                       <Check className="h-4 w-4 text-emerald-400" />
@@ -339,11 +346,11 @@ export function ProfileSecuritySection({
 
             <div>
               <p className="font-display text-sm font-semibold text-foreground">
-                2. Confirme com o código de 6 dígitos
+                {t("step2")}
               </p>
               <div className="mt-3 max-w-xs">
                 <Input
-                  label="Código de verificação"
+                  label={t("verifyCode")}
                   inputMode="numeric"
                   maxLength={6}
                   value={verifyCode}
@@ -366,7 +373,7 @@ export function ProfileSecuritySection({
                 size="sm"
                 onClick={handleVerifyMfa}
               >
-                Confirmar e ativar
+                {t("confirmActivate")}
               </Button>
               <Button
                 type="button"
@@ -378,7 +385,7 @@ export function ProfileSecuritySection({
                   setVerifyError("");
                 }}
               >
-                Cancelar
+                {tc("cancel")}
               </Button>
             </div>
           </div>
@@ -386,8 +393,7 @@ export function ProfileSecuritySection({
 
         {!mfaEnabled && mfaStep === "idle" && (
           <p className="text-sm text-muted">
-            Recomendamos ativar o 2FA para proteger seu inventário, skins e
-            progresso no ranking.
+            {t("mfaRecommend")}
           </p>
         )}
       </section>

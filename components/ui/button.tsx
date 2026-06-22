@@ -19,9 +19,9 @@ const variants: Record<Variant, string> = {
   primary:
     "text-primary-foreground bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] shadow-[0_8px_30px_-8px_var(--glow-1)] hover:shadow-[0_10px_44px_-8px_var(--glow-1)] hover:-translate-y-0.5 active:translate-y-0",
   outline:
-    "text-foreground border border-[color-mix(in_srgb,var(--primary)_45%,transparent)] hover:bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] hover:border-primary",
+    "glass-input text-foreground hover:glow-ring-contained hover:-translate-y-0.5 active:translate-y-0",
   ghost:
-    "text-muted hover:text-foreground hover:bg-[color-mix(in_srgb,var(--primary)_10%,transparent)]",
+    "text-muted hover:text-foreground hover:glass-chip",
   glass:
     "glass text-foreground hover:glow-ring hover:-translate-y-0.5",
 };

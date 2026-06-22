@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { Logo } from "@/components/ui/logo";
 import { ButtonLink } from "@/components/ui/button";
 import { FooterAccountLinks } from "@/components/layout/footer-account-links";
@@ -6,29 +7,6 @@ import { SteamIcon } from "@/components/ui/icons";
 import { ShieldCheck } from "lucide-react";
 import { marketingNav } from "@/lib/navigation";
 import { SITE_NAME } from "@/lib/brand";
-
-const columns = [
-  {
-    title: "Plataforma",
-    links: [
-      { label: "Início", href: "/" },
-      ...marketingNav.map((n) => ({ label: n.label, href: n.href })),
-    ],
-  },
-  {
-    title: "Conta",
-    custom: true,
-  },
-  {
-    title: "Comunidade",
-    links: [
-      { label: "Discord", href: "#" },
-      { label: "Status dos serviços", href: "#" },
-      { label: "Blog", href: "#" },
-      { label: "Contato", href: "#" },
-    ],
-  },
-];
 
 const social = [
   { label: "Discord" },
@@ -38,9 +16,36 @@ const social = [
   { label: "Twitch" },
 ];
 
-export function Footer() {
+export async function Footer() {
+  const tFooter = await getTranslations("footer");
+  const tNav = await getTranslations("nav");
+  const tBar = await getTranslations("navbar");
+
+  const columns = [
+    {
+      title: tFooter("platform"),
+      links: [
+        { label: tFooter("home"), href: "/" },
+        ...marketingNav.map((n) => ({ label: tNav(n.i18nKey), href: n.href })),
+      ],
+    },
+    {
+      title: tFooter("account"),
+      custom: true,
+    },
+    {
+      title: tFooter("community"),
+      links: [
+        { label: "Discord", href: "#" },
+        { label: tFooter("status"), href: "#" },
+        { label: tFooter("blog"), href: "#" },
+        { label: tFooter("contact"), href: "#" },
+      ],
+    },
+  ];
+
   return (
-    <footer className="relative mt-24 overflow-hidden border-t border-border bg-background-soft">
+    <footer className="relative mt-24 overflow-hidden border-t border-border glass-strong">
       <div
         className="pointer-events-none absolute -top-40 left-1/2 h-80 w-[60rem] -translate-x-1/2 rounded-full opacity-40 blur-[120px]"
         style={{ background: "var(--glow-1)" }}
@@ -51,9 +56,7 @@ export function Footer() {
           <div className="max-w-sm">
             <Logo />
             <p className="mt-4 text-sm leading-relaxed text-muted">
-              Desde 2018 construindo evolução no Counter-Strike: treino de alta
-              performance, ranking competitivo e skins liberadas. Play like a
-              pro.
+              {tFooter("tagline")}
             </p>
             <ButtonLink
               href="/anticheat"
@@ -62,7 +65,7 @@ export function Footer() {
               className="mt-6"
             >
               <ShieldCheck className="h-4 w-4" />
-              Baixar Anticheat
+              {tBar("downloadAnticheat")}
             </ButtonLink>
           </div>
 
@@ -93,8 +96,7 @@ export function Footer() {
 
         <div className="mt-14 flex flex-col items-center justify-between gap-6 border-t border-border pt-8 sm:flex-row">
           <p className="text-xs text-muted">
-            © {new Date().getFullYear()} {SITE_NAME}. Não afiliado à Valve
-            Corporation. Counter-Strike é marca da Valve.
+            © {new Date().getFullYear()} {SITE_NAME}. {tFooter("disclaimer")}
           </p>
           <div className="flex flex-wrap items-center gap-1">
             {social.map((item) => {

@@ -2,19 +2,18 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
   applyApiGuards,
-  jsonError,
   parseJsonBody,
 } from "@/lib/security/api-guard";
 import { hashPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/prisma";
 import { RATE_LIMITS } from "@/lib/security/constants";
-import {
-  registerSchema,
-  formatZodErrors,
-  firstZodError,
-} from "@/lib/security/schemas";
 import { sessionOptionsFromUser } from "@/lib/auth/session-options";
 import { applySessionCookie, createSessionToken } from "@/lib/security/session";
+import {
+  jsonErrorKey,
+  validationSchemasForRequest,
+  zodErrorResponse,
+} from "@/lib/i18n/api-route";
 
 export async function POST(request: NextRequest) {
   const guardError = applyApiGuards(
@@ -28,29 +27,24 @@ export async function POST(request: NextRequest) {
   const { data, error: parseError } = await parseJsonBody(request);
   if (parseError) return parseError;
 
-  const parsed = registerSchema.safeParse(data);
+  const schemas = validationSchemasForRequest(request);
+  const parsed = schemas.registerSchema.safeParse(data);
   if (!parsed.success) {
-    return NextResponse.json(
-      {
-        error: firstZodError(parsed.error),
-        fieldErrors: formatZodErrors(parsed.error),
-      },
-      { status: 400 },
-    );
+    return zodErrorResponse(request, parsed.error);
   }
 
   const existing = await prisma.user.findUnique({
     where: { email: parsed.data.email },
   });
   if (existing) {
-    return jsonError(409, "Este e-mail já está cadastrado.");
+    return jsonErrorKey(request, 409, "emailAlreadyRegistered");
   }
 
   const nicknameTaken = await prisma.user.findFirst({
     where: { nickname: parsed.data.nickname },
   });
   if (nicknameTaken) {
-    return jsonError(409, "Este nickname já está em uso.");
+    return jsonErrorKey(request, 409, "nicknameAlreadyInUse");
   }
 
   const passwordHash = await hashPassword(parsed.data.password);

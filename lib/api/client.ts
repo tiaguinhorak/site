@@ -2,13 +2,25 @@ import { API_REQUEST_HEADER } from "@/lib/brand";
 
 type ApiErrorBody = {
   error?: string;
+  message?: string;
+  warning?: string;
+  orphanProcess?: boolean;
   fieldErrors?: Record<string, string>;
 };
 
 export async function secureApi<T>(
   path: string,
   options: RequestInit & { json?: unknown } = {},
-): Promise<{ ok: true; data: T } | { ok: false; error: string; fieldErrors?: Record<string, string> }> {
+): Promise<
+  | { ok: true; data: T }
+  | {
+      ok: false;
+      error: string;
+      warning?: string;
+      orphanProcess?: boolean;
+      fieldErrors?: Record<string, string>;
+    }
+> {
   const headers = new Headers(options.headers);
   headers.set("Content-Type", "application/json");
   headers.set(API_REQUEST_HEADER, "1");
@@ -21,6 +33,7 @@ export async function secureApi<T>(
   }
 
   const response = await fetch(path, {
+    cache: "no-store",
     ...options,
     headers,
     credentials: "same-origin",
@@ -32,7 +45,9 @@ export async function secureApi<T>(
   if (!response.ok) {
     return {
       ok: false,
-      error: body.error ?? "Erro inesperado. Tente novamente.",
+      error: body.error ?? body.message ?? "Erro inesperado. Tente novamente.",
+      warning: body.warning,
+      orphanProcess: body.orphanProcess,
       fieldErrors: body.fieldErrors,
     };
   }

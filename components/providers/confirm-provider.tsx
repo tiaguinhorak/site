@@ -18,10 +18,12 @@ import {
   Trash2,
   type LucideIcon,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export type ConfirmTone = "danger" | "warning" | "default";
+export type ConfirmIcon = "delete" | "edit" | "logout" | "info";
 
 export type ConfirmOptions = {
   title: string;
@@ -29,6 +31,7 @@ export type ConfirmOptions = {
   confirmLabel?: string;
   cancelLabel?: string;
   tone?: ConfirmTone;
+  icon?: ConfirmIcon;
 };
 
 type ConfirmContextValue = {
@@ -59,6 +62,7 @@ const toneConfig: Record<
 };
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
+  const t = useTranslations("confirmDialog");
   const [open, setOpen] = useState(false);
   const [options, setOptions] = useState<ConfirmOptions | null>(null);
   const resolveRef = useRef<((value: boolean) => void) | null>(null);
@@ -89,12 +93,15 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
 
   const tone = options?.tone ?? "default";
   const config = toneConfig[tone];
+  const iconKey = options?.icon;
   const Icon =
-    tone === "danger" && options?.confirmLabel?.toLowerCase().includes("excluir")
+    iconKey === "delete"
       ? Trash2
-      : tone === "default" && options?.confirmLabel?.toLowerCase().includes("editar")
+      : iconKey === "edit"
         ? Pencil
-        : config.icon;
+        : iconKey === "logout"
+          ? LogOut
+          : config.icon;
 
   return (
     <ConfirmContext.Provider value={{ confirm }}>
@@ -105,11 +112,11 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
           <div className="fixed inset-0 z-[100] flex items-end justify-center p-4 sm:items-center sm:p-6">
             <motion.button
               type="button"
-              aria-label="Fechar diálogo"
+              aria-label={t("close")}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 glass-scrim"
+              className="absolute inset-0 scrim-dim"
               onClick={() => close(false)}
             />
 
@@ -122,7 +129,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16, scale: 0.98 }}
               transition={{ duration: 0.22, ease: [0.21, 0.47, 0.32, 0.98] }}
-              className="relative w-full max-w-md overflow-hidden rounded-2xl glass-menu p-6 shadow-2xl"
+              className="relative z-[101] w-full max-w-md overflow-hidden rounded-2xl glass-modal p-6 shadow-2xl"
             >
               <div className="flex gap-4">
                 <div
@@ -161,7 +168,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                   className="w-full sm:w-auto"
                   onClick={() => close(false)}
                 >
-                  {options.cancelLabel ?? "Cancelar"}
+                  {options.cancelLabel ?? t("cancel")}
                 </Button>
                 <Button
                   type="button"
@@ -174,7 +181,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                   )}
                   onClick={() => close(true)}
                 >
-                  {options.confirmLabel ?? "Confirmar"}
+                  {options.confirmLabel ?? t("confirm")}
                 </Button>
               </div>
             </motion.div>

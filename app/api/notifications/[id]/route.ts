@@ -7,6 +7,7 @@ import {
 import { getSessionUserId } from "@/lib/auth/session-user";
 import { prisma } from "@/lib/prisma";
 import { RATE_LIMITS } from "@/lib/security/constants";
+import { jsonErrorKey } from "@/lib/i18n/api-route";
 
 export async function PATCH(
   request: NextRequest,
@@ -22,7 +23,7 @@ export async function PATCH(
 
   const userId = await getSessionUserId(request);
   if (!userId) {
-    return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    return jsonErrorKey(request, 401, "unauthorized");
   }
 
   const { id } = await context.params;
@@ -31,7 +32,7 @@ export async function PATCH(
   });
 
   if (!notification) {
-    return jsonError(404, "Notificação não encontrada.");
+    return jsonErrorKey(request, 404, "notificationNotFound");
   }
 
   await prisma.notification.update({

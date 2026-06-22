@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { DashboardPageShell } from "@/components/dashboard/dashboard-page-shell";
 import { GameModeRoomsSection } from "@/components/dashboard/game-mode-rooms-section";
 import { getGameModeBySlug } from "@/lib/queries";
@@ -12,6 +13,8 @@ type ModePageProps = {
 export default async function ModePage({ params }: ModePageProps) {
   const { modeId } = await params;
   const mode = await getGameModeBySlug(modeId);
+  const t = await getTranslations("pageHeaders");
+  const tl = await getTranslations("lobbyDetail");
 
   if (!mode) {
     notFound();
@@ -34,14 +37,14 @@ export default async function ModePage({ params }: ModePageProps) {
   return (
     <DashboardPageShell
       title={mode.name}
-      description="Escolha uma sala para entrar."
+      description={t("modesDesc")}
     >
       <Link
-        href="/dashboard/modos"
+        href="/dashboard/lobby"
         className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-muted transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        Voltar aos modos
+        {tl("backToLobby")}
       </Link>
       <GameModeRoomsSection mode={view} />
     </DashboardPageShell>

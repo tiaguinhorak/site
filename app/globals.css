@@ -20,10 +20,15 @@
   --primary-foreground: #ffffff;
   --ring: #8b5cf6;
   --glass-bg: 255 255 255;
-  --glass-opacity: 0.78;
-  --glass-strong-opacity: 0.9;
-  --glass-menu-opacity: 0.94;
-  --glass-scrim-opacity: 0.72;
+  --glass-opacity: 0.62;
+  --glass-strong-opacity: 0.78;
+  --glass-menu-opacity: 0.88;
+  --glass-modal-opacity: 0.9;
+  --glass-input-opacity: 0.55;
+  --glass-scrim-opacity: 0.42;
+  --glass-shadow: 0 8px 32px -8px rgb(124 58 237 / 0.14);
+  --glass-shadow-strong: 0 12px 40px -10px rgb(124 58 237 / 0.18);
+  --glass-inset: 0 1px 0 0 rgb(255 255 255 / 0.92) inset;
   --grid-line: rgba(124, 58, 237, 0.08);
   --glow-1: rgba(139, 92, 246, 0.35);
   --glow-2: rgba(168, 85, 247, 0.22);
@@ -43,10 +48,15 @@
   --primary-foreground: #0a0612;
   --ring: #a855f7;
   --glass-bg: 22 16 38;
-  --glass-opacity: 0.72;
-  --glass-strong-opacity: 0.88;
-  --glass-menu-opacity: 0.92;
-  --glass-scrim-opacity: 0.78;
+  --glass-opacity: 0.22;
+  --glass-strong-opacity: 0.3;
+  --glass-menu-opacity: 0.55;
+  --glass-modal-opacity: 0.62;
+  --glass-input-opacity: 0.2;
+  --glass-scrim-opacity: 0.55;
+  --glass-shadow: 0 12px 40px -12px rgb(0 0 0 / 0.45);
+  --glass-shadow-strong: 0 16px 48px -16px rgb(0 0 0 / 0.55);
+  --glass-inset: 0 1px 0 0 rgb(255 255 255 / 0.12) inset;
   --grid-line: rgba(168, 85, 247, 0.07);
   --glow-1: rgba(168, 85, 247, 0.4);
   --glow-2: rgba(124, 58, 237, 0.28);
@@ -156,42 +166,69 @@ button{
 /* ------------------------------------------------------------------ */
 /* Utilities: acrylic / glassmorphism                                  */
 /* ------------------------------------------------------------------ */
-@utility glass {
-  background-color: rgb(var(--glass-bg) / var(--glass-opacity));
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
-  box-shadow:
-    0 1px 0 0 rgb(255 255 255 / 0.08) inset,
-    0 12px 40px -12px rgb(0 0 0 / 0.35);
-}
+@layer components {
+  .glass {
+    isolation: isolate;
+    background-color: rgb(var(--glass-bg) / var(--glass-opacity));
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+    box-shadow: var(--glass-inset), var(--glass-shadow);
+  }
 
-@utility glass-strong {
-  background-color: rgb(var(--glass-bg) / var(--glass-strong-opacity));
-  backdrop-filter: blur(40px) saturate(200%);
-  -webkit-backdrop-filter: blur(40px) saturate(200%);
-  border: 1px solid color-mix(in srgb, var(--primary) 24%, transparent);
-  box-shadow:
-    0 1px 0 0 rgb(255 255 255 / 0.1) inset,
-    0 16px 48px -16px rgb(0 0 0 / 0.45);
-}
+  .glass-strong {
+    isolation: isolate;
+    background-color: rgb(var(--glass-bg) / var(--glass-strong-opacity));
+    -webkit-backdrop-filter: blur(56px) saturate(195%);
+    backdrop-filter: blur(56px) saturate(195%);
+    border: 1px solid color-mix(in srgb, var(--primary) 28%, transparent);
+    box-shadow: var(--glass-inset), var(--glass-shadow-strong);
+  }
 
-/* Menus, dropdowns, modals — máxima legibilidade */
-@utility glass-menu {
-  background-color: rgb(var(--glass-bg) / var(--glass-menu-opacity));
-  backdrop-filter: blur(48px) saturate(210%);
-  -webkit-backdrop-filter: blur(48px) saturate(210%);
-  border: 1px solid color-mix(in srgb, var(--primary) 28%, transparent);
-  box-shadow:
-    0 1px 0 0 rgb(255 255 255 / 0.12) inset,
-    0 24px 64px -16px rgb(0 0 0 / 0.55);
-}
+  .glass-menu {
+    isolation: isolate;
+    background-color: rgb(var(--glass-bg) / var(--glass-menu-opacity));
+    -webkit-backdrop-filter: blur(72px) saturate(210%);
+    backdrop-filter: blur(72px) saturate(210%);
+    border: 1px solid color-mix(in srgb, var(--primary) 32%, transparent);
+    box-shadow: var(--glass-inset), var(--glass-shadow-strong);
+  }
 
-/* Scrim atrás de overlays (menu mobile, modais) */
-@utility glass-scrim {
-  background-color: rgb(var(--glass-bg) / var(--glass-scrim-opacity));
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  .glass-modal {
+    isolation: isolate;
+    background-color: rgb(var(--glass-bg) / var(--glass-modal-opacity));
+    -webkit-backdrop-filter: blur(80px) saturate(220%);
+    backdrop-filter: blur(80px) saturate(220%);
+    border: 1px solid color-mix(in srgb, var(--primary) 36%, transparent);
+    box-shadow: var(--glass-inset), var(--glass-shadow-strong);
+  }
+
+  .glass-input {
+    isolation: isolate;
+    background-color: rgb(var(--glass-bg) / var(--glass-input-opacity));
+    -webkit-backdrop-filter: blur(32px) saturate(170%);
+    backdrop-filter: blur(32px) saturate(170%);
+    border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
+    box-shadow: 0 1px 0 0 rgb(255 255 255 / 0.08) inset;
+  }
+
+  .glass-chip {
+    isolation: isolate;
+    background-color: rgb(var(--glass-bg) / var(--glass-input-opacity));
+    -webkit-backdrop-filter: blur(28px) saturate(165%);
+    backdrop-filter: blur(28px) saturate(165%);
+    border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+  }
+
+  /* Click-outside dismiss — transparent, no blur (dropdowns, account menu) */
+  .scrim-dismiss {
+    background-color: transparent;
+  }
+
+  /* Modal backdrop — subtle dim only; glass blur lives on the panel */
+  .scrim-dim {
+    background-color: rgb(0 0 0 / var(--glass-scrim-opacity));
+  }
 }
 
 @utility text-gradient {

@@ -1,9 +1,9 @@
 export const marketingNav = [
-  { label: "Modos", href: "/modos" },
-  { label: "Plataforma", href: "/plataforma" },
-  { label: "Servidores", href: "/servidores" },
-  { label: "Ranking", href: "/ranking" },
-  { label: "Premium", href: "/premium" },
+  { label: "Modos", href: "/modos", i18nKey: "modes" },
+  { label: "Plataforma", href: "/plataforma", i18nKey: "platform" },
+  { label: "Servidores", href: "/servidores", i18nKey: "servers" },
+  { label: "Ranking", href: "/ranking", i18nKey: "ranking" },
+  { label: "Premium", href: "/premium", i18nKey: "premium" },
 ] as const;
 
 export const marketingPages = [
@@ -52,7 +52,7 @@ export const marketingPages = [
     label: "Anticheat",
     title: "Partidas justas, sem trapaça",
     description:
-      "Anticheat oficial, leve e compatível com VAC. Obrigatório no modo competitivo.",
+      "Anticheat oficial, leve e compatível com VAC. Obrigatório apenas no modo rankeado.",
     eyebrow: "Segurança",
   },
 ] as const;
@@ -64,13 +64,33 @@ export const dashboardNav = [
     icon: "LayoutDashboard",
     title: "Dashboard",
     description: "Resumo da sua conta e acesso rápido.",
+    i18nKey: "overview",
   },
   {
-    label: "Modos de jogo",
-    href: "/dashboard/modos",
+    label: "Jogar",
+    href: "/dashboard/lobby",
     icon: "Gamepad2",
-    title: "Modos de jogo",
-    description: "Escolha um modo e conecte ao melhor servidor.",
+    title: "Jogar",
+    description: "Escolha entre o warmup casual e o modo rankeado.",
+    i18nKey: "play",
+    children: [
+      {
+        label: "Lobby",
+        href: "/dashboard/lobby",
+        icon: "Users",
+        title: "Lobby",
+        description: "Warmup casual em salas abertas gerenciadas pelo sistema.",
+        i18nKey: "lobby",
+      },
+      {
+        label: "Rankeado",
+        href: "/dashboard/ranked",
+        icon: "Trophy",
+        title: "Modo rankeado",
+        description: "Monte seu time 5x5, desafie outros times e suba de ELO (Premium/Elite).",
+        i18nKey: "ranked",
+      },
+    ],
   },
   {
     label: "Perfil",
@@ -78,6 +98,7 @@ export const dashboardNav = [
     icon: "UserRound",
     title: "Perfil",
     description: "Suas estatísticas, plano e configurações.",
+    i18nKey: "profile",
   },
   {
     label: "Notificações",
@@ -85,6 +106,7 @@ export const dashboardNav = [
     icon: "Bell",
     title: "Notificações",
     description: "Atualizações, partidas e alertas da conta.",
+    i18nKey: "notifications",
   },
   {
     label: "Notícias",
@@ -92,6 +114,7 @@ export const dashboardNav = [
     icon: "Newspaper",
     title: "Central de notícias",
     description: "Patches, eventos e novidades da rede.",
+    i18nKey: "news",
   },
   {
     label: "Loja",
@@ -99,6 +122,7 @@ export const dashboardNav = [
     icon: "ShoppingBag",
     title: "Loja",
     description: "Skins, agentes e cosméticos exclusivos.",
+    i18nKey: "store",
   },
   {
     label: "Inventário",
@@ -106,13 +130,15 @@ export const dashboardNav = [
     icon: "Package",
     title: "Inventário",
     description: "Suas skins, facas, luvas e agentes equipados.",
+    i18nKey: "inventory",
   },
   {
     label: "Anticheat",
     href: "/dashboard/anticheat",
     icon: "ShieldCheck",
     title: "Anticheat",
-    description: "Download e status da proteção.",
+    description: "Download e status — obrigatório apenas no modo rankeado.",
+    i18nKey: "anticheat",
   },
   {
     label: "Premium",
@@ -120,6 +146,7 @@ export const dashboardNav = [
     icon: "Crown",
     title: "Premium",
     description: "Upgrade de plano e benefícios.",
+    i18nKey: "premium",
   },
   {
     label: "Suporte",
@@ -127,14 +154,33 @@ export const dashboardNav = [
     icon: "Headphones",
     title: "Suporte",
     description: "Canais de ajuda e atendimento.",
+    i18nKey: "support",
   },
 ] as const;
 
-export type DashboardNavIcon = typeof dashboardNav[number]["icon"];
+export type DashboardNavChild = {
+  label: string;
+  href: string;
+  icon: string;
+  title: string;
+  description: string;
+  i18nKey: string;
+};
 
-export function getDashboardPageMeta(pathname: string) {
-  const item = dashboardNav.find((n) => pathname === n.href);
-  return item ?? dashboardNav[0];
+export type DashboardNavItem = DashboardNavChild & {
+  children?: readonly DashboardNavChild[];
+};
+
+export function getDashboardPageMeta(pathname: string): DashboardNavChild {
+  for (const item of dashboardNav as readonly DashboardNavItem[]) {
+    if (pathname === item.href && !item.children) return item;
+    const child = item.children?.find((c) => pathname === c.href);
+    if (child) return child;
+  }
+  const direct = (dashboardNav as readonly DashboardNavItem[]).find(
+    (n) => pathname === n.href,
+  );
+  return direct ?? dashboardNav[0];
 }
 
 export const adminNav = [
@@ -174,6 +220,13 @@ export const adminNav = [
     description: "CRUD de servidores públicos exibidos na plataforma.",
   },
   {
+    label: "Infra CS:GO",
+    href: "/admin/infra-csgo",
+    icon: "CloudCog",
+    title: "Infra CS:GO",
+    description: "Subir, derrubar servidores e cancelar partidas de teste na VPS.",
+  },
+  {
     label: "Notícias",
     href: "/admin/noticias",
     icon: "Newspaper",
@@ -202,3 +255,54 @@ export const adminNav = [
     description: "Log de ações administrativas para rastreabilidade.",
   },
 ] as const;
+
+export type AdminNavItem = {
+  label: string;
+  href: string;
+  icon: string;
+  title: string;
+  description: string;
+};
+
+export type AdminNavGroup = {
+  id: string;
+  label: string;
+  icon: string;
+  items: AdminNavItem[];
+};
+
+export const adminOverview: AdminNavItem = adminNav[0];
+
+export const adminNavGroups: AdminNavGroup[] = [
+  {
+    id: "community",
+    label: "Comunidade",
+    icon: "Users",
+    items: [adminNav[1], adminNav[2], adminNav[3]],
+  },
+  {
+    id: "content",
+    label: "Conteúdo",
+    icon: "Newspaper",
+    items: [adminNav[6], adminNav[7], adminNav[8]],
+  },
+  {
+    id: "infra",
+    label: "Infra",
+    icon: "Server",
+    items: [adminNav[4], adminNav[5]],
+  },
+  {
+    id: "system",
+    label: "Sistema",
+    icon: "ScrollText",
+    items: [adminNav[9]],
+  },
+];
+
+export function getAdminPageMeta(pathname: string): AdminNavItem {
+  const direct = adminNav.find(
+    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
+  );
+  return direct ?? adminOverview;
+}

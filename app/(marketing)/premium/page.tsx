@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 import { Premium } from "@/components/sections/premium";
 import { PremiumFaq } from "@/components/marketing/premium-faq";
@@ -11,20 +12,21 @@ export const metadata: Metadata = {
 };
 
 export default async function PremiumPage() {
+  const t = await getTranslations("marketing");
   const plans = await getSubscriptionPlans();
 
   return (
     <>
       <MarketingPageShell
-        eyebrow="Planos"
+        eyebrow={t("premiumEyebrow")}
         title={
           <>
-            Eleve sua experiência ao{" "}
-            <span className="text-gradient">máximo</span>
+            {t("premiumTitleA")}{" "}
+            <span className="text-gradient">{t("premiumTitleB")}</span>
           </>
         }
-        description="Alta performance, skins liberadas e liberdade para jogar do seu jeito. Cancele quando quiser."
-        withGlow={false}
+        description={t("premiumDesc")}
+        withGlow
       >
         <Premium embedded plans={plans} />
         <PremiumFaq />

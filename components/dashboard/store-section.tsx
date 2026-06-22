@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { Flame } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { ButtonLink } from "@/components/ui/button";
-import { confirmPresets } from "@/lib/confirm-presets";
+import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { cn } from "@/lib/utils";
 
 type StoreItem = {
@@ -21,6 +22,8 @@ type StoreItem = {
 };
 
 export function StoreSection() {
+  const t = useTranslations("store");
+  const confirmPresets = useConfirmPresets();
   const [items, setItems] = useState<StoreItem[]>([]);
 
   useEffect(() => {
@@ -36,7 +39,7 @@ export function StoreSection() {
   if (!featured) {
     return (
       <section className="rounded-card glass p-8 text-center text-muted">
-        Nenhum item na loja no momento.
+        {t("empty")}
       </section>
     );
   }
@@ -90,7 +93,7 @@ export function StoreSection() {
             className="shrink-0"
             confirm={confirmPresets.purchaseItem(featured.name, featured.price)}
           >
-            Comprar agora
+            {t("buyNow")}
           </ButtonLink>
         </div>
       </motion.div>

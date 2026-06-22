@@ -15,6 +15,23 @@ import {
 import { logAdminAction } from "@/lib/admin/audit";
 import { adminNotificationSendSchema } from "@/lib/admin/schemas";
 import { listAdminNotifications } from "@/lib/admin/queries";
+import type { ContentTranslations } from "@/lib/i18n-content";
+import { buildNotificationTranslations } from "@/lib/translation/auto-translate";
+
+async function resolveNotificationTranslations(
+  title: string,
+  body: string,
+  autoTranslate: boolean | undefined,
+  manual: ContentTranslations | null | undefined,
+): Promise<ContentTranslations | null> {
+  if (manual && (manual.en || manual.es)) {
+    return manual;
+  }
+  if (autoTranslate) {
+    return await buildNotificationTranslations(title, body);
+  }
+  return null;
+}
 
 export async function GET(request: NextRequest) {
   const { error } = await requireAdmin(request);
@@ -52,6 +69,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const translations = await resolveNotificationTranslations(
+    parsed.data.title,
+    parsed.data.body,
+    parsed.data.autoTranslate,
+    parsed.data.translations,
+  );
+
+  const notificationData = {
+    title: parsed.data.title,
+    body: parsed.data.body,
+    type: parsed.data.type,
+    translations: translations ?? undefined,
+  };
+
   const broadcast = parsed.data.broadcast === true;
 
   if (broadcast) {
@@ -63,9 +94,7 @@ export async function POST(request: NextRequest) {
     await prisma.notification.createMany({
       data: users.map((u) => ({
         userId: u.id,
-        title: parsed.data.title,
-        body: parsed.data.body,
-        type: parsed.data.type,
+        ...notificationData,
       })),
     });
 
@@ -94,9 +123,7 @@ export async function POST(request: NextRequest) {
   const notification = await prisma.notification.create({
     data: {
       userId: parsed.data.userId,
-      title: parsed.data.title,
-      body: parsed.data.body,
-      type: parsed.data.type,
+      ...notificationData,
     },
   });
 

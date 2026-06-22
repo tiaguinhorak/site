@@ -9,10 +9,11 @@ import {
   AlertCircle,
   Globe,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { SteamIcon } from "@/components/ui/icons";
 import { secureApi } from "@/lib/api/client";
-import { confirmPresets } from "@/lib/confirm-presets";
+import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { getCountryLabel } from "@/lib/profile";
 import { maskSteamId, formatSteamLinkedAt } from "@/lib/steam/display";
 import type { UserProfile } from "@/lib/serializers";
@@ -37,6 +38,8 @@ export function ProfileSteamSection({
   profile,
   onSteamUnlink,
 }: ProfileSteamSectionProps) {
+  const t = useTranslations("steamSection");
+  const confirmPresets = useConfirmPresets();
   const {
     steamLinked,
     steamId,
@@ -57,15 +60,15 @@ export function ProfileSteamSection({
           <SteamIcon className="h-5 w-5" />
         </span>
         <div>
-          <h3 className="font-display text-lg font-bold text-foreground">Steam</h3>
+          <h3 className="font-display text-lg font-bold text-foreground">{t("title")}</h3>
           <p className="mt-0.5 text-sm text-muted">
-            Status da vinculação e dados públicos importados da sua conta Steam.
+            {t("subtitle")}
           </p>
         </div>
       </div>
 
-      <div className="rounded-card border border-border overflow-hidden">
-        <div className="border-b border-border bg-[color-mix(in_srgb,var(--primary)_6%,transparent)] px-5 py-4 sm:px-6">
+      <div className="rounded-card glass overflow-hidden">
+        <div className="border-b border-border glass-input px-5 py-4 sm:px-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#171a21] ring-1 ring-border">
@@ -82,7 +85,7 @@ export function ProfileSteamSection({
               </div>
               <div>
                 <p className="font-display text-base font-bold text-foreground">
-                  {steamLinked ? (steamPersonaName ?? "Conta Steam") : "Steam não vinculada"}
+                  {steamLinked ? (steamPersonaName ?? t("accountSteam")) : t("notLinked")}
                 </p>
                 <span
                   className={cn(
@@ -95,12 +98,12 @@ export function ProfileSteamSection({
                   {steamLinked ? (
                     <>
                       <CheckCircle2 className="h-3 w-3" />
-                      Vinculada
+                      {t("linked")}
                     </>
                   ) : (
                     <>
                       <AlertCircle className="h-3 w-3" />
-                      Pendente
+                      {t("pending")}
                     </>
                   )}
                 </span>
@@ -116,7 +119,7 @@ export function ProfileSteamSection({
                   className="inline-flex h-9 items-center gap-2 rounded-xl border border-border px-4 text-xs font-semibold uppercase tracking-wide text-foreground transition-colors hover:bg-[color-mix(in_srgb,var(--primary)_10%,transparent)]"
                 >
                   <SteamIcon className="h-4 w-4" />
-                  Perfil Steam
+                  {t("steamProfile")}
                   <ExternalLink className="h-3 w-3 text-muted" />
                 </a>
               )}
@@ -135,7 +138,7 @@ export function ProfileSteamSection({
                   }}
                 >
                   <Unlink className="h-4 w-4" />
-                  Desvincular
+                  {t("unlink")}
                 </Button>
               ) : (
                 <a
@@ -143,7 +146,7 @@ export function ProfileSteamSection({
                   className="inline-flex h-9 items-center gap-2 rounded-xl px-4 text-xs font-semibold uppercase tracking-wide bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground shadow-[0_8px_30px_-8px_var(--glow-1)]"
                 >
                   <SteamIcon className="h-4 w-4" />
-                  Vincular Steam
+                  {t("linkSteam")}
                 </a>
               )}
             </div>
@@ -154,39 +157,39 @@ export function ProfileSteamSection({
           <dl className="grid gap-0 sm:grid-cols-2">
             {[
               {
-                label: "Status",
-                value: "Conta vinculada e ativa",
+                label: t("rowStatus"),
+                value: t("statusValue"),
                 icon: CheckCircle2,
                 valueClass: "text-emerald-400",
               },
               {
-                label: "Data da vinculação",
-                value: linkedDate ?? "Registro anterior à atualização",
+                label: t("rowLinkedDate"),
+                value: linkedDate ?? t("linkedDateFallback"),
                 icon: Clock,
               },
               {
-                label: "Steam ID",
+                label: t("rowSteamId"),
                 value: steamId ? maskSteamId(steamId) : "—",
                 icon: SteamIcon,
                 mono: true,
                 steamIcon: true,
               },
               {
-                label: "País Steam",
+                label: t("rowCountry"),
                 value: steamCountryCode
                   ? getCountryLabel(steamCountryCode)
-                  : "Não informado",
+                  : t("countryFallback"),
                 icon: Globe,
               },
               {
-                label: "Persona",
+                label: t("rowPersona"),
                 value: steamPersonaName ?? "—",
                 icon: SteamIcon,
                 steamIcon: true,
               },
               {
-                label: "Anticheat",
-                value: anticheatInstalled ? "Instalado" : "Não detectado",
+                label: t("rowAnticheat"),
+                value: anticheatInstalled ? t("installed") : t("notDetected"),
                 icon: ShieldCheck,
                 valueClass: anticheatInstalled ? "text-emerald-400" : "text-muted",
               },
@@ -224,16 +227,14 @@ export function ProfileSteamSection({
           <div className="px-5 py-8 text-center sm:px-6">
             <SteamIcon className="mx-auto h-10 w-10 text-muted opacity-60" />
             <p className="mt-4 text-sm text-muted">
-              Vincule sua Steam para jogar nos servidores, usar o anticheat e
-              sincronizar foto e nickname automaticamente.
+              {t("notLinkedDesc")}
             </p>
           </div>
         )}
       </div>
 
       <p className="text-xs text-muted">
-        O Steam ID é exibido parcialmente mascarado por segurança. Ao vincular,
-        importamos apenas dados públicos da Steam (foto, nome e país).
+        {t("maskNote")}
       </p>
     </section>
   );

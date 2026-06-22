@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { LIMITS } from "@/lib/security/constants";
+import { normalizeSlugPart } from "@/lib/i18n-content";
 import {
   sanitizeEmail,
   sanitizeNickname,
@@ -70,6 +71,24 @@ export const adminNotificationSendSchema = z.object({
   type: notificationTypeSchema.default("SYSTEM"),
   userId: z.string().min(1).optional(),
   broadcast: z.boolean().optional(),
+  autoTranslate: z.boolean().optional(),
+  translations: z
+    .object({
+      en: z
+        .object({
+          title: z.string().max(120).optional(),
+          body: z.string().max(500).optional(),
+        })
+        .optional(),
+      es: z
+        .object({
+          title: z.string().max(120).optional(),
+          body: z.string().max(500).optional(),
+        })
+        .optional(),
+    })
+    .optional()
+    .nullable(),
 });
 
 export const adminPunishmentCreateSchema = z.object({
@@ -107,9 +126,30 @@ export const adminServerCreateSchema = z.object({
 
 export const adminServerUpdateSchema = adminServerCreateSchema.partial();
 
+const newsSlugSchema = z
+  .union([z.string(), z.undefined(), z.null()])
+  .optional()
+  .transform((v) => {
+    const trimmed = (v ?? "").trim();
+    if (!trimmed) return undefined;
+    return normalizeSlugPart(trimmed).slice(0, 100);
+  })
+  .pipe(
+    z.union([
+      z.undefined(),
+      z
+        .string()
+        .min(3)
+        .max(100)
+        .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+    ]),
+  );
+
 export const adminNewsCreateSchema = z.object({
   title: z.string().min(4).max(160).transform((v) => sanitizeText(v, 160)),
   excerpt: z.string().min(10).max(400).transform((v) => sanitizeText(v, 400)),
+  body: z.string().max(20000).default(""),
+  slug: newsSlugSchema,
   category: z.string().min(2).max(40).transform((v) => sanitizeText(v, 40)),
   imageAccent: z.string().min(3).max(120).transform((v) => sanitizeText(v, 120)),
   imageUrl: z
@@ -122,7 +162,9 @@ export const adminNewsCreateSchema = z.object({
   publishedAt: z.string().datetime().optional(),
 });
 
-export const adminNewsUpdateSchema = adminNewsCreateSchema.partial();
+export const adminNewsUpdateSchema = adminNewsCreateSchema.partial().extend({
+  archived: z.boolean().optional(),
+});
 
 export const adminStoreCreateSchema = z.object({
   name: z.string().min(2).max(80).transform((v) => sanitizeText(v, 80)),
@@ -166,3 +208,17 @@ export const adminGameModeRoomCreateSchema = z.object({
 });
 
 export const adminGameModeRoomUpdateSchema = adminGameModeRoomCreateSchema.partial();
+
+export const adminRankedQueueRestrictSchema = z.object({
+  minutes: z.number().int().min(1).max(10080),
+  reason: z
+    .string()
+    .min(3, "Descreva o motivo.")
+    .max(300)
+    .transform((v) => sanitizeText(v, 300)),
+  incrementDodge: z.boolean().optional().default(true),
+});
+
+export const adminRankedQueueClearSchema = z.object({
+  resetDodges: z.boolean().optional().default(false),
+});

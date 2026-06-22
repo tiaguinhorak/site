@@ -2,45 +2,95 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
   applyApiGuards,
-  jsonError,
   parseJsonBody,
 } from "@/lib/security/api-guard";
 import { getSessionUserId } from "@/lib/auth/session-user";
 import { prisma } from "@/lib/prisma";
 import { RATE_LIMITS } from "@/lib/security/constants";
-
-function formatRelativeTime(date: Date): string {
-  const diff = Date.now() - date.getTime();
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  if (hours < 1) return "Agora";
-  if (hours < 24) return `${hours}h atrás`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return "Ontem";
-  return `${days} dias`;
-}
+import { type Locale } from "@/lib/i18n";
+import { getMessages } from "next-intl/server";
+import { getRequestLocale, apiErrorMessage } from "@/lib/i18n/server";
+import { jsonErrorKey } from "@/lib/i18n/api-route";
+import { parseContentTranslations } from "@/lib/i18n-content";
+import { resolveNotificationContentForLocale } from "@/lib/i18n/auto-resolve-content";
+import {
+  formatRelativeTime,
+  resolveNotificationText,
+} from "@/lib/notifications/format";
 
 export async function GET(request: NextRequest) {
   const userId = await getSessionUserId(request);
   if (!userId) {
-    return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    const locale = await getRequestLocale(request);
+    return NextResponse.json(
+      { error: apiErrorMessage(locale, "unauthorized") },
+      { status: 401 },
+    );
   }
+
+  const locale = await getRequestLocale(request);
+  const messages = await getMessages({ locale });
 
   const notifications = await prisma.notification.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json({
-    notifications: notifications.map((n) => ({
-      id: n.id,
-      title: n.title,
-      body: n.body,
-      read: n.read,
-      type: n.type.toLowerCase(),
-      time: formatRelativeTime(n.createdAt),
-      createdAt: n.createdAt.toISOString(),
-    })),
-  });
+  const rows = await Promise.all(
+    notifications.map(async (n) => {
+      const params =
+        n.params && typeof n.params === "object" && !Array.isArray(n.params)
+          ? (n.params as Record<string, string>)
+          : {};
+      const storedTranslations = parseContentTranslations(n.translations);
+
+      let title = n.title;
+      let body = n.body;
+
+      if (n.titleKey) {
+        const resolved = resolveNotificationText(
+          locale,
+          messages as Record<string, unknown>,
+          n.title,
+          n.body,
+          n.titleKey,
+          n.bodyKey,
+          params,
+          storedTranslations,
+        );
+        title = resolved.title;
+        body = resolved.body;
+      } else {
+        const resolved = await resolveNotificationContentForLocale(
+          locale,
+          n.title,
+          n.body,
+          storedTranslations,
+        );
+        title = resolved.title;
+        body = resolved.body;
+
+        if (resolved.translated && resolved.translations) {
+          await prisma.notification.update({
+            where: { id: n.id },
+            data: { translations: resolved.translations },
+          });
+        }
+      }
+
+      return {
+        id: n.id,
+        title,
+        body,
+        read: n.read,
+        type: n.type.toLowerCase(),
+        time: formatRelativeTime(n.createdAt, locale),
+        createdAt: n.createdAt.toISOString(),
+      };
+    }),
+  );
+
+  return NextResponse.json({ notifications: rows });
 }
 
 export async function PATCH(request: NextRequest) {
@@ -54,14 +104,18 @@ export async function PATCH(request: NextRequest) {
 
   const userId = await getSessionUserId(request);
   if (!userId) {
-    return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    const locale = await getRequestLocale(request);
+    return NextResponse.json(
+      { error: apiErrorMessage(locale, "unauthorized") },
+      { status: 401 },
+    );
   }
 
   const { data, error: parseError } = await parseJsonBody(request);
   if (parseError) return parseError;
 
   if (data?.markAllRead !== true) {
-    return jsonError(400, "Ação inválida.");
+    return jsonErrorKey(request, 400, "invalidAction");
   }
 
   await prisma.notification.updateMany({

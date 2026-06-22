@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { SectionHeading } from "@/components/ui/reveal";
 import { AmbientGlow } from "@/components/ui/ambient";
 import { resolveIcon } from "@/lib/icon-map";
@@ -20,6 +21,7 @@ export function Features({
   embedded?: boolean;
   features: FeatureView[];
 }) {
+  const t = useTranslations("marketing");
   return (
     <section
       id={embedded ? undefined : "plataforma"}
@@ -32,14 +34,14 @@ export function Features({
       <div className={cn(embedded ? "" : "relative mx-auto max-w-6xl px-4 sm:px-6")}>
         {!embedded && (
           <SectionHeading
-            eyebrow="Plataforma completa"
+            eyebrow={t("plataformaEyebrow")}
             title={
               <>
-                Tudo que você precisa para{" "}
-                <span className="text-gradient">evoluir no CS2</span>
+                {t("plataformaTitleA")}{" "}
+                <span className="text-gradient">{t("plataformaTitleB")}</span>
               </>
             }
-            description="Uma plataforma inteira pensada para o competitivo: do servidor ao perfil público."
+            description={t("plataformaDesc")}
             align="center"
           />
         )}

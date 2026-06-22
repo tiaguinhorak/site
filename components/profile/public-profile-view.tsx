@@ -12,6 +12,7 @@ import {
   Medal,
   TrendingUp,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { SteamIcon } from "@/components/ui/icons";
 import type { PublicPlayerProfile } from "@/lib/profile/serialize-public";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ const planLabels = {
 };
 
 export function PublicProfileView({ player }: { player: PublicPlayerProfile }) {
+  const t = useTranslations("publicProfile");
   return (
     <div className="space-y-6">
       {/* Hero */}
@@ -83,13 +85,13 @@ export function PublicProfileView({ player }: { player: PublicPlayerProfile }) {
                   {player.bio}
                 </p>
               ) : (
-                <p className="mt-4 text-sm text-muted">Sem bio pública.</p>
+                <p className="mt-4 text-sm text-muted">{t("noBio")}</p>
               )}
 
               <div className="mt-5 flex flex-wrap items-center gap-3">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] px-3 py-1 text-sm font-medium text-foreground">
                   <Trophy className="h-4 w-4 text-primary" />
-                  Rank #{player.rank}
+                  {t("rankBadge", { rank: player.rank })}
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] px-3 py-1 text-sm font-medium text-foreground">
                   <Medal className="h-4 w-4 text-primary" />
@@ -98,7 +100,7 @@ export function PublicProfileView({ player }: { player: PublicPlayerProfile }) {
                 {player.anticheatInstalled && (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-sm font-medium text-emerald-400">
                     <ShieldCheck className="h-4 w-4" />
-                    Anticheat verificado
+                    {t("anticheatVerified")}
                   </span>
                 )}
               </div>
@@ -115,20 +117,20 @@ export function PublicProfileView({ player }: { player: PublicPlayerProfile }) {
         className="rounded-card glass-strong p-6 sm:p-8"
       >
         <h2 className="font-display text-sm font-bold uppercase tracking-wider text-muted">
-          Estatísticas
+          {t("statsTitle")}
         </h2>
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
           {[
-            { label: "K/D", value: player.kd.toFixed(2), icon: Target },
-            { label: "Partidas", value: player.matches, icon: Medal },
-            { label: "Win rate", value: `${player.winRate}%`, icon: TrendingUp },
-            { label: "Horas jogadas", value: player.hoursPlayed, icon: Clock },
+            { label: t("kd"), value: player.kd.toFixed(2), icon: Target },
+            { label: t("matches"), value: player.matches, icon: Medal },
+            { label: t("winRate"), value: `${player.winRate}%`, icon: TrendingUp },
+            { label: t("hoursPlayed"), value: player.hoursPlayed, icon: Clock },
           ].map((stat) => {
             const Icon = stat.icon;
             return (
               <div
                 key={stat.label}
-                className="rounded-xl border border-border bg-[color-mix(in_srgb,var(--card)_40%,transparent)] p-4"
+                className="rounded-xl glass p-4"
               >
                 <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted">
                   <Icon className="h-3.5 w-3.5 text-primary" />
@@ -143,19 +145,19 @@ export function PublicProfileView({ player }: { player: PublicPlayerProfile }) {
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-border p-5">
-            <p className="text-xs uppercase tracking-wider text-muted">Posição global</p>
+          <div className="rounded-xl glass p-5">
+            <p className="text-xs uppercase tracking-wider text-muted">{t("globalPosition")}</p>
             <p className="mt-2 font-display text-4xl font-bold text-gradient">
               #{player.rank}
             </p>
-            <p className="mt-1 text-sm text-muted">Temporada atual</p>
+            <p className="mt-1 text-sm text-muted">{t("currentSeason")}</p>
           </div>
-          <div className="rounded-xl border border-border p-5">
-            <p className="text-xs uppercase tracking-wider text-muted">Rating ELO</p>
+          <div className="rounded-xl glass p-5">
+            <p className="text-xs uppercase tracking-wider text-muted">{t("eloRating")}</p>
             <p className="mt-2 font-display text-4xl font-bold text-foreground">
               {player.elo}
             </p>
-            <p className="mt-1 text-sm text-muted">Pontuação competitiva</p>
+            <p className="mt-1 text-sm text-muted">{t("competitiveScore")}</p>
           </div>
         </div>
       </motion.div>
@@ -173,24 +175,24 @@ export function PublicProfileView({ player }: { player: PublicPlayerProfile }) {
               <Crown className="h-5 w-5" />
             </div>
             <div>
-              <p className="font-display text-sm font-bold text-foreground">Plano</p>
+              <p className="font-display text-sm font-bold text-foreground">{t("plan")}</p>
               <p className="text-sm text-muted">{planLabels[player.plan]}</p>
             </div>
           </div>
           <div className="mt-5 space-y-3 border-t border-border pt-5">
             <div className="flex justify-between text-sm">
-              <span className="text-muted">Anticheat</span>
+              <span className="text-muted">{t("anticheat")}</span>
               <span
                 className={cn(
                   "font-medium",
                   player.anticheatInstalled ? "text-emerald-400" : "text-muted",
                 )}
               >
-                {player.anticheatInstalled ? "Instalado" : "Não detectado"}
+                {player.anticheatInstalled ? t("installed") : t("notDetected")}
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted">País</span>
+              <span className="text-muted">{t("country")}</span>
               <span className="font-medium text-foreground">
                 {player.countryFlag} {player.countryName}
               </span>
@@ -204,23 +206,23 @@ export function PublicProfileView({ player }: { player: PublicPlayerProfile }) {
               <SteamIcon className="h-5 w-5" />
             </div>
             <div>
-              <p className="font-display text-sm font-bold text-foreground">Steam</p>
+              <p className="font-display text-sm font-bold text-foreground">{t("steam")}</p>
               <p className="text-sm text-muted">
-                {player.steamPersonaName ? "Conta vinculada" : "Não vinculada"}
+                {player.steamPersonaName ? t("linkedAccount") : t("notLinked")}
               </p>
             </div>
           </div>
           {player.steamPersonaName && (
             <div className="mt-5 space-y-3 border-t border-border pt-5">
               <div className="flex justify-between gap-4 text-sm">
-                <span className="text-muted">Persona</span>
+                <span className="text-muted">{t("persona")}</span>
                 <span className="font-medium text-foreground text-right">
                   {player.steamPersonaName}
                 </span>
               </div>
               {player.steamProfileUrl && (
                 <div className="flex justify-between gap-4 text-sm">
-                  <span className="text-muted">Perfil</span>
+                  <span className="text-muted">{t("profile")}</span>
                   <Link
                     href={player.steamProfileUrl}
                     target="_blank"

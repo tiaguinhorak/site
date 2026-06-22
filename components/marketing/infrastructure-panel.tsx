@@ -1,30 +1,32 @@
 import { Wifi, Gauge, Server, MapPin } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
-export function InfrastructurePanel({ serverCount }: { serverCount: string }) {
+export async function InfrastructurePanel({ serverCount }: { serverCount: string }) {
+  const t = await getTranslations("infraPanel");
   const infra = [
     {
       icon: MapPin,
-      label: "Localização",
-      value: "São Paulo, BR",
-      detail: "Datacenter com rotas otimizadas para todo o Brasil",
+      label: t("locationLabel"),
+      value: t("locationValue"),
+      detail: t("locationDetail"),
     },
     {
       icon: Gauge,
-      label: "Links dedicados",
-      value: "10 Gbps",
-      detail: "Baixa latência e estabilidade em horários de pico",
+      label: t("linksLabel"),
+      value: t("linksValue"),
+      detail: t("linksDetail"),
     },
     {
       icon: Wifi,
-      label: "Ping médio",
-      value: "18ms",
-      detail: "Medição em jogadores de todas as regiões do país",
+      label: t("pingLabel"),
+      value: t("pingValue"),
+      detail: t("pingDetail"),
     },
     {
       icon: Server,
-      label: "Servidores",
+      label: t("serversLabel"),
       value: serverCount,
-      detail: "Retakes, DM, ForFun, Duels, Wingman e Surf",
+      detail: t("serversDetail"),
     },
   ];
 

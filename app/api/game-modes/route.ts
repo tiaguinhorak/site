@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { getGameModesWithRooms } from "@/lib/queries";
 
+const CASUAL_MODE_SLUGS = new Set(["competitive"]);
+
 export async function GET() {
   const modes = await getGameModesWithRooms();
   return NextResponse.json({
-    modes: modes.map((mode) => ({
+    modes: modes.filter((mode) => !CASUAL_MODE_SLUGS.has(mode.slug)).map((mode) => ({
       id: mode.slug,
       name: mode.name,
       accent: mode.accent,

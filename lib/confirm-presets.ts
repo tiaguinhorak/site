@@ -93,6 +93,36 @@ export const confirmPresets = {
     cancelLabel: "Cancelar",
     tone: "warning" as const,
   }),
+  createLobbyRoom: {
+    title: "Criar nova sala?",
+    description:
+      "Sua sala ficará visível no lobby para outros jogadores entrarem. Você poderá configurar mapa e modo depois.",
+    confirmLabel: "Criar sala",
+    cancelLabel: "Cancelar",
+    tone: "default" as const,
+  },
+  autoLobby: (roomName: string, modeName: string) => ({
+    title: "Entrar via Auto lobby?",
+    description: `Encontramos a melhor sala disponível: ${roomName} (${modeName}). Você será conectado automaticamente.`,
+    confirmLabel: "Entrar agora",
+    cancelLabel: "Cancelar",
+    tone: "default" as const,
+  }),
+  joinRankedQueue: {
+    title: "Entrar na fila ranqueada?",
+    description:
+      "Você buscará uma partida 5x5 com ELO. Assinatura Premium ou Elite é necessária.",
+    confirmLabel: "GO",
+    cancelLabel: "Cancelar",
+    tone: "default" as const,
+  },
+  leaveRankedQueue: {
+    title: "Sair da fila ranqueada?",
+    description: "Sua busca por partida será cancelada e você perderá a posição na fila.",
+    confirmLabel: "Sair da fila",
+    cancelLabel: "Continuar buscando",
+    tone: "warning" as const,
+  },
   downloadAnticheat: {
     title: "Baixar anticheat?",
     description:
@@ -184,4 +214,71 @@ export const confirmPresets = {
     cancelLabel: "Cancelar",
     tone: "danger" as const,
   }),
+  csgoStartServer: (serverName: string, mapLabel: string) => ({
+    title: `Subir ${serverName}?`,
+    description: `O processo CS:GO será iniciado na VPS com o mapa ${mapLabel}.`,
+    confirmLabel: "Subir servidor",
+    cancelLabel: "Cancelar",
+    tone: "default" as const,
+  }),
+  csgoChangeMap: (serverName: string, mapLabel: string) => ({
+    title: `Trocar mapa de ${serverName}?`,
+    description: `Tenta RCON changelevel; se falhar, derruba e sobe novamente em ${mapLabel}.`,
+    confirmLabel: "Trocar mapa",
+    cancelLabel: "Cancelar",
+    tone: "warning" as const,
+  }),
+  csgoStopServer: (serverName: string) => ({
+    title: `Derrubar ${serverName}?`,
+    description:
+      "O processo CS:GO será encerrado na VPS. Jogadores conectados serão desconectados.",
+    confirmLabel: "Derrubar",
+    cancelLabel: "Cancelar",
+    tone: "danger" as const,
+  }),
+  csgoDeleteServer: (serverName: string) => ({
+    title: `Remover registro de ${serverName}?`,
+    description:
+      "Para o servidor se estiver online e remove o cadastro da API CS:GO. Não apaga arquivos na VPS.",
+    confirmLabel: "Remover registro",
+    cancelLabel: "Cancelar",
+    tone: "danger" as const,
+  }),
+  csgoRegisterServer: (serverName: string) => ({
+    title: `Registrar ${serverName}?`,
+    description: "Adiciona o servidor na API CS:GO para controle remoto (ainda offline até subir).",
+    confirmLabel: "Registrar",
+    cancelLabel: "Cancelar",
+    tone: "default" as const,
+  }),
+  csgoCancelMatch: (matchId: string) => ({
+    title: "Cancelar partida?",
+    description: `A partida ${matchId.slice(0, 8)}… será cancelada e liberará o fluxo de teste.`,
+    confirmLabel: "Cancelar partida",
+    cancelLabel: "Voltar",
+    tone: "warning" as const,
+  }),
+  csgoEndMatch: (matchId: string) => ({
+    title: "Encerrar partida ao vivo?",
+    description: `Finaliza a partida ${matchId.slice(0, 8)}… como concluída na API CS:GO.`,
+    confirmLabel: "Encerrar",
+    cancelLabel: "Voltar",
+    tone: "danger" as const,
+  }),
+  rankedSimulateMatch: {
+    title: "Simular partida ranked?",
+    description:
+      "Cria 9 bots, monta 2 lobbies 5v5 (você na party A), aceita desafio, confirma 10/10, vota mapa e tenta subir o servidor. Cancela partidas antigas na API CS:GO e apaga estado ranked local antes.",
+    confirmLabel: "Simular E2E",
+    cancelLabel: "Cancelar",
+    tone: "warning" as const,
+  },
+  rankedCancelMatch: {
+    title: "Cancelar partida?",
+    description:
+      "Encerra esta partida rankeada e libera seu lobby. Se houver registro na API CS:GO, a partida também será cancelada lá.",
+    confirmLabel: "Cancelar partida",
+    cancelLabel: "Voltar",
+    tone: "danger" as const,
+  },
 };

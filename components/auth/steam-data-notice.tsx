@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Image,
   UserRound,
@@ -6,23 +8,25 @@ import {
   Lock,
   Ban,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { SteamIcon } from "@/components/ui/icons";
 
-const collected = [
-  { icon: Image, label: "Foto do perfil" },
-  { icon: UserRound, label: "Nome exibido (persona)" },
-  { icon: SteamIcon, steamIcon: true, label: "Steam ID público" },
-  { icon: Globe, label: "País (se público)" },
-  { icon: SteamIcon, steamIcon: true, label: "Link do perfil Steam" },
-];
-
-const notCollected = [
-  { icon: Lock, label: "Senha da Steam" },
-  { icon: Ban, label: "Acesso à conta ou biblioteca" },
-  { icon: ShieldCheck, label: "Dados de pagamento" },
-];
-
 export function SteamDataNotice({ compact = false }: { compact?: boolean }) {
+  const t = useTranslations("steamDataNotice");
+  const collected = [
+    { icon: Image, label: t("photo") },
+    { icon: UserRound, label: t("persona") },
+    { icon: SteamIcon, steamIcon: true, label: t("steamId") },
+    { icon: Globe, label: t("country") },
+    { icon: SteamIcon, steamIcon: true, label: t("profileLink") },
+  ];
+
+  const notCollected = [
+    { icon: Lock, label: t("password") },
+    { icon: Ban, label: t("accountAccess") },
+    { icon: ShieldCheck, label: t("paymentData") },
+  ];
+
   return (
     <div
       className={`rounded-xl border border-[color-mix(in_srgb,var(--primary)_22%,transparent)] bg-[color-mix(in_srgb,var(--primary)_6%,transparent)] ${compact ? "p-4" : "p-5"}`}
@@ -33,11 +37,10 @@ export function SteamDataNotice({ compact = false }: { compact?: boolean }) {
         </span>
         <div className="min-w-0">
           <p className="font-display text-sm font-semibold text-foreground">
-            Dados coletados da Steam
+            {t("title")}
           </p>
           <p className="mt-1 text-xs leading-relaxed text-muted">
-            Somente informações públicas do perfil. Não pedimos senha nem acesso
-            à sua conta Steam.
+            {t("description")}
           </p>
         </div>
       </div>
@@ -48,7 +51,7 @@ export function SteamDataNotice({ compact = false }: { compact?: boolean }) {
           return (
             <li
               key={item.label}
-              className="flex items-center gap-2 rounded-lg border border-border/60 bg-[color-mix(in_srgb,var(--glass-bg)_40%,transparent)] px-3 py-2 text-xs text-foreground"
+              className="flex items-center gap-2 rounded-lg glass-chip px-3 py-2 text-xs text-foreground"
             >
               {item.steamIcon ? (
                 <SteamIcon className="h-3.5 w-3.5 shrink-0 text-primary" />
@@ -62,7 +65,7 @@ export function SteamDataNotice({ compact = false }: { compact?: boolean }) {
       </ul>
 
       <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-muted">
-        Não coletamos
+        {t("notCollectedTitle")}
       </p>
       <ul className="mt-2 flex flex-wrap gap-2">
         {notCollected.map((item) => {

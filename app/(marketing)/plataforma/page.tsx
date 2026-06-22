@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 import { Features } from "@/components/sections/features";
 import { CallToAction } from "@/components/sections/cta";
@@ -11,20 +12,21 @@ export const metadata: Metadata = {
 };
 
 export default async function PlataformaPage() {
+  const t = await getTranslations("marketing");
   const features = await getMarketingFeatures();
   const stats = await getSiteStats();
 
   return (
     <>
       <MarketingPageShell
-        eyebrow="Plataforma completa"
+        eyebrow={t("plataformaEyebrow")}
         title={
           <>
-            Tudo que você precisa para{" "}
-            <span className="text-gradient">evoluir no CS2</span>
+            {t("plataformaTitleA")}{" "}
+            <span className="text-gradient">{t("plataformaTitleB")}</span>
           </>
         }
-        description="Uma plataforma inteira pensada para o competitivo: do servidor ao perfil público."
+        description={t("plataformaDesc")}
       >
         <div className="mb-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {stats.map((s) => (

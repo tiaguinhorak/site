@@ -1,20 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { ShieldCheck, Download } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { SteamRequiredCard } from "@/components/dashboard/steam-required-card";
-import { confirmPresets } from "@/lib/confirm-presets";
+import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { useUser } from "@/lib/hooks/use-user";
 
 export function AnticheatSection() {
   const { user, loading } = useUser();
+  const t = useTranslations("anticheat");
+  const confirmPresets = useConfirmPresets();
 
   if (loading) {
     return (
       <div className="rounded-card glass p-8 text-center text-muted">
-        Carregando...
+        {t("loading")}
       </div>
     );
   }
@@ -24,8 +25,8 @@ export function AnticheatSection() {
   if (!user.steamLinked) {
     return (
       <SteamRequiredCard
-        title="Steam necessária para o anticheat"
-        description="Vincule sua conta Steam antes de instalar e usar o anticheat clutchclube nos servidores."
+        title={t("steamTitle")}
+        description={t("steamDesc")}
       />
     );
   }
@@ -40,12 +41,10 @@ export function AnticheatSection() {
         </div>
         <div className="flex-1">
           <h2 className="font-display text-2xl font-bold text-foreground">
-            {installed ? "Anticheat instalado" : "Anticheat necessário"}
+            {installed ? t("installedTitle") : t("requiredTitle")}
           </h2>
           <p className="mt-2 text-sm text-muted">
-            {installed
-              ? "Sua instalação foi detectada. Você pode jogar em todos os modos competitivos."
-              : "Instale o anticheat clutchclube para acessar servidores ranqueados e competitivos."}
+            {installed ? t("installedDesc") : t("requiredDesc")}
           </p>
         </div>
         {!installed && (
@@ -57,7 +56,7 @@ export function AnticheatSection() {
             confirm={confirmPresets.downloadAnticheat}
           >
             <Download className="h-4 w-4" />
-            Baixar anticheat
+            {t("download")}
           </ButtonLink>
         )}
       </div>

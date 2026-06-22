@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, Send, Loader2, Users } from "lucide-react";
+import { Bell, Send, Loader2, Users, Languages } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { secureApi } from "@/lib/api/client";
@@ -18,6 +18,13 @@ type NotificationRow = {
   user: { id: string; nickname: string; email: string | null };
 };
 
+type TranslationFields = { title: string; body: string };
+
+const emptyTranslations = (): { en: TranslationFields; es: TranslationFields } => ({
+  en: { title: "", body: "" },
+  es: { title: "", body: "" },
+});
+
 const TYPES = ["SYSTEM", "MATCH", "SOCIAL", "PROMO"] as const;
 
 export function AdminNotificationsSection() {
@@ -26,6 +33,9 @@ export function AdminNotificationsSection() {
   const [type, setType] = useState<string>("SYSTEM");
   const [userId, setUserId] = useState("");
   const [broadcast, setBroadcast] = useState(false);
+  const [autoTranslateOnSend, setAutoTranslateOnSend] = useState(true);
+  const [translations, setTranslations] = useState(emptyTranslations());
+  const [translating, setTranslating] = useState<"en" | "es" | "all" | null>(null);
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +56,65 @@ export function AdminNotificationsSection() {
     loadHistory();
   }, []);
 
+  function buildManualTranslations() {
+    const out: {
+      en?: { title?: string; body?: string };
+      es?: { title?: string; body?: string };
+    } = {};
+    if (translations.en.title || translations.en.body) {
+      out.en = {
+        title: translations.en.title || undefined,
+        body: translations.en.body || undefined,
+      };
+    }
+    if (translations.es.title || translations.es.body) {
+      out.es = {
+        title: translations.es.title || undefined,
+        body: translations.es.body || undefined,
+      };
+    }
+    return Object.keys(out).length ? out : null;
+  }
+
+  async function autoTranslate(target: "en" | "es" | "all") {
+    if (!title.trim()) {
+      setError("Preencha o título em português antes de traduzir.");
+      return;
+    }
+    setTranslating(target);
+    setError(null);
+    const targets = target === "all" ? (["en", "es"] as const) : [target];
+
+    try {
+      for (const lang of targets) {
+        const result = await secureApi<{
+          ok: boolean;
+          translation: { title: string; excerpt: string; body: string };
+        }>("/api/admin/translate", {
+          method: "POST",
+          json: {
+            title,
+            excerpt: "",
+            body,
+            target: lang,
+            source: "pt-BR",
+          },
+        });
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
+        const tr = result.data.translation;
+        setTranslations((prev) => ({
+          ...prev,
+          [lang]: { title: tr.title, body: tr.body },
+        }));
+      }
+    } finally {
+      setTranslating(null);
+    }
+  }
+
   async function send() {
     setError(null);
     setMessage(null);
@@ -58,6 +127,9 @@ export function AdminNotificationsSection() {
       return;
     }
 
+    const manualTranslations = buildManualTranslations();
+    const useAutoTranslate = autoTranslateOnSend && !manualTranslations;
+
     setSending(true);
     const result = await secureApi<{ ok: boolean; sent?: number }>(
       "/api/admin/notifications",
@@ -69,6 +141,8 @@ export function AdminNotificationsSection() {
           type,
           userId: broadcast ? undefined : userId.trim(),
           broadcast,
+          autoTranslate: useAutoTranslate,
+          translations: manualTranslations,
         },
       },
     );
@@ -87,6 +161,7 @@ export function AdminNotificationsSection() {
     setTitle("");
     setBody("");
     setUserId("");
+    setTranslations(emptyTranslations());
     loadHistory();
   }
 
@@ -141,14 +216,14 @@ export function AdminNotificationsSection() {
         </div>
 
         <Input
-          label="Título"
+          label="Título (PT)"
           value={title}
           maxLength={120}
           onChange={(e) => setTitle(e.target.value)}
         />
         <div>
           <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted">
-            Mensagem
+            Mensagem (PT)
           </label>
           <textarea
             value={body}
@@ -158,6 +233,125 @@ export function AdminNotificationsSection() {
             className="w-full rounded-xl border border-border bg-transparent px-3 py-2.5 text-sm resize-y min-h-[100px]"
           />
         </div>
+
+        <label className="flex items-center gap-3 rounded-xl border border-border p-3 text-sm">
+          <input
+            type="checkbox"
+            checked={autoTranslateOnSend}
+            onChange={(e) => setAutoTranslateOnSend(e.target.checked)}
+            className="h-4 w-4 accent-[var(--primary)]"
+          />
+          <span>
+            <span className="font-medium text-foreground">Traduzir automaticamente ao enviar</span>
+            <span className="block text-xs text-muted">
+              Gera EN/ES no servidor se não houver traduções manuais
+            </span>
+          </span>
+        </label>
+
+        <details className="rounded-xl border border-border p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-foreground">
+            Traduções (EN / ES)
+          </summary>
+          <div className="mt-4 space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={translating !== null}
+                onClick={() => autoTranslate("en")}
+              >
+                {translating === "en" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Languages className="h-4 w-4" />
+                )}
+                Traduzir EN
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={translating !== null}
+                onClick={() => autoTranslate("es")}
+              >
+                {translating === "es" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Languages className="h-4 w-4" />
+                )}
+                Traduzir ES
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={translating !== null}
+                onClick={() => autoTranslate("all")}
+              >
+                {translating === "all" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Languages className="h-4 w-4" />
+                )}
+                Traduzir todos
+              </Button>
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted">English</p>
+                <Input
+                  label="Título EN"
+                  value={translations.en.title}
+                  onChange={(e) =>
+                    setTranslations((prev) => ({
+                      ...prev,
+                      en: { ...prev.en, title: e.target.value },
+                    }))
+                  }
+                />
+                <textarea
+                  value={translations.en.body}
+                  rows={3}
+                  placeholder="Mensagem EN"
+                  onChange={(e) =>
+                    setTranslations((prev) => ({
+                      ...prev,
+                      en: { ...prev.en, body: e.target.value },
+                    }))
+                  }
+                  className="w-full rounded-xl border border-border bg-transparent px-3 py-2 text-sm"
+                />
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted">Español</p>
+                <Input
+                  label="Título ES"
+                  value={translations.es.title}
+                  onChange={(e) =>
+                    setTranslations((prev) => ({
+                      ...prev,
+                      es: { ...prev.es, title: e.target.value },
+                    }))
+                  }
+                />
+                <textarea
+                  value={translations.es.body}
+                  rows={3}
+                  placeholder="Mensagem ES"
+                  onChange={(e) =>
+                    setTranslations((prev) => ({
+                      ...prev,
+                      es: { ...prev.es, body: e.target.value },
+                    }))
+                  }
+                  className="w-full rounded-xl border border-border bg-transparent px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+        </details>
 
         {error && (
           <p className="text-sm text-rose-400" role="alert">{error}</p>

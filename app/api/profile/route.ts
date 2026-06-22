@@ -9,20 +9,21 @@ import { getSessionUser } from "@/lib/auth/session-user";
 import { prisma } from "@/lib/prisma";
 import { RATE_LIMITS } from "@/lib/security/constants";
 import { formatPhoneBR } from "@/lib/security/sanitize";
-import {
-  profileUpdateSchema,
-  profileUpdateWithIdentitySchema,
-  formatZodErrors,
-  firstZodError,
-} from "@/lib/security/schemas";
+import { formatZodErrors, firstZodError } from "@/lib/security/schemas";
+import { createValidationSchemas } from "@/lib/security/schema-factory";
+import { getRequestLocale, getValidationMessages, apiErrorMessage } from "@/lib/i18n/server";
 import { z } from "zod";
 import { serializeUser } from "@/lib/serializers";
 import { hasSteamLinked } from "@/lib/auth/steam-access";
 
 export async function GET(request: NextRequest) {
+  const locale = await getRequestLocale(request);
   const user = await getSessionUser(request);
   if (!user) {
-    return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    return NextResponse.json(
+      { error: apiErrorMessage(locale, "unauthorized") },
+      { status: 401 },
+    );
   }
   return NextResponse.json({ user: serializeUser(user) });
 }
@@ -39,23 +40,30 @@ export async function PATCH(request: NextRequest) {
   const { session, error: sessionError } = requireSession(request);
   if (sessionError) return sessionError;
 
+  const locale = await getRequestLocale(request);
   const currentUser = await prisma.user.findUnique({
     where: { id: session!.userId },
   });
   if (!currentUser) {
-    return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
+    return NextResponse.json(
+      { error: apiErrorMessage(locale, "userNotFound") },
+      { status: 404 },
+    );
   }
 
   const { data, error: parseError } = await parseJsonBody(request);
   if (parseError) return parseError;
 
   const steamLinked = hasSteamLinked(currentUser);
-  const schema = steamLinked ? profileUpdateSchema : profileUpdateWithIdentitySchema;
+  const schemas = createValidationSchemas(getValidationMessages(locale));
+  const schema = steamLinked
+    ? schemas.profileUpdateSchema
+    : schemas.profileUpdateWithIdentitySchema;
   const parsed = schema.safeParse(data);
   if (!parsed.success) {
     return NextResponse.json(
       {
-        error: firstZodError(parsed.error),
+        error: schemas.firstZodError(parsed.error),
         fieldErrors: formatZodErrors(parsed.error),
       },
       { status: 400 },
@@ -79,7 +87,7 @@ export async function PATCH(request: NextRequest) {
   };
 
   if (!steamLinked && "nickname" in parsed.data && "email" in parsed.data) {
-    const identity = parsed.data as z.infer<typeof profileUpdateWithIdentitySchema>;
+    const identity = parsed.data as z.infer<typeof schemas.profileUpdateWithIdentitySchema>;
     const emailTaken = await prisma.user.findFirst({
       where: {
         email: identity.email,
@@ -89,8 +97,8 @@ export async function PATCH(request: NextRequest) {
     if (emailTaken) {
       return NextResponse.json(
         {
-          error: "Este e-mail já está em uso.",
-          fieldErrors: { email: "E-mail já cadastrado." },
+          error: apiErrorMessage(locale, "emailInUse"),
+          fieldErrors: { email: apiErrorMessage(locale, "emailInUseField") },
         },
         { status: 409 },
       );
@@ -105,8 +113,8 @@ export async function PATCH(request: NextRequest) {
     if (nicknameTaken) {
       return NextResponse.json(
         {
-          error: "Nickname em uso.",
-          fieldErrors: { nickname: "Nickname já em uso." },
+          error: apiErrorMessage(locale, "nicknameInUse"),
+          fieldErrors: { nickname: apiErrorMessage(locale, "nicknameInUseField") },
         },
         { status: 409 },
       );

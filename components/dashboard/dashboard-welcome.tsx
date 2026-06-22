@@ -1,10 +1,12 @@
 "use client";
 
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { useUser } from "@/lib/hooks/use-user";
 
 export function DashboardWelcome() {
   const { user } = useUser();
+  const t = useTranslations("dashboardWelcome");
 
   if (!user) return null;
 
@@ -15,10 +17,10 @@ export function DashboardWelcome() {
       className="mb-8"
     >
       <h2 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
-        Olá, {user.nickname}
+        {t("greeting", { name: user.nickname })}
       </h2>
       <p className="mt-1 text-sm text-muted">
-        Season 8 · Rank #{user.rank} · {user.elo} ELO
+        {t("subtitle", { rank: user.rank, elo: user.elo })}
       </p>
     </motion.div>
   );

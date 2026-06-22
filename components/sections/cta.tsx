@@ -2,13 +2,16 @@
 
 import { motion } from "motion/react";
 import { ShieldCheck, LayoutDashboard } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { ButtonLink } from "@/components/ui/button";
 import { SteamIcon } from "@/components/ui/icons";
-import { confirmPresets } from "@/lib/confirm-presets";
+import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { useAuthSession } from "@/lib/hooks/use-auth-session";
 
 export function CallToAction() {
   const { authenticated, steamLinked } = useAuthSession();
+  const t = useTranslations("cta");
+  const confirmPresets = useConfirmPresets();
 
   return (
     <section className="relative py-24">
@@ -29,22 +32,22 @@ export function CallToAction() {
 
           <div className="relative mx-auto max-w-2xl">
             <h2 className="font-display text-4xl font-bold leading-tight tracking-tight text-foreground sm:text-6xl">
-              Mais que servidores.
-              <span className="block text-gradient">Sua evolução no CS2.</span>
+              {t("titleLine1")}
+              <span className="block text-gradient">{t("titleLine2")}</span>
             </h2>
             <p className="mx-auto mt-5 max-w-xl text-base text-muted sm:text-lg">
               {authenticated
                 ? steamLinked
-                  ? "Acesse o dashboard para conectar aos servidores, ver seu ranking e gerenciar sua conta."
-                  : "Vincule sua Steam para jogar nos servidores e liberar skins, ranking e inventário."
-                : "Crie sua conta gratuita, instale o anticheat e entre no melhor servidor disponível em segundos."}
+                  ? t("descDashboard")
+                  : t("descLinkSteam")
+                : t("descGuest")}
             </p>
             <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
               {authenticated ? (
                 steamLinked ? (
                   <ButtonLink href="/dashboard" variant="primary" size="lg" className="w-full sm:w-auto">
                     <LayoutDashboard className="h-5 w-5" />
-                    Ir ao Dashboard
+                    {t("goDashboard")}
                   </ButtonLink>
                 ) : (
                   <ButtonLink
@@ -54,13 +57,13 @@ export function CallToAction() {
                     className="w-full sm:w-auto"
                   >
                     <SteamIcon className="h-5 w-5" />
-                    Vincular Steam
+                    {t("linkSteam")}
                   </ButtonLink>
                 )
               ) : (
                 <ButtonLink href="/register" variant="primary" size="lg" className="w-full sm:w-auto">
                   <SteamIcon className="h-5 w-5" />
-                  Criar conta grátis
+                  {t("createAccount")}
                 </ButtonLink>
               )}
               <ButtonLink
@@ -71,7 +74,7 @@ export function CallToAction() {
                 confirm={confirmPresets.downloadAnticheat}
               >
                 <ShieldCheck className="h-5 w-5 text-primary" />
-                Baixar Anticheat
+                {t("downloadAnticheat")}
               </ButtonLink>
             </div>
           </div>

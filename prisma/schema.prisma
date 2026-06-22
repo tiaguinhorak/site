@@ -79,6 +79,9 @@ model User {
   steamProfileUrl    String?
   steamCountryCode   String?
   isAdmin            Boolean  @default(false)
+  rankedQueueDodges     Int       @default(0)
+  rankedRestrictedUntil DateTime?
+  rankedLastDodgeAt     DateTime?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -88,6 +91,17 @@ model User {
   punishmentsIssued Punishment[] @relation("PunishmentAdmin")
   punishmentsRevoked Punishment[] @relation("PunishmentRevoker")
   adminAuditLogs    AdminAuditLog[]
+  hostedLobbyRooms LobbyRoom[]  @relation("LobbyHost")
+  lobbyMemberships LobbyMember[]
+  rankedPartiesLed     RankedParty[]        @relation("RankedPartyLeader")
+  rankedPartyMembers   RankedPartyMember[]
+  rankedPartyMessages  RankedPartyMessage[]
+  rankedMatchAcceptances RankedMatchAcceptance[]
+  rankedMapVotes       RankedMapVote[]
+  lobbyJoinQueues      LobbyJoinQueue[]
+  rankedQueueEntries   RankedQueueEntry[] @relation("RankedQueueLeader")
+  notificationPreferences UserNotificationPreferences?
+  newsArticlesAuthored NewsArticle[] @relation("NewsAuthor")
 
   @@index([rank])
   @@index([elo])
@@ -135,17 +149,33 @@ model AdminAuditLog {
 }
 
 model Notification {
-  id        String           @id @default(cuid())
-  userId    String
-  title     String
-  body      String
-  read      Boolean          @default(false)
-  type      NotificationType @default(SYSTEM)
-  createdAt DateTime         @default(now())
+  id           String           @id @default(cuid())
+  userId       String
+  title        String
+  body         String
+  titleKey     String?
+  bodyKey      String?
+  params       Json?
+  translations Json?
+  read         Boolean          @default(false)
+  type         NotificationType @default(SYSTEM)
+  createdAt    DateTime         @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
+}
+
+model UserNotificationPreferences {
+  userId          String  @id
+  emailNewsletter Boolean @default(true)
+  inAppMatch      Boolean @default(true)
+  inAppSocial     Boolean @default(true)
+  inAppPromo      Boolean @default(true)
+  inAppSystem     Boolean @default(true)
+  browserPush     Boolean @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model GameMode {
@@ -158,6 +188,7 @@ model GameMode {
   iconKey     String         @default("Crosshair")
   sortOrder   Int            @default(0)
   rooms       GameModeRoom[]
+  lobbyRooms  LobbyRoom[]
 }
 
 model GameModeRoom {
@@ -170,22 +201,268 @@ model GameModeRoom {
   ping       Int      @default(0)
   sortOrder  Int      @default(0)
 
-  gameMode GameMode @relation(fields: [gameModeId], references: [id], onDelete: Cascade)
+  gameMode  GameMode   @relation(fields: [gameModeId], references: [id], onDelete: Cascade)
+  lobbyRoom LobbyRoom?
 
   @@index([gameModeId])
 }
 
+model LobbyRoom {
+  id            String   @id @default(cuid())
+  hostUserId    String
+  gameModeId    String
+  catalogRoomId String?  @unique
+  isSystem      Boolean  @default(false)
+  name          String
+  map           String
+  slots         Int
+  region        String   @default("BR")
+  visibility    String   @default("public")
+  passwordHash  String?
+  settings      Json     @default("{}")
+  status        String   @default("open")
+  ping          Int      @default(25)
+  matchId       String?
+  expiresAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  host        User          @relation("LobbyHost", fields: [hostUserId], references: [id], onDelete: Cascade)
+  gameMode    GameMode      @relation(fields: [gameModeId], references: [id], onDelete: Cascade)
+  catalogRoom GameModeRoom? @relation(fields: [catalogRoomId], references: [id], onDelete: Cascade)
+  members     LobbyMember[]
+  joinQueue   LobbyJoinQueue[]
+  rankedMatch RankedMatchSession?
+
+  @@index([status])
+  @@index([gameModeId])
+  @@index([hostUserId])
+  @@index([createdAt])
+  @@index([isSystem])
+}
+
+model RankedParty {
+  id           String   @id @default(cuid())
+  leaderUserId String
+  inviteCode   String   @unique @default(cuid())
+  status       String   @default("open")
+  name         String?
+  region       String   @default("BR")
+  visibility   String   @default("public")
+  passwordHash String?
+  minLevel     Int      @default(1)
+  maxLevel     Int      @default(20)
+  mapPool      Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  leader            User                @relation("RankedPartyLeader", fields: [leaderUserId], references: [id], onDelete: Cascade)
+  members           RankedPartyMember[]
+  challengesSent    RankedChallenge[]   @relation("ChallengeFrom")
+  challengesReceived RankedChallenge[]  @relation("ChallengeTo")
+  matchSessionsAsA  RankedMatchSession[] @relation("MatchPartyA")
+  matchSessionsAsB  RankedMatchSession[] @relation("MatchPartyB")
+  queueEntry        RankedQueueEntry?
+  activities        RankedPartyActivity[]
+  messages          RankedPartyMessage[]
+
+  @@index([leaderUserId])
+  @@index([status])
+}
+
+model RankedPartyActivity {
+  id            String   @id @default(cuid())
+  partyId       String
+  type          String
+  nickname      String
+  actorNickname String?
+  createdAt     DateTime @default(now())
+
+  party RankedParty @relation(fields: [partyId], references: [id], onDelete: Cascade)
+
+  @@index([partyId, createdAt])
+}
+
+model RankedPartyMessage {
+  id        String   @id @default(cuid())
+  partyId   String
+  userId    String
+  nickname  String
+  body      String
+  createdAt DateTime @default(now())
+
+  party RankedParty @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([partyId, createdAt])
+}
+
+model RankedPartyMember {
+  id        String   @id @default(cuid())
+  partyId   String
+  userId    String
+  slotIndex Int
+  joinedAt  DateTime @default(now())
+
+  party RankedParty @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([partyId, userId])
+  @@unique([partyId, slotIndex])
+  @@unique([userId])
+  @@index([partyId])
+}
+
+model RankedChallenge {
+  id          String    @id @default(cuid())
+  fromPartyId String
+  toPartyId   String
+  status      String    @default("pending")
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+  respondedAt DateTime?
+
+  fromParty    RankedParty         @relation("ChallengeFrom", fields: [fromPartyId], references: [id], onDelete: Cascade)
+  toParty      RankedParty         @relation("ChallengeTo", fields: [toPartyId], references: [id], onDelete: Cascade)
+  matchSession RankedMatchSession?
+
+  @@index([fromPartyId])
+  @@index([toPartyId])
+  @@index([status])
+}
+
+model RankedMatchSession {
+  id          String   @id @default(cuid())
+  challengeId String?  @unique
+  lobbyRoomId String?  @unique
+  matchSource String   @default("challenge")
+  teamSize    Int      @default(5)
+  partyAId    String
+  partyBId    String
+  status      String   @default("accepting")
+  csgoMatchId String?
+  selectedMap String?
+  serverHost  String?
+  serverPort  Int?
+  vetoData    Json?
+  voteEndsAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  challenge   RankedChallenge?        @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  lobbyRoom   LobbyRoom?              @relation(fields: [lobbyRoomId], references: [id], onDelete: SetNull)
+  partyA      RankedParty             @relation("MatchPartyA", fields: [partyAId], references: [id], onDelete: Cascade)
+  partyB      RankedParty             @relation("MatchPartyB", fields: [partyBId], references: [id], onDelete: Cascade)
+  acceptances RankedMatchAcceptance[]
+  mapVotes    RankedMapVote[]
+
+  @@index([partyAId])
+  @@index([partyBId])
+  @@index([status])
+  @@index([lobbyRoomId])
+}
+
+model RankedMatchAcceptance {
+  id         String    @id @default(cuid())
+  sessionId  String
+  userId     String
+  accepted   Boolean   @default(false)
+  acceptedAt DateTime?
+
+  session RankedMatchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@index([sessionId])
+}
+
+model RankedMapVote {
+  id        String   @id @default(cuid())
+  sessionId String
+  userId    String
+  map       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  session RankedMatchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@index([sessionId])
+}
+
+model LobbyMember {
+  id          String   @id @default(cuid())
+  lobbyRoomId String
+  userId      String
+  slotIndex   Int
+  isReady     Boolean  @default(false)
+  joinedAt    DateTime @default(now())
+
+  lobbyRoom LobbyRoom @relation(fields: [lobbyRoomId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([lobbyRoomId, userId])
+  @@unique([lobbyRoomId, slotIndex])
+  @@unique([userId])
+  @@index([lobbyRoomId])
+  @@index([userId])
+}
+
+model LobbyJoinQueue {
+  id           String   @id @default(cuid())
+  lobbyRoomId  String
+  userId       String
+  planPriority Int      @default(0)
+  requestedAt  DateTime @default(now())
+
+  lobbyRoom LobbyRoom @relation(fields: [lobbyRoomId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([lobbyRoomId, userId])
+  @@index([lobbyRoomId, planPriority, requestedAt])
+}
+
+model RankedQueueEntry {
+  id           String   @id @default(cuid())
+  partyId      String   @unique
+  leaderUserId String
+  playerCount  Int
+  avgElo       Int
+  planPriority Int      @default(0)
+  status       String   @default("searching")
+  joinedAt     DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  party  RankedParty @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  leader User        @relation("RankedQueueLeader", fields: [leaderUserId], references: [id], onDelete: Cascade)
+
+  @@index([status, joinedAt])
+  @@index([leaderUserId])
+}
+
 model NewsArticle {
   id           String   @id @default(cuid())
+  slug         String   @unique
   title        String
   excerpt      String
+  body         String   @default("") @db.Text
   category     String
   imageAccent  String
   imageUrl     String?
   featured     Boolean  @default(false)
+  translations Json?
+  archivedAt   DateTime?
+  authorId     String?
   publishedAt  DateTime @default(now())
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  author User? @relation("NewsAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([publishedAt])
+  @@index([authorId])
+  @@index([archivedAt])
 }
 
 model StoreItem {
@@ -228,14 +505,20 @@ model UserInventoryItem {
 }
 
 model PublicServer {
-  id        String @id @default(cuid())
-  name      String
-  map       String
-  mode      String
-  players   Int    @default(0)
-  slots     Int
-  ping      Int    @default(0)
-  sortOrder Int    @default(0)
+  id           String  @id @default(cuid())
+  name         String
+  map          String
+  mode         String
+  players      Int     @default(0)
+  slots        Int
+  ping         Int     @default(0)
+  sortOrder    Int     @default(0)
+  csgoServerId String? @unique
+  host         String?
+  port         Int?
+  isLiveSynced Boolean @default(false)
+
+  @@index([isLiveSynced])
 }
 
 model LeaderboardEntry {
@@ -273,4 +556,90 @@ model SiteStat {
   value     String
   label     String
   sortOrder Int    @default(0)
+}
+
+// --- CS:GO REST API (integração servidor / partidas / skins) ---
+
+enum CsgoSkinWear {
+  factory_new
+  minimal_wear
+  field_tested
+  well_worn
+  battle_scarred
+}
+
+model CsgoServer {
+  id            String   @id @default(uuid())
+  name          String
+  host          String
+  sshPort       Int      @default(22)
+  sshUser       String?
+  sshPassword   String?
+  rconPort      Int
+  rconPassword  String
+  csgoDir       String
+  screenSession String
+  status        String   @default("offline")
+  port          Int
+  tickrate      Int      @default(128)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  matches CsgoMatch[]
+
+  @@index([status])
+}
+
+model CsgoMatch {
+  id          String   @id @default(uuid())
+  roomId      String
+  teamA       Json
+  teamB       Json
+  mapPool     Json
+  vetoHistory Json     @default("[]")
+  pickedMaps  Json     @default("{}")
+  status      String   @default("waiting_players")
+  serverId    String?
+  selectedMap String?
+  config      Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  server CsgoServer? @relation(fields: [serverId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([roomId])
+  @@index([serverId])
+}
+
+model CsgoSkinCatalog {
+  id           String @id
+  weaponId     String
+  weaponName   String
+  paintkit     Int
+  paintkitName String
+  rarity       String
+  category     String
+
+  playerSkins CsgoPlayerSkin[]
+
+  @@index([weaponId])
+}
+
+model CsgoPlayerSkin {
+  id            String       @id @default(cuid())
+  steamId       String
+  skinId        String
+  wear          CsgoSkinWear @default(field_tested)
+  seed          Int          @default(0)
+  stattrak      Boolean      @default(false)
+  stattrakCount Int          @default(0)
+  nametag       String?
+  equipped      Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+
+  skin CsgoSkinCatalog @relation(fields: [skinId], references: [id], onDelete: Cascade)
+
+  @@index([steamId])
+  @@index([steamId, equipped])
 }

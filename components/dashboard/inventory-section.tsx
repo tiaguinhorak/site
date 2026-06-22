@@ -2,12 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import {
-  inventoryCategoryLabels,
-  type InventoryCategoryKey,
-} from "@/lib/profile";
-import { confirmPresets } from "@/lib/confirm-presets";
+import { type InventoryCategoryKey } from "@/lib/profile";
+import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { cn } from "@/lib/utils";
 
 type InventoryItem = {
@@ -20,17 +18,26 @@ type InventoryItem = {
   owned: boolean;
 };
 
-const filters: { id: "all" | InventoryCategoryKey; label: string }[] = [
-  { id: "all", label: "Todos" },
-  { id: "knife", label: "Facas" },
-  { id: "gloves", label: "Luvas" },
-  { id: "rifle", label: "Rifles" },
-  { id: "pistol", label: "Pistolas" },
-  { id: "smg", label: "SMGs" },
-  { id: "agent", label: "Agentes" },
-];
-
 export function InventorySection() {
+  const t = useTranslations("inventory");
+  const confirmPresets = useConfirmPresets();
+  const categoryLabels: Record<InventoryCategoryKey, string> = {
+    knife: t("catKnife"),
+    gloves: t("catGloves"),
+    rifle: t("catRifle"),
+    pistol: t("catPistol"),
+    smg: t("catSmg"),
+    agent: t("catAgent"),
+  };
+  const filters: { id: "all" | InventoryCategoryKey; label: string }[] = [
+    { id: "all", label: t("catAll") },
+    { id: "knife", label: t("catKnife") },
+    { id: "gloves", label: t("catGloves") },
+    { id: "rifle", label: t("catRifle") },
+    { id: "pistol", label: t("catPistol") },
+    { id: "smg", label: t("catSmg") },
+    { id: "agent", label: t("catAgent") },
+  ];
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [filter, setFilter] = useState<"all" | InventoryCategoryKey>("all");
 
@@ -69,7 +76,7 @@ export function InventorySection() {
       </div>
 
       <p className="mb-4 text-sm text-muted">
-        {ownedCount} itens no inventário
+        {t("itemsCount", { count: ownedCount })}
       </p>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -94,7 +101,7 @@ export function InventorySection() {
               {item.name}
             </h3>
             <p className="mt-1 text-xs uppercase tracking-wider text-muted">
-              {inventoryCategoryLabels[item.category]} · {item.rarity}
+              {categoryLabels[item.category]} · {item.rarity}
             </p>
             {item.owned && (
               <Button
@@ -105,7 +112,7 @@ export function InventorySection() {
                 confirm={confirmPresets.equipSkin(item.name)}
                 onClick={() => {}}
               >
-                {item.equipped ? "Equipado" : "Equipar"}
+                {item.equipped ? t("equipped") : t("equip")}
               </Button>
             )}
           </motion.article>
@@ -116,6 +123,7 @@ export function InventorySection() {
 }
 
 export function InventoryPreview() {
+  const t = useTranslations("inventory");
   const [items, setItems] = useState<InventoryItem[]>([]);
 
   useEffect(() => {
@@ -129,14 +137,14 @@ export function InventoryPreview() {
 
   if (equipped.length === 0) {
     return (
-      <p className="text-sm text-muted">Nenhum item equipado.</p>
+      <p className="text-sm text-muted">{t("noneEquipped")}</p>
     );
   }
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {equipped.slice(0, 6).map((item) => (
-        <div key={item.id} className="rounded-xl border border-border p-3">
+        <div key={item.id} className="rounded-xl glass p-3">
           <div
             className={cn("h-12 rounded-lg bg-gradient-to-br", item.accent)}
           />

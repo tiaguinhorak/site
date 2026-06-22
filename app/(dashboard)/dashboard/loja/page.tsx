@@ -1,11 +1,13 @@
+import { getTranslations } from "next-intl/server";
 import { DashboardPageShell } from "@/components/dashboard/dashboard-page-shell";
 import { StoreSection } from "@/components/dashboard/store-section";
 
-export default function LojaPage() {
+export default async function LojaPage() {
+  const t = await getTranslations("pageHeaders");
   return (
     <DashboardPageShell
-      title="Loja"
-      description="Skins, agentes e cosméticos exclusivos nos servidores clutchclube."
+      title={t("storeTitle")}
+      description={t("storeDesc")}
     >
       <StoreSection />
     </DashboardPageShell>

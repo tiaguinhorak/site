@@ -1,27 +1,32 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { LoginForm } from "@/components/auth/login-form";
 
-export const metadata: Metadata = {
-  title: "Entrar — clutchclube",
-  description: "Acesse sua conta clutchclube e entre no melhor servidor de CS2.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("meta");
+  return {
+    title: t("loginTitle"),
+    description: t("loginDescription"),
+  };
+}
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const t = await getTranslations("authPages");
   return (
     <AuthShell
-      eyebrow="Bem-vindo de volta"
-      title="Entrar na conta"
-      subtitle="Conecte-se para acompanhar seu ranking e jogar."
+      eyebrow={t("loginEyebrow")}
+      title={t("loginTitle")}
+      subtitle={t("loginSubtitle")}
       footer={
         <>
-          Ainda não tem conta?{" "}
+          {t("loginNoAccount")}{" "}
           <Link
             href="/register"
             className="font-semibold text-primary hover:underline"
           >
-            Criar conta grátis
+            {t("loginCreate")}
           </Link>
         </>
       }

@@ -1,23 +1,28 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { getTranslations } from "next-intl/server";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { SteamCompleteProfileForm } from "@/components/auth/steam-complete-profile-form";
 import { Loader2 } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: "Completar perfil — clutchclube",
-  description: "Finalize seu cadastro clutchclube após conectar com Steam.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("meta");
+  return {
+    title: t("completeProfileTitle"),
+    description: t("completeProfileDescription"),
+  };
+}
 
-export default function CompletarPerfilPage() {
+export default async function CompletarPerfilPage() {
+  const t = await getTranslations("authPages");
   return (
     <AuthShell
-      eyebrow="Último passo"
-      title="Complete seu perfil"
-      subtitle="Sua Steam foi conectada. Preencha os dados abaixo — o progresso é salvo automaticamente."
+      eyebrow={t("completarEyebrow")}
+      title={t("completarTitle")}
+      subtitle={t("completarSubtitle")}
       footer={
         <span className="text-muted">
-          Você pode trocar a Steam ou usar outra conta antes de finalizar
+          {t("completarFooter")}
         </span>
       }
       compact

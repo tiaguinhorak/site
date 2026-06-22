@@ -2,10 +2,11 @@
 
 import { motion } from "motion/react";
 import { Check, Crown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { SectionHeading } from "@/components/ui/reveal";
 import { ButtonLink } from "@/components/ui/button";
 import { AmbientGlow } from "@/components/ui/ambient";
-import { confirmPresets } from "@/lib/confirm-presets";
+import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { cn } from "@/lib/utils";
 
 export type PlanView = {
@@ -25,6 +26,8 @@ export function Premium({
   embedded?: boolean;
   plans: PlanView[];
 }) {
+  const t = useTranslations("marketing");
+  const confirmPresets = useConfirmPresets();
   return (
     <section
       id={embedded ? undefined : "premium"}
@@ -41,14 +44,14 @@ export function Premium({
       >
         {!embedded && (
           <SectionHeading
-            eyebrow="Planos"
+            eyebrow={t("premiumEyebrow")}
             title={
               <>
-                Eleve sua experiência ao{" "}
-                <span className="text-gradient">máximo</span>
+                {t("premiumTitleA")}{" "}
+                <span className="text-gradient">{t("premiumTitleB")}</span>
               </>
             }
-            description="Alta performance, skins liberadas e liberdade para jogar do seu jeito. Cancele quando quiser."
+            description={t("premiumDesc")}
             align="center"
           />
         )}

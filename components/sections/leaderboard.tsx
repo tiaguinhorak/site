@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion } from "motion/react";
 import { Crown, TrendingUp, Medal, LayoutDashboard } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { SectionHeading } from "@/components/ui/reveal";
 import { ButtonLink } from "@/components/ui/button";
 import { SteamIcon } from "@/components/ui/icons";
@@ -25,6 +26,7 @@ export function Leaderboard({
   embedded?: boolean;
   leaderboard: LeaderboardPlayerView[];
 }) {
+  const t = useTranslations("marketing");
   const { authenticated, steamLinked } = useAuthSession();
   const [top, ...rest] = leaderboard;
 
@@ -36,13 +38,13 @@ export function Leaderboard({
       <div className={cn(embedded ? "" : "mx-auto max-w-6xl px-4 sm:px-6")}>
         {!embedded && (
           <SectionHeading
-            eyebrow="Season 8 — Ranking global"
+            eyebrow={t("rankingEyebrow")}
             title={
               <>
-                Os <span className="text-gradient">melhores</span> da temporada
+                {t("rankingTitleA")} <span className="text-gradient">{t("rankingTitleB")}</span> {t("rankingTitleC")}
               </>
             }
-            description="Ranking competitivo com ELO, K/D e estatísticas detalhadas. Suba de posição a cada partida."
+            description={t("rankingDesc")}
           />
         )}
 
@@ -68,7 +70,7 @@ export function Leaderboard({
             <div className="relative">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-amber-400">
                 <Crown className="h-3.5 w-3.5" />
-                Top 1 da temporada
+                {t("topSeason")}
               </span>
 
               <div className="mt-6 flex items-center gap-4">
@@ -81,14 +83,14 @@ export function Leaderboard({
                       {top.name}
                     </Link>
                   </h3>
-                  <p className="text-sm text-muted">Jogador #1 — Season 8</p>
+                  <p className="text-sm text-muted">{t("playerNo1")}</p>
                 </div>
               </div>
 
               <div className="mt-8 grid grid-cols-2 gap-4 sm:gap-6">
                 <div className="rounded-xl border border-border p-4">
                   <p className="text-xs uppercase tracking-wider text-muted">
-                    K/D Ratio
+                    {t("kdRatio")}
                   </p>
                   <p className="mt-1 font-display text-3xl font-bold text-foreground">
                     {top.kd.toFixed(2)}
@@ -96,7 +98,7 @@ export function Leaderboard({
                 </div>
                 <div className="rounded-xl border border-border p-4">
                   <p className="text-xs uppercase tracking-wider text-muted">
-                    Pontos
+                    {t("points")}
                   </p>
                   <p className="mt-1 font-display text-3xl font-bold text-gradient">
                     {top.points.toLocaleString("pt-BR")}
@@ -151,24 +153,24 @@ export function Leaderboard({
             <div className="flex flex-col items-center justify-between gap-3 border-t border-border p-5 sm:flex-row">
               <p className="flex items-center gap-2 text-sm text-muted">
                 <Medal className="h-4 w-4 text-primary" />
-                Sua posição: <span className="text-foreground">#—</span>
+                {t("yourPosition")} <span className="text-foreground">#—</span>
               </p>
               {authenticated ? (
                 steamLinked ? (
                   <ButtonLink href="/dashboard" variant="primary" size="sm">
                     <LayoutDashboard className="h-4 w-4" />
-                    Ver no dashboard
+                    {t("viewDashboard")}
                   </ButtonLink>
                 ) : (
                   <ButtonLink href="/api/auth/steam?mode=link" variant="primary" size="sm">
                     <SteamIcon className="h-4 w-4" />
-                    Vincular Steam
+                    {t("linkSteam")}
                   </ButtonLink>
                 )
               ) : (
                 <ButtonLink href="/login" variant="primary" size="sm">
                   <SteamIcon className="h-4 w-4" />
-                  Entrar para ver seu rank
+                  {t("loginForRank")}
                 </ButtonLink>
               )}
             </div>

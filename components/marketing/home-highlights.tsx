@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   ArrowRight,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { marketingPages } from "@/lib/navigation";
 
 const icons = {
@@ -23,23 +24,25 @@ const icons = {
 };
 
 export function HomeHighlights() {
+  const t = useTranslations("highlights");
+  const tc = useTranslations("marketingCards");
   return (
     <section className="relative py-20 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="max-w-2xl">
           <h2 className="font-display text-3xl font-bold text-foreground sm:text-4xl">
-            Explore a{" "}
-            <span className="text-gradient">plataforma completa</span>
+            {t("title1")}{" "}
+            <span className="text-gradient">{t("title2")}</span>
           </h2>
           <p className="mt-3 text-base text-muted sm:text-lg">
-            Tudo separado e organizado — modos, servidores, ranking, planos e
-            muito mais.
+            {t("subtitle")}
           </p>
         </div>
 
         <div className="mt-10 grid w-full min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
           {marketingPages.map((page, i) => {
             const Icon = icons[page.href as keyof typeof icons] ?? Gamepad2;
+            const slug = page.href.replace("/", "");
             return (
               <motion.div
                 key={page.href}
@@ -56,16 +59,16 @@ export function HomeHighlights() {
                     <Icon className="h-5 w-5" />
                   </div>
                   <p className="mt-5 font-display text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-                    {page.eyebrow}
+                    {tc(`${slug}Eyebrow`)}
                   </p>
                   <h3 className="mt-1 font-display text-xl font-bold text-foreground">
-                    {page.label}
+                    {tc(`${slug}Label`)}
                   </h3>
                   <p className="mt-2 flex-1 text-sm leading-relaxed text-muted">
-                    {page.description}
+                    {tc(`${slug}Desc`)}
                   </p>
                   <span className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-foreground">
-                    Ver página
+                    {t("viewPage")}
                     <ArrowRight className="h-4 w-4 text-primary transition-transform group-hover:translate-x-0.5" />
                   </span>
                 </Link>

@@ -1,4 +1,11 @@
 import type { NextConfig } from "next";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const projectRoot = path.dirname(fileURLToPath(import.meta.url));
+
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
@@ -35,6 +42,10 @@ const brandAssetCacheHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  serverExternalPackages: ["pg", "ssh2", "rcon-client"],
+  turbopack: {
+    root: projectRoot,
+  },
   allowedDevOrigins: ["*.ngrok-free.dev", "*.ngrok.io", "*.ngrok.app"],
   images: {
     localPatterns: [
@@ -62,4 +73,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

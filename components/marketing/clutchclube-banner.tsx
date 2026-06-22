@@ -1,4 +1,7 @@
+"use client";
+
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { BRAND_ASSETS } from "@/lib/brand-assets";
 
@@ -13,6 +16,7 @@ type ClutchClubeBannerProps = {
 
 /** Exibe o banner completo sem crop — a arte já traz texto e branding. */
 export function ClutchClubeBanner({ priority = false, className }: ClutchClubeBannerProps) {
+  const t = useTranslations();
   return (
     <div
       className={cn(
@@ -22,7 +26,7 @@ export function ClutchClubeBanner({ priority = false, className }: ClutchClubeBa
     >
       <Image
         src={BANNER_SRC}
-        alt="Clutch Clube — comunidade competitiva de Counter-Strike"
+        alt={t("bannerAlt")}
         width={BANNER_WIDTH}
         height={BANNER_HEIGHT}
         priority={priority}
