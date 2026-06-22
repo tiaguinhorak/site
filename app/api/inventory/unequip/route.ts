@@ -7,7 +7,7 @@ import {
   unequipCatalogSkinForUser,
   unequipWeaponForUser,
 } from "@/lib/inventory/unequip-catalog-skin";
-import { schedulePushPlayerLoadoutToGameServer } from "@/lib/inventory/push-loadout-to-game-server";
+import { pushPlayerLoadoutToGameServer } from "@/lib/inventory/push-loadout-to-game-server";
 import {
   applyApiGuards,
   parseJsonBody,
@@ -51,12 +51,15 @@ export async function POST(request: NextRequest) {
     const result = parsed.data.catalogSkinId
       ? await unequipCatalogSkinForUser(session!.userId, parsed.data.catalogSkinId)
       : await unequipWeaponForUser(session!.userId, parsed.data.weaponId!);
+
+    let gameSync = { ok: true as boolean };
     if (result.steamId) {
-      schedulePushPlayerLoadoutToGameServer(result.steamId, {
+      gameSync = await pushPlayerLoadoutToGameServer(result.steamId, {
         clearWeaponIds: [result.weaponId],
       });
     }
-    return NextResponse.json(result);
+
+    return NextResponse.json({ ...result, gameSync });
   } catch (err) {
     if (err instanceof CsgoApiError) {
       if (err.message.includes("Steam")) {

@@ -51,12 +51,23 @@ async function equipCatalogSkin(catalogSkinId: string) {
     body: JSON.stringify({ catalogSkinId }),
   });
 
+  const payload = (await response.json().catch(() => null)) as {
+    error?: string;
+    gameSync?: { ok: boolean; error?: string };
+  } | null;
+
   if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
     throw new Error(payload?.error ?? "Falha ao equipar skin.");
   }
 
-  return response.json();
+  if (payload?.gameSync && !payload.gameSync.ok) {
+    throw new Error(
+      payload.gameSync.error ??
+        "Skin salva no site, mas falhou ao enviar ao servidor CS:GO. Tente respawn ou contate suporte.",
+    );
+  }
+
+  return payload;
 }
 
 async function unequipCatalogSkin(catalogSkinId: string) {
@@ -70,12 +81,23 @@ async function unequipCatalogSkin(catalogSkinId: string) {
     body: JSON.stringify({ catalogSkinId }),
   });
 
+  const payload = (await response.json().catch(() => null)) as {
+    error?: string;
+    gameSync?: { ok: boolean; error?: string };
+  } | null;
+
   if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
     throw new Error(payload?.error ?? "Falha ao desequipar skin.");
   }
 
-  return response.json();
+  if (payload?.gameSync && !payload.gameSync.ok) {
+    throw new Error(
+      payload.gameSync.error ??
+        "Desequipado no site, mas falhou ao enviar ao servidor CS:GO. Tente respawn.",
+    );
+  }
+
+  return payload;
 }
 
 function LoadoutPanel({
