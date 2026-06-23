@@ -54,7 +54,9 @@ export async function POST(request: NextRequest) {
       ? await unequipCatalogSkinForUser(session!.userId, parsed.data.catalogSkinId, team)
       : await unequipWeaponForUser(session!.userId, parsed.data.weaponId!, team);
 
-    let gameSync = { ok: true as boolean };
+    let gameSync: { ok: boolean; error?: string; applyMode?: "staged" | "immediate" } = {
+      ok: true,
+    };
     if (result.steamId) {
       const isGlove = result.weaponId.toLowerCase().includes("gloves") ||
         result.weaponId.toLowerCase().includes("handwraps");

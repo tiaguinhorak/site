@@ -100,7 +100,7 @@ async function postJson(url: string, body: unknown) {
 
   const payload = (await response.json().catch(() => null)) as {
     error?: string;
-    gameSync?: { ok: boolean; error?: string };
+    gameSync?: { ok: boolean; error?: string; applyMode?: "staged" | "immediate" };
   } | null;
 
   if (!response.ok) {
@@ -266,6 +266,7 @@ export function InventorySection() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [equipError, setEquipError] = useState<string | null>(null);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
   const [equippingId, setEquippingId] = useState<string | null>(null);
   const [unequippingId, setUnequippingId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -295,6 +296,55 @@ export function InventorySection() {
       setRefreshing(false);
     }
   }, [loadoutTeam]);
+
+  const pushLoadoutToServer = useCallback(async () => {
+    setSyncNotice(null);
+    setEquipError(null);
+    try {
+      const response = await fetch("/api/inventory/push-loadout", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "x-clutchclube-request": "1",
+        },
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        error?: string;
+        gameSync?: { ok: boolean; error?: string; applyMode?: "staged" | "immediate" };
+      } | null;
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Sync failed.");
+      }
+      if (payload?.gameSync?.ok) {
+        setSyncNotice(
+          payload.gameSync.applyMode === "immediate"
+            ? t("gameSyncImmediate")
+            : t("gameSyncStaged"),
+        );
+      } else if (payload?.gameSync?.error) {
+        throw new Error(payload.gameSync.error);
+      }
+    } catch (err) {
+      setEquipError(err instanceof Error ? err.message : "Falha ao sincronizar loadout.");
+    }
+  }, [t]);
+
+  const refreshLoadoutAndServer = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await pushLoadoutToServer();
+      const response = await fetch(`/api/inventory/loadout?team=${loadoutTeam}`, {
+        credentials: "same-origin",
+      });
+      if (response.ok) {
+        const data = (await response.json()) as LoadoutResponse;
+        setLoadout(data);
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadoutTeam, pushLoadoutToServer]);
 
   const fetchSkins = useCallback(async () => {
     const reqId = ++reqIdRef.current;
@@ -372,17 +422,29 @@ export function InventorySection() {
   }, [fetchSkins]);
 
   const handleEquip = async (item: CatalogSkin) => {
-    if (item.equipped || !item.owned) return;
+    if (!item.owned) return;
     setEquipError(null);
+    setSyncNotice(null);
     setEquippingId(item.id);
     try {
-      await postJson("/api/inventory/equip", { catalogSkinId: item.id, team: loadoutTeam });
+      const payload = await postJson("/api/inventory/equip", {
+        catalogSkinId: item.id,
+        team: loadoutTeam,
+      });
+      if (payload?.gameSync?.ok) {
+        setSyncNotice(
+          payload.gameSync.applyMode === "immediate"
+            ? t("gameSyncImmediate")
+            : t("gameSyncStaged"),
+        );
+      }
       await fetchLoadout();
       await fetchSkins();
       setPreviewSkin((prev) =>
         prev?.id === item.id ? { ...prev, equipped: true } : prev,
       );
     } catch (err) {
+      setSyncNotice(null);
       setEquipError(err instanceof Error ? err.message : "Falha ao equipar skin.");
     } finally {
       setEquippingId(null);
@@ -391,15 +453,27 @@ export function InventorySection() {
 
   const handleUnequip = async (catalogSkinId: string, weaponId: string) => {
     setEquipError(null);
+    setSyncNotice(null);
     setUnequippingId(catalogSkinId);
     try {
-      await postJson("/api/inventory/unequip", { catalogSkinId, team: loadoutTeam });
+      const payload = await postJson("/api/inventory/unequip", {
+        catalogSkinId,
+        team: loadoutTeam,
+      });
+      if (payload?.gameSync?.ok) {
+        setSyncNotice(
+          payload.gameSync.applyMode === "immediate"
+            ? t("gameSyncImmediate")
+            : t("gameSyncStaged"),
+        );
+      }
       await fetchLoadout();
       await fetchSkins();
       setPreviewSkin((prev) =>
         prev?.id === catalogSkinId ? { ...prev, equipped: false } : prev,
       );
     } catch (err) {
+      setSyncNotice(null);
       setEquipError(err instanceof Error ? err.message : "Falha ao desequipar skin.");
     } finally {
       setUnequippingId(null);
@@ -442,7 +516,7 @@ export function InventorySection() {
         <EquippedSidebar
           loadout={loadout}
           team={loadoutTeam}
-          onRefresh={fetchLoadout}
+          onRefresh={refreshLoadoutAndServer}
           refreshing={refreshing}
           unequippingId={unequippingId}
           onUnequip={(item) => handleUnequip(item.catalogSkinId, item.weaponId)}
@@ -541,6 +615,11 @@ export function InventorySection() {
             )}
           </div>
 
+          {syncNotice && (
+            <div className="mb-4 rounded-card border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
+              <p className="text-sm text-emerald-800 dark:text-emerald-200">{syncNotice}</p>
+            </div>
+          )}
           {equipError && (
             <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/5 p-3">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />

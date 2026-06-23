@@ -52,7 +52,9 @@ export async function POST(request: NextRequest) {
       ? await equipCatalogSkinForUser(session!.userId, parsed.data.catalogSkinId, team)
       : await equipInventoryItemForUser(session!.userId, parsed.data.inventoryItemId!, team);
 
-    let gameSync = { ok: true as boolean };
+    let gameSync: { ok: boolean; error?: string; applyMode?: "staged" | "immediate" } = {
+      ok: true,
+    };
     if (result.steamId) {
       gameSync = await pushPlayerLoadoutToGameServer(result.steamId);
     }

@@ -25,7 +25,7 @@ export type PushLoadoutOptions = {
 export async function pushPlayerLoadoutToGameServer(
   steamId64: string,
   options?: PushLoadoutOptions,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; applyMode?: 'staged' | 'immediate' }> {
   const syncKey = getSkinsSyncKey();
   if (!syncKey) {
     return { ok: false, error: "CSGO_SKINS_SYNC_KEY not configured" };
@@ -60,11 +60,22 @@ export async function pushPlayerLoadoutToGameServer(
       });
 
       if (res.ok) {
+        const bodyText = await res.text().catch(() => "");
+        let applyMode: "staged" | "immediate" = "staged";
+        try {
+          const data = JSON.parse(bodyText) as { applyMode?: string };
+          if (data.applyMode === "immediate") {
+            applyMode = "immediate";
+          }
+        } catch {
+          // non-json body — default staged
+        }
+
         const stickerResult = await pushPlayerStickersToGameServer(steamId64);
         if (!stickerResult.ok) {
           console.warn("[Clutch] pushPlayerStickersToGameServer:", stickerResult.error);
         }
-        return { ok: true };
+        return { ok: true, applyMode };
       }
 
       const text = await res.text().catch(() => "");
