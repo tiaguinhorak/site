@@ -20,13 +20,9 @@ export type SyncWeaponEntry = {
 
 type EquippedRow = CsgoPlayerSkin & { skin: CsgoSkinCatalog };
 
-/** True when row is equipped on this side (or legacy `equipped` without per-team flags). */
+/** True when row is equipped on this side (per-team flags only — no legacy `equipped`). */
 function isEquippedOnTeam(row: EquippedRow, team: LoadoutTeam): boolean {
-  if (team === "T" && row.equippedT) return true;
-  if (team === "CT" && row.equippedCT) return true;
-  // Legacy rows before migration / re-equip: `equipped` only → sync both sides
-  if (row.equipped && !row.equippedT && !row.equippedCT) return true;
-  return false;
+  return team === "T" ? row.equippedT : row.equippedCT;
 }
 
 function mapRowToSyncWeapon(row: EquippedRow, team?: LoadoutTeam): SyncWeaponEntry {
@@ -70,14 +66,12 @@ export function buildSyncWeaponsFromEquipped(rows: EquippedRow[]): SyncWeaponEnt
     if (row.skin.paintkit <= 0) continue;
     if (row.equippedT || row.equippedCT) {
       weaponIds.add(row.skin.weaponId);
-    } else if (row.equipped) {
-      weaponIds.add(row.skin.weaponId);
     }
   }
 
   for (const weaponId of weaponIds) {
-    const tRow = rows.find((r) => r.skin.weaponId === weaponId && isEquippedOnTeam(r, "T"));
-    const ctRow = rows.find((r) => r.skin.weaponId === weaponId && isEquippedOnTeam(r, "CT"));
+    const tRow = rows.find((r) => r.skin.weaponId === weaponId && r.equippedT);
+    const ctRow = rows.find((r) => r.skin.weaponId === weaponId && r.equippedCT);
     if (tRow) {
       weapons.push(mapRowToSyncWeapon(tRow, "T"));
     }

@@ -7,9 +7,16 @@ import {
   listApiSkinsForWeapon,
   type CatalogRowFromApi,
 } from "@/lib/inventory/csgo-api-index";
+import {
+  assertPaintkitCsgoCompatible,
+  classifyPaintkitGameClient,
+  isCatalogGameClientCs2,
+  resolvePaintkitCompat,
+  type CatalogGameClient,
+} from "@/lib/inventory/csgo-paintkit-compat";
 import { invalidateCatalogReadyCache } from "@/lib/inventory/ensure-catalog-synced";
 import { triggerWeaponsCfgSyncOnVps } from "@/lib/inventory/trigger-weapons-cfg-sync";
-import { wsCatalogKey } from "@/lib/inventory/ws-allowlist";
+import { fetchWsAllowlistKeys, wsCatalogKey } from "@/lib/inventory/ws-allowlist";
 
 export type CatalogSkinSource = "sync" | "admin" | "import";
 
@@ -25,6 +32,7 @@ export type CatalogSkinAdminRow = {
   weaponDefIndex: number | null;
   enabled: boolean;
   source: string;
+  gameClient: CatalogGameClient;
   updatedAt: string;
 };
 
@@ -41,12 +49,14 @@ function serializeRow(row: CsgoSkinCatalog): CatalogSkinAdminRow {
     weaponDefIndex: row.weaponDefIndex,
     enabled: row.enabled,
     source: row.source,
+    gameClient: (row.gameClient as CatalogGameClient) ?? "unknown",
     updatedAt: row.updatedAt.toISOString(),
   };
 }
 
 export async function lookupCatalogSkinPreview(weaponId: string, paintkit: number) {
   const fromApi = await lookupCatalogFromApi(weaponId, paintkit);
+  const compat = await resolvePaintkitCompat(weaponId, paintkit, fromApi !== null);
   const existing = await prisma.csgoSkinCatalog.findFirst({
     where: { weaponId, paintkit },
   });
@@ -54,6 +64,7 @@ export async function lookupCatalogSkinPreview(weaponId: string, paintkit: numbe
     found: fromApi !== null,
     api: fromApi,
     existing: existing ? serializeRow(existing) : null,
+    compatibility: compat,
   };
 }
 
@@ -76,6 +87,14 @@ async function upsertCatalogRow(input: UpsertInput, apiRow: CatalogRowFromApi | 
     where: { weaponId: input.weaponId, paintkit: input.paintkit },
   });
 
+  const allowlist = await fetchWsAllowlistKeys();
+  const compat = classifyPaintkitGameClient(
+    input.weaponId,
+    input.paintkit,
+    allowlist,
+    apiRow !== null,
+  );
+
   const data = {
     weaponId: input.weaponId,
     weaponName: input.weaponName ?? apiRow?.weaponName ?? existing?.weaponName ?? "Weapon",
@@ -89,7 +108,12 @@ async function upsertCatalogRow(input: UpsertInput, apiRow: CatalogRowFromApi | 
       input.weaponDefIndex ?? apiRow?.weaponDefIndex ?? existing?.weaponDefIndex ?? null,
     enabled: input.enabled ?? existing?.enabled ?? true,
     source: existing?.source && existing.source !== "sync" ? existing.source : input.source,
+    gameClient: compat.gameClient,
   };
+
+  if (data.enabled && !compat.csgoCompatible) {
+    data.enabled = false;
+  }
 
   const id = existing?.id ?? input.id ?? apiRow?.id ?? `${input.weaponId}_${input.paintkit}`;
 
@@ -99,7 +123,7 @@ async function upsertCatalogRow(input: UpsertInput, apiRow: CatalogRowFromApi | 
       id,
       ...data,
       source: input.source,
-      enabled: input.enabled ?? true,
+      enabled: data.enabled,
     },
     update: data,
   });
@@ -119,6 +143,14 @@ export async function upsertCatalogSkinFromPaintkit(input: UpsertInput) {
       "Skin não encontrada na CSGO-API. Confira weaponId e paintkit ou preencha nome manualmente.",
     );
   }
+
+  const compat = await resolvePaintkitCompat(input.weaponId, input.paintkit, apiRow !== null);
+  if (!compat.csgoCompatible && (input.enabled ?? true)) {
+    throw new Error(
+      `Skin bloqueada (CS2): ${compat.reason} Use uma skin da lista CS:GO (!ws).`,
+    );
+  }
+
   const row = await upsertCatalogRow(input, apiRow);
   await afterCatalogMutation();
   return row;
@@ -133,8 +165,22 @@ export async function importWeaponSkinsFromApi(
     throw new Error(`Nenhuma skin na CSGO-API para ${weaponId}.`);
   }
 
+  const allowlist = await fetchWsAllowlistKeys();
   let imported = 0;
+  let skippedCs2 = 0;
+
   for (const apiRow of apiRows) {
+    const compat = classifyPaintkitGameClient(
+      apiRow.weaponId,
+      apiRow.paintkit,
+      allowlist,
+      true,
+    );
+    if (!compat.csgoCompatible) {
+      skippedCs2 += 1;
+      continue;
+    }
+
     await upsertCatalogRow(
       {
         weaponId: apiRow.weaponId,
@@ -149,7 +195,7 @@ export async function importWeaponSkinsFromApi(
   }
 
   await afterCatalogMutation();
-  return { imported, weaponId };
+  return { imported, skippedCs2, weaponId };
 }
 
 export async function listCatalogSkinsAdmin(options: {
@@ -187,6 +233,26 @@ export async function listCatalogSkinsAdmin(options: {
     }),
   ]);
 
+  const unknownRows = rows.filter((row) => row.gameClient === "unknown");
+  if (unknownRows.length > 0) {
+    const allowlist = await fetchWsAllowlistKeys();
+    for (const row of unknownRows) {
+      const gameClient = classifyPaintkitGameClient(
+        row.weaponId,
+        row.paintkit,
+        allowlist,
+        true,
+      ).gameClient;
+      if (gameClient !== "unknown") {
+        row.gameClient = gameClient;
+        await prisma.csgoSkinCatalog.update({
+          where: { id: row.id },
+          data: { gameClient, ...(gameClient === "cs2" ? { enabled: false } : {}) },
+        });
+      }
+    }
+  }
+
   return {
     items: rows.map(serializeRow),
     page,
@@ -204,6 +270,18 @@ export async function updateCatalogSkinAdmin(
     paintkitName?: string;
   },
 ) {
+  const existing = await prisma.csgoSkinCatalog.findUnique({ where: { id } });
+  if (!existing) {
+    throw new Error("Skin não encontrada.");
+  }
+
+  if (data.enabled === true) {
+    await assertPaintkitCsgoCompatible(existing.weaponId, existing.paintkit, true);
+    if (isCatalogGameClientCs2(existing.gameClient)) {
+      throw new Error("Skin marcada como CS2 — não pode ser ativada no servidor CS:GO.");
+    }
+  }
+
   const row = await prisma.csgoSkinCatalog.update({
     where: { id },
     data: {
@@ -224,7 +302,7 @@ export async function deleteCatalogSkinAdmin(id: string) {
 
 export async function getEnabledCatalogAllowlistEntries() {
   const rows = await prisma.csgoSkinCatalog.findMany({
-    where: { enabled: true },
+    where: { enabled: true, gameClient: { not: "cs2" } },
     select: {
       weaponId: true,
       paintkit: true,

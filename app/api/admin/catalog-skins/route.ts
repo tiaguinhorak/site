@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
         action: "CATALOG_SKIN_IMPORT_WEAPON",
         targetType: "catalog_skin",
         targetId: parsed.data.weaponId,
-        summary: `Importou ${result.imported} skins de ${parsed.data.weaponId}`,
+        summary: `Importou ${result.imported} skins de ${parsed.data.weaponId} (${result.skippedCs2} CS2 ignoradas)`,
       });
       return NextResponse.json({ ok: true, ...result });
     } catch (err) {

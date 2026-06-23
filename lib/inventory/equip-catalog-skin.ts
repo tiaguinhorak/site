@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { CsgoApiError } from "@/lib/csgo-api/http";
 import { isAllSkinsEquipEnabled } from "@/lib/inventory/catalog-access";
+import { assertPaintkitCsgoCompatible, isCatalogGameClientCs2 } from "@/lib/inventory/csgo-paintkit-compat";
 import { getCatalogIdsToUnequipOnEquip } from "@/lib/inventory/equip-slot-rules";
 import {
   buildTeamEquipCreateData,
@@ -35,6 +36,14 @@ export async function equipCatalogSkinForUser(
     where: { id: catalogSkinId },
   });
   if (!catalog) throw new CsgoApiError("Skin não encontrada no catálogo.", 404);
+
+  if (isCatalogGameClientCs2(catalog.gameClient)) {
+    throw new CsgoApiError(
+      "Esta skin é do CS2 e não funciona no servidor CS:GO. Escolha outra skin.",
+      400,
+    );
+  }
+  await assertPaintkitCsgoCompatible(catalog.weaponId, catalog.paintkit, true);
 
   const weaponId = catalog.weaponId;
   const category = catalog.category as InventoryCategoryKey;

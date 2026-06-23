@@ -26,13 +26,19 @@ export async function unequipSlotForTeam(
       skinId: { in: catalogSkinIds },
       [field]: true,
     },
-    data: {
-      [field]: false,
-      equipped: false,
-    },
+    data: { [field]: false },
   });
 
-  // Re-enable global flag when the same skin stays equipped on the other side.
+  await db.csgoPlayerSkin.updateMany({
+    where: {
+      steamId,
+      skinId: { in: catalogSkinIds },
+      equippedT: false,
+      equippedCT: false,
+    },
+    data: { equipped: false },
+  });
+
   await db.csgoPlayerSkin.updateMany({
     where: {
       steamId,

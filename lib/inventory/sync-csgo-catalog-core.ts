@@ -4,6 +4,7 @@ import {
   CSGO_API_SKINS_URL,
   type CsgoApiSkin,
 } from "@/lib/inventory/csgo-api-index";
+import { classifyPaintkitGameClient } from "@/lib/inventory/csgo-paintkit-compat";
 import {
   fetchWsAllowlistKeys,
   getWsAllowlistSource,
@@ -68,6 +69,8 @@ export async function syncCsgoSkinCatalogWithClient(prisma: PrismaClient) {
             ...row,
             enabled: allowlistMode === "site-db" || allowlistMode === "site",
             source: "sync",
+            gameClient: classifyPaintkitGameClient(row.weaponId, row.paintkit, wsAllowlist, true)
+              .gameClient,
           },
           update: {
             weaponId: row.weaponId,
@@ -78,6 +81,7 @@ export async function syncCsgoSkinCatalogWithClient(prisma: PrismaClient) {
             category: row.category,
             imageUrl: row.imageUrl,
             weaponDefIndex: row.weaponDefIndex,
+            gameClient: "csgo",
           },
         }),
       ),

@@ -76,6 +76,7 @@ export async function getCatalogSkinsForUser(
 
   const where = {
     enabled: true,
+    gameClient: { not: "cs2" as const },
     ...(category !== "all" ? { category } : {}),
     ...(weaponIdWhere !== undefined ? { weaponId: weaponIdWhere } : {}),
     ...(search

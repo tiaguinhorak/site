@@ -29,6 +29,7 @@ type CatalogItem = {
   imageUrl: string | null;
   enabled: boolean;
   source: string;
+  gameClient: "csgo" | "cs2" | "unknown";
 };
 
 type WeaponOption = { weaponId: string; weaponName: string };
@@ -46,7 +47,30 @@ type LookupPreview = {
     category: string;
   } | null;
   existing: CatalogItem | null;
+  compatibility?: {
+    gameClient: "csgo" | "cs2" | "unknown";
+    csgoCompatible: boolean;
+    reason: string;
+  };
 };
+
+function GameClientBadge({ gameClient }: { gameClient: CatalogItem["gameClient"] }) {
+  if (gameClient === "csgo") {
+    return (
+      <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+        CS:GO
+      </span>
+    );
+  }
+  if (gameClient === "cs2") {
+    return (
+      <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+        CS2
+      </span>
+    );
+  }
+  return null;
+}
 
 export function AdminSkinsSection() {
   const [items, setItems] = useState<CatalogItem[]>([]);
@@ -163,7 +187,7 @@ export function AdminSkinsSection() {
     setImporting(true);
     setError(null);
     try {
-      const result = await secureApi<{ imported: number }>("/api/admin/catalog-skins", {
+      const result = await secureApi<{ imported: number; skippedCs2?: number }>("/api/admin/catalog-skins", {
         method: "POST",
         json: {
           action: "import-weapon",
@@ -177,7 +201,12 @@ export function AdminSkinsSection() {
       }
       setPreview(null);
       await load();
-      alert(`Importadas ${result.data.imported} skins de ${formWeaponId}.`);
+      alert(
+        `Importadas ${result.data.imported} skins de ${formWeaponId}.` +
+          (result.data.skippedCs2
+            ? ` ${result.data.skippedCs2} skins CS2 ignoradas.`
+            : ""),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao importar.");
     } finally {
@@ -223,7 +252,7 @@ export function AdminSkinsSection() {
             Catálogo de skins
           </h1>
           <p className="mt-1 text-sm text-muted">
-            Postgres + CSGO-API (imagens Steam). Paintkit do CSGOStash / csgoskins.gg.
+            Postgres + CSGO-API (imagens). Servidor é CS:GO — skins CS2 são bloqueadas automaticamente.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -285,7 +314,11 @@ export function AdminSkinsSection() {
             )}
             Preview
           </Button>
-          <Button type="button" disabled={saving} onClick={addSkin}>
+          <Button
+            type="button"
+            disabled={saving || preview?.compatibility?.csgoCompatible === false}
+            onClick={addSkin}
+          >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             Adicionar
           </Button>
@@ -322,11 +355,19 @@ export function AdminSkinsSection() {
               </div>
             )}
             <div className="min-w-0 text-sm">
-              <p className="font-semibold text-foreground">
-                {preview.api.weaponName} | {preview.api.paintkitName}
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-semibold text-foreground">
+                  {preview.api.weaponName} | {preview.api.paintkitName}
+                </p>
+                {preview.compatibility && (
+                  <GameClientBadge gameClient={preview.compatibility.gameClient} />
+                )}
+              </div>
               <p className="text-muted">Paintkit {preview.api.paintkit}</p>
               <p className="text-muted">{preview.api.rarity} · {preview.api.category}</p>
+              {preview.compatibility && !preview.compatibility.csgoCompatible && (
+                <p className="mt-2 text-amber-300">{preview.compatibility.reason}</p>
+              )}
               {preview.existing && (
                 <p className="mt-2 text-amber-300">Já existe no catálogo (será atualizada).</p>
               )}
@@ -407,9 +448,12 @@ export function AdminSkinsSection() {
                   <div className="h-12 w-16 rounded bg-white/5" />
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground">
-                    {item.weaponName} | {item.paintkitName}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {item.weaponName} | {item.paintkitName}
+                    </p>
+                    <GameClientBadge gameClient={item.gameClient} />
+                  </div>
                   <p className="text-xs text-muted">
                     {item.weaponId} · pk {item.paintkit} · {item.source}
                   </p>
@@ -417,11 +461,13 @@ export function AdminSkinsSection() {
                 <button
                   type="button"
                   onClick={() => toggleEnabled(item)}
+                  disabled={item.gameClient === "cs2"}
                   className={cn(
                     "rounded-full px-3 py-1 text-xs font-medium",
                     item.enabled
                       ? "bg-emerald-500/20 text-emerald-300"
                       : "bg-white/10 text-muted",
+                    item.gameClient === "cs2" && "opacity-50 cursor-not-allowed",
                   )}
                 >
                   {item.enabled ? "Ativa" : "Off"}

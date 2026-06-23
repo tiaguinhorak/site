@@ -632,6 +632,8 @@ model CsgoSkinCatalog {
   enabled        Boolean @default(true)
   /** sync | admin | import */
   source         String  @default("sync")
+  /** csgo = servidor CS:GO (!ws); cs2 = só CS2 (bloqueado); unknown = legado */
+  gameClient     String  @default("unknown")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
