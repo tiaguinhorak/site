@@ -19,6 +19,7 @@ const equipSchema = z
   .object({
     inventoryItemId: z.string().min(1).optional(),
     catalogSkinId: z.string().min(1).optional(),
+    team: z.enum(["T", "CT"]).optional(),
   })
   .refine((data) => data.inventoryItemId || data.catalogSkinId, {
     message: "inventoryItemId ou catalogSkinId é obrigatório.",
@@ -46,9 +47,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const team = parsed.data.team ?? "CT";
     const result = parsed.data.catalogSkinId
-      ? await equipCatalogSkinForUser(session!.userId, parsed.data.catalogSkinId)
-      : await equipInventoryItemForUser(session!.userId, parsed.data.inventoryItemId!);
+      ? await equipCatalogSkinForUser(session!.userId, parsed.data.catalogSkinId, team)
+      : await equipInventoryItemForUser(session!.userId, parsed.data.inventoryItemId!, team);
 
     let gameSync = { ok: true as boolean };
     if (result.steamId) {

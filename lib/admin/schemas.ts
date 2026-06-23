@@ -228,3 +228,32 @@ export const adminRankedQueueRestrictSchema = z.object({
 export const adminRankedQueueClearSchema = z.object({
   resetDodges: z.boolean().optional().default(false),
 });
+
+export const adminCatalogSkinCreateSchema = z.object({
+  weaponId: z.string().min(3).max(64).transform((v) => sanitizeText(v, 64).toLowerCase()),
+  paintkit: z.number().int().positive(),
+  enabled: z.boolean().optional().default(true),
+  paintkitName: z.string().max(80).transform((v) => sanitizeText(v, 80)).optional(),
+  imageUrl: z.string().url().max(500).optional().nullable(),
+});
+
+export const adminCatalogSkinImportSchema = z.object({
+  weaponId: z.string().min(3).max(64).transform((v) => sanitizeText(v, 64).toLowerCase()),
+  enabled: z.boolean().optional().default(true),
+});
+
+export const adminCatalogSkinUpdateSchema = z.object({
+  enabled: z.boolean().optional(),
+  imageUrl: z.string().url().max(500).optional().nullable(),
+  paintkitName: z.string().min(1).max(80).transform((v) => sanitizeText(v, 80)).optional(),
+});
+
+export const adminStickerCatalogCreateSchema = z.object({
+  defIndex: z.number().int().positive(),
+  enabled: z.boolean().optional().default(true),
+});
+
+export const adminStickerCatalogUpdateSchema = z.object({
+  enabled: z.boolean().optional(),
+  imageUrl: z.string().url().max(500).optional().nullable(),
+});

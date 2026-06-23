@@ -14,6 +14,7 @@ function sleep(ms: number): Promise<void> {
 
 export type PushLoadoutOptions = {
   clearWeaponIds?: string[];
+  clearGloveTeam?: "T" | "CT";
 };
 
 /**
@@ -39,6 +40,7 @@ export async function pushPlayerLoadoutToGameServer(
     ...payload,
     clearKnifeSlot,
     clearWeaponIds,
+    clearGloveTeam: options?.clearGloveTeam,
   };
 
   const url = `${getCsgoApiBaseUrl()}/api/csgo/skins/player-sync`;

@@ -34,7 +34,12 @@ export async function getCatalogSkinCount(): Promise<number> {
 
 async function catalogHealthCheck(): Promise<{ needsRefresh: boolean; total: number }> {
   const total = await prisma.csgoSkinCatalog.count();
-  if (total < EXPECTED_MIN_CATALOG_SKINS) {
+  const siteDbMode =
+    process.env.CATALOG_ALLOWLIST_SOURCE?.trim().toLowerCase() === "site-db" ||
+    process.env.CATALOG_ALLOWLIST_SOURCE?.trim().toLowerCase() === "site";
+  const minSkins = siteDbMode ? 1 : EXPECTED_MIN_CATALOG_SKINS;
+
+  if (total < minSkins) {
     return { needsRefresh: true, total };
   }
   if (total > STALE_FULL_CATALOG_THRESHOLD) {

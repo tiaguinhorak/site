@@ -10,6 +10,12 @@ import {
 import { getCatalogWeaponOptions } from "@/lib/inventory/get-catalog-weapon-options";
 import { rarityAccent } from "@/lib/inventory/catalog-categories";
 import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
+import {
+  excludedWeaponIdsForTeam,
+  teamEquipField,
+  weaponAllowedOnTeam,
+  type LoadoutTeam,
+} from "@/lib/inventory/loadout-team";
 
 const DEFAULT_LIMIT = 36;
 const MAX_LIMIT = 72;
@@ -37,6 +43,7 @@ export async function getCatalogSkinsForUser(
     weaponId?: string;
     page?: number;
     limit?: number;
+    team?: LoadoutTeam;
   },
 ): Promise<{
   items: CatalogSkinRow[];
@@ -52,12 +59,15 @@ export async function getCatalogSkinsForUser(
   const search = options.search?.trim() ?? "";
   const category = options.category ?? "all";
   const weaponFilter = options.weaponId?.trim() ?? "";
+  const team = options.team;
 
   await ensureCatalogReady();
 
   const where = {
+    enabled: true,
     ...(category !== "all" ? { category } : {}),
     ...(weaponFilter ? { weaponId: weaponFilter } : {}),
+    ...(team ? { weaponId: { notIn: excludedWeaponIdsForTeam(team) } } : {}),
     ...(search
       ? {
           OR: [
@@ -73,11 +83,16 @@ export async function getCatalogSkinsForUser(
     select: { steamId: true },
   });
 
+  const equippedField = team ? teamEquipField(team) : null;
+
   const [catalogTotal, equippedRows, total, rows, weaponOptions] = await Promise.all([
     getCatalogTotalCached(),
     user?.steamId
       ? prisma.csgoPlayerSkin.findMany({
-          where: { steamId: user.steamId, equipped: true },
+          where: {
+            steamId: user.steamId,
+            ...(equippedField ? { [equippedField]: true } : { equipped: true }),
+          },
           select: { skinId: true },
         })
       : Promise.resolve([]),
@@ -111,6 +126,10 @@ export async function getCatalogSkinsForUser(
     owned: allSkins,
   }));
 
+  const filteredWeaponOptions = team
+    ? weaponOptions.filter((w) => weaponAllowedOnTeam(w.weaponId, team))
+    : weaponOptions;
+
   return {
     items,
     page,
@@ -118,6 +137,6 @@ export async function getCatalogSkinsForUser(
     total,
     totalPages: Math.max(1, Math.ceil(total / limit)),
     catalogTotal,
-    weaponOptions,
+    weaponOptions: filteredWeaponOptions,
   };
 }

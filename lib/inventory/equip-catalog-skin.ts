@@ -2,9 +2,22 @@ import { prisma } from "@/lib/prisma";
 import { CsgoApiError } from "@/lib/csgo-api/http";
 import { isAllSkinsEquipEnabled } from "@/lib/inventory/catalog-access";
 import { getCatalogIdsToUnequipOnEquip } from "@/lib/inventory/equip-slot-rules";
+import {
+  buildTeamEquipCreateData,
+  buildTeamEquipUpdateData,
+  unequipSlotForTeam,
+} from "@/lib/inventory/loadout-equip-helpers";
+import {
+  weaponAllowedOnTeam,
+  type LoadoutTeam,
+} from "@/lib/inventory/loadout-team";
 import type { InventoryCategoryKey } from "@/lib/profile";
 
-export async function equipCatalogSkinForUser(userId: string, catalogSkinId: string) {
+export async function equipCatalogSkinForUser(
+  userId: string,
+  catalogSkinId: string,
+  team: LoadoutTeam,
+) {
   if (!isAllSkinsEquipEnabled()) {
     throw new CsgoApiError("Catálogo completo não habilitado para esta conta.", 403);
   }
@@ -26,17 +39,18 @@ export async function equipCatalogSkinForUser(userId: string, catalogSkinId: str
   const weaponId = catalog.weaponId;
   const category = catalog.category as InventoryCategoryKey;
 
+  if (!weaponAllowedOnTeam(weaponId, team)) {
+    throw new CsgoApiError(
+      team === "T"
+        ? "Esta arma não está disponível para o time Terrorista."
+        : "Esta arma não está disponível para o time Counter-Terrorist.",
+      400,
+    );
+  }
+
   await prisma.$transaction(async (tx) => {
     const catalogIdsForSlot = await getCatalogIdsToUnequipOnEquip(tx, weaponId);
-
-    await tx.csgoPlayerSkin.updateMany({
-      where: {
-        steamId: user.steamId!,
-        equipped: true,
-        skinId: { in: catalogIdsForSlot },
-      },
-      data: { equipped: false },
-    });
+    await unequipSlotForTeam(tx, user.steamId!, catalogIdsForSlot, team);
 
     let playerSkin = await tx.csgoPlayerSkin.findFirst({
       where: { steamId: user.steamId!, skinId: catalog.id },
@@ -44,19 +58,18 @@ export async function equipCatalogSkinForUser(userId: string, catalogSkinId: str
 
     if (!playerSkin) {
       playerSkin = await tx.csgoPlayerSkin.create({
-        data: {
+        data: buildTeamEquipCreateData(team, {
           steamId: user.steamId!,
           skinId: catalog.id,
           wear: "field_tested",
           seed: 0,
           stattrak: false,
-          equipped: true,
-        },
+        }),
       });
     } else {
       playerSkin = await tx.csgoPlayerSkin.update({
         where: { id: playerSkin.id },
-        data: { equipped: true },
+        data: buildTeamEquipUpdateData(team, playerSkin),
       });
     }
   });
@@ -68,6 +81,7 @@ export async function equipCatalogSkinForUser(userId: string, catalogSkinId: str
     weaponId,
     paintkit: catalog.paintkit,
     category,
+    team,
     name: `${catalog.weaponName} | ${catalog.paintkitName}`,
     equippedAt: new Date().toISOString(),
   };

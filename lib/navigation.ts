@@ -220,6 +220,13 @@ export const adminNav = [
     description: "CRUD de servidores públicos exibidos na plataforma.",
   },
   {
+    label: "Skins CS:GO",
+    href: "/admin/skins",
+    icon: "Sparkles",
+    title: "Catálogo de skins",
+    description: "Adicionar paintkits, imagens (CSGO-API) e controlar o inventário.",
+  },
+  {
     label: "Infra CS:GO",
     href: "/admin/infra-csgo",
     icon: "CloudCog",
@@ -284,19 +291,19 @@ export const adminNavGroups: AdminNavGroup[] = [
     id: "content",
     label: "Conteúdo",
     icon: "Newspaper",
-    items: [adminNav[6], adminNav[7], adminNav[8]],
+    items: [adminNav[7], adminNav[8], adminNav[9]],
   },
   {
     id: "infra",
     label: "Infra",
     icon: "Server",
-    items: [adminNav[4], adminNav[5]],
+    items: [adminNav[4], adminNav[5], adminNav[6]],
   },
   {
     id: "system",
     label: "Sistema",
     icon: "ScrollText",
-    items: [adminNav[9]],
+    items: [adminNav[10]],
   },
 ];
 

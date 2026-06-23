@@ -1,62 +1,32 @@
 import type { PrismaClient } from "@/lib/generated/prisma/client";
 import {
-  isWeaponSkinCategory,
-  mapCatalogCategoryToUi,
-  rarityLabelFromId,
-} from "@/lib/inventory/catalog-categories";
+  apiSkinToCatalogRow,
+  CSGO_API_SKINS_URL,
+  type CsgoApiSkin,
+} from "@/lib/inventory/csgo-api-index";
 import {
   fetchWsAllowlistKeys,
   getWsAllowlistSource,
   isInWsAllowlist,
 } from "@/lib/inventory/ws-allowlist";
 
-const CSGO_API_SKINS_URL =
-  "https://raw.githubusercontent.com/ByMykel/CSGO-API/main/public/api/en/skins.json";
-
 const BATCH_SIZE = 20;
 const TX_TIMEOUT_MS = 120_000;
 
-type ApiSkin = {
-  id: string;
-  name: string;
-  image?: string;
-  paint_index?: string | number;
-  category?: { id?: string };
-  weapon?: { id?: string; name?: string; weapon_id?: number | string };
-  pattern?: { name?: string };
-  rarity?: { id?: string };
-};
-
-function normalizeWeaponId(skin: ApiSkin): string | null {
-  if (!skin.weapon?.id) return null;
-  const id = String(skin.weapon.id);
-  if (id.startsWith("sfui_wpnhud_")) return null;
-  return id;
+function catalogAllowlistSource(): string {
+  return process.env.CATALOG_ALLOWLIST_SOURCE?.trim().toLowerCase() ?? "ws";
 }
 
-function toCatalogRow(skin: ApiSkin) {
-  const weaponId = normalizeWeaponId(skin);
-  const paintkit = Number(skin.paint_index);
-  if (!weaponId || !Number.isFinite(paintkit) || paintkit <= 0) return null;
-  if (!isWeaponSkinCategory(skin.category?.id)) return null;
-
-  const rawDefIndex = skin.weapon?.weapon_id;
-  const weaponDefIndex =
-    rawDefIndex !== undefined && rawDefIndex !== null && Number.isFinite(Number(rawDefIndex))
-      ? Number(rawDefIndex)
-      : null;
-
-  return {
-    id: skin.id,
-    weaponId,
-    weaponName: skin.weapon?.name ?? "Weapon",
-    paintkit,
-    paintkitName: skin.pattern?.name ?? skin.name,
-    rarity: rarityLabelFromId(skin.rarity?.id ?? "rarity_common_weapon"),
-    category: mapCatalogCategoryToUi(skin.category?.id, weaponId),
-    imageUrl: skin.image ?? null,
-    weaponDefIndex,
-  };
+export async function fetchSiteEnabledAllowlistKeys(prisma: PrismaClient): Promise<Set<string>> {
+  const rows = await prisma.csgoSkinCatalog.findMany({
+    where: { enabled: true },
+    select: { weaponId: true, paintkit: true },
+  });
+  const keys = new Set<string>();
+  for (const row of rows) {
+    keys.add(`${row.weaponId}:${row.paintkit}`);
+  }
+  return keys;
 }
 
 export async function syncCsgoSkinCatalogWithClient(prisma: PrismaClient) {
@@ -65,13 +35,25 @@ export async function syncCsgoSkinCatalogWithClient(prisma: PrismaClient) {
     throw new Error(`Falha ao baixar catálogo CS:GO (${response.status}).`);
   }
 
-  const payload = (await response.json()) as ApiSkin[];
-  const wsAllowlist = await fetchWsAllowlistKeys();
-  if (wsAllowlist.size > 0) {
-    console.log(`[catalog] ws-allowlist loaded (${wsAllowlist.size} keys, source: ${getWsAllowlistSource()})`);
+  const payload = (await response.json()) as CsgoApiSkin[];
+
+  let wsAllowlist: Set<string>;
+  const allowlistMode = catalogAllowlistSource();
+
+  if (allowlistMode === "site-db" || allowlistMode === "site") {
+    wsAllowlist = await fetchSiteEnabledAllowlistKeys(prisma);
+    console.log(`[catalog] allowlist from Postgres enabled skins (${wsAllowlist.size} keys)`);
+  } else {
+    wsAllowlist = await fetchWsAllowlistKeys();
+    if (wsAllowlist.size > 0) {
+      console.log(
+        `[catalog] ws-allowlist loaded (${wsAllowlist.size} keys, source: ${getWsAllowlistSource()})`,
+      );
+    }
   }
+
   const allRows = payload
-    .map(toCatalogRow)
+    .map((skin) => apiSkinToCatalogRow(skin))
     .filter((row): row is NonNullable<typeof row> => row !== null)
     .filter((row) => isInWsAllowlist(row.weaponId, row.paintkit, wsAllowlist));
 
@@ -82,7 +64,11 @@ export async function syncCsgoSkinCatalogWithClient(prisma: PrismaClient) {
       batch.map((row) =>
         prisma.csgoSkinCatalog.upsert({
           where: { id: row.id },
-          create: row,
+          create: {
+            ...row,
+            enabled: allowlistMode === "site-db" || allowlistMode === "site",
+            source: "sync",
+          },
           update: {
             weaponId: row.weaponId,
             weaponName: row.weaponName,
@@ -100,12 +86,25 @@ export async function syncCsgoSkinCatalogWithClient(prisma: PrismaClient) {
     synced += batch.length;
   }
 
-  if (wsAllowlist.size > 0 && allRows.length > 0) {
+  // Never delete admin/import skins — only prune legacy sync-only rows when using external ws allowlist.
+  if (
+    wsAllowlist.size > 0 &&
+    allRows.length > 0 &&
+    allowlistMode !== "site-db" &&
+    allowlistMode !== "site"
+  ) {
     const allowedIds = allRows.map((row) => row.id);
     await prisma.csgoSkinCatalog.deleteMany({
-      where: { id: { notIn: allowedIds } },
+      where: {
+        id: { notIn: allowedIds },
+        source: "sync",
+      },
     });
   }
 
-  return { synced, wsOnly: wsAllowlist.size > 0 };
+  return {
+    synced,
+    wsOnly: wsAllowlist.size > 0,
+    allowlistMode,
+  };
 }

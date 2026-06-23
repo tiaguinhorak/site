@@ -10,7 +10,7 @@ import { SkinRarityBadge } from "@/components/skins/skin-rarity-badge";
 import { SkinRarityLegend } from "@/components/skins/skin-rarity-legend";
 import { SkinRarityLine } from "@/components/skins/skin-rarity-line";
 import type { InventoryCategoryKey } from "@/lib/profile";
-import type { PublicSkinGroup } from "@/lib/inventory/get-public-player-skins";
+import type { PublicLoadoutSide, PublicSkinGroup } from "@/lib/inventory/get-public-player-skins";
 import { cn } from "@/lib/utils";
 
 const CATEGORY_ICON: Record<"all" | InventoryCategoryKey, typeof LayoutGrid> = {
@@ -23,7 +23,147 @@ const CATEGORY_ICON: Record<"all" | InventoryCategoryKey, typeof LayoutGrid> = {
   agent: Boxes,
 };
 
-export function PublicProfileSkins({ groups }: { groups: PublicSkinGroup[] }) {
+function SideSkins({
+  side,
+  categoryLabels,
+}: {
+  side: PublicLoadoutSide;
+  categoryLabels: Record<InventoryCategoryKey, string>;
+}) {
+  const t = useTranslations("inventory");
+  const tp = useTranslations("publicProfile");
+
+  const tabs = useMemo(
+    () => [
+      { id: "all" as const, label: t("catAll"), count: side.total },
+      ...side.groups.map((g) => ({
+        id: g.category,
+        label: categoryLabels[g.category],
+        count: g.items.length,
+      })),
+    ],
+    [side, t, categoryLabels],
+  );
+
+  const [active, setActive] = useState<"all" | InventoryCategoryKey>("all");
+  const [previewSkin, setPreviewSkin] = useState<SkinPreviewData | null>(null);
+
+  const visibleGroups =
+    active === "all" ? side.groups : side.groups.filter((g) => g.category === active);
+
+  const teamLabel = side.team === "T" ? t("teamT") : t("teamCT");
+
+  return (
+    <div className="rounded-xl border border-white/5 bg-black/15 p-4 sm:p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h3
+          className={cn(
+            "text-xs font-bold uppercase tracking-wider",
+            side.team === "T" ? "text-amber-300" : "text-sky-300",
+          )}
+        >
+          {teamLabel}
+        </h3>
+        <span className="text-xs text-muted">{tp("skinsCount", { count: side.total })}</span>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {tabs.map((tab) => {
+          const Icon = CATEGORY_ICON[tab.id];
+          const isActive = active === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActive(tab.id)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-all",
+                isActive
+                  ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground"
+                  : "glass-input text-muted hover:text-foreground",
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {tab.label}
+              <span
+                className={cn(
+                  "rounded-full px-1.5 text-[10px] font-bold",
+                  isActive ? "bg-black/20" : "bg-white/10",
+                )}
+              >
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-6 space-y-6">
+        {visibleGroups.map((group: PublicSkinGroup) => (
+          <div key={group.category}>
+            <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted">
+              {categoryLabels[group.category]}
+              <span className="text-muted/60">· {group.items.length}</span>
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {group.items.map((item) => (
+                <article
+                  key={`${side.team}-${item.id}`}
+                  className="relative flex flex-col overflow-hidden rounded-xl glass"
+                >
+                  <SkinRarityLine accent={item.accent} rarity={item.rarity} />
+                  <div className="relative p-3">
+                    <InventoryItemArt
+                      imageUrl={item.imageUrl}
+                      accent={item.accent}
+                      className="h-24 w-full"
+                      onClick={() =>
+                        setPreviewSkin({
+                          name: item.name,
+                          imageUrl: item.imageUrl,
+                          accent: item.accent,
+                          category: categoryLabels[group.category],
+                          rarity: item.rarity,
+                          weaponName: item.weaponName,
+                          paintkitName: item.paintkitName,
+                          stattrak: item.stattrak,
+                        })
+                      }
+                    />
+                    {item.stattrak && (
+                      <span className="absolute left-5 top-5 rounded bg-amber-500/90 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-black">
+                        ST
+                      </span>
+                    )}
+                  </div>
+                  <div className="border-t border-white/5 px-3 pb-3">
+                    <p className="line-clamp-1 text-xs font-semibold text-foreground">
+                      {item.weaponName}
+                    </p>
+                    <p className="line-clamp-1 text-[11px] text-muted">{item.paintkitName}</p>
+                    <SkinRarityBadge
+                      rarity={item.rarity}
+                      accent={item.accent}
+                      className="mt-2"
+                    />
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <SkinPreviewModal
+        open={previewSkin !== null}
+        skin={previewSkin}
+        onClose={() => setPreviewSkin(null)}
+      />
+    </div>
+  );
+}
+
+export function PublicProfileSkins({ sides }: { sides: PublicLoadoutSide[] }) {
   const t = useTranslations("inventory");
   const tp = useTranslations("publicProfile");
 
@@ -40,26 +180,9 @@ export function PublicProfileSkins({ groups }: { groups: PublicSkinGroup[] }) {
   );
 
   const total = useMemo(
-    () => groups.reduce((sum, g) => sum + g.items.length, 0),
-    [groups],
+    () => sides.reduce((sum, side) => sum + side.total, 0),
+    [sides],
   );
-
-  const tabs = useMemo(
-    () => [
-      { id: "all" as const, label: t("catAll"), count: total },
-      ...groups.map((g) => ({
-        id: g.category,
-        label: categoryLabels[g.category],
-        count: g.items.length,
-      })),
-    ],
-    [groups, total, t, categoryLabels],
-  );
-
-  const [active, setActive] = useState<"all" | InventoryCategoryKey>("all");
-  const [previewSkin, setPreviewSkin] = useState<SkinPreviewData | null>(null);
-
-  const visibleGroups = active === "all" ? groups : groups.filter((g) => g.category === active);
 
   return (
     <motion.div
@@ -83,100 +206,13 @@ export function PublicProfileSkins({ groups }: { groups: PublicSkinGroup[] }) {
       ) : (
         <>
           <SkinRarityLegend className="mt-5" />
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            {tabs.map((tab) => {
-              const Icon = CATEGORY_ICON[tab.id];
-              const isActive = active === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActive(tab.id)}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-all",
-                    isActive
-                      ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground"
-                      : "glass-input text-muted hover:text-foreground",
-                  )}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {tab.label}
-                  <span
-                    className={cn(
-                      "rounded-full px-1.5 text-[10px] font-bold",
-                      isActive ? "bg-black/20" : "bg-white/10",
-                    )}
-                  >
-                    {tab.count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
           <div className="mt-6 space-y-6">
-            {visibleGroups.map((group) => (
-              <div key={group.category}>
-                <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted">
-                  {categoryLabels[group.category]}
-                  <span className="text-muted/60">· {group.items.length}</span>
-                </p>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {group.items.map((item) => (
-                    <article
-                      key={item.id}
-                      className="relative flex flex-col overflow-hidden rounded-xl glass"
-                    >
-                      <SkinRarityLine accent={item.accent} rarity={item.rarity} />
-                      <div className="relative p-3">
-                        <InventoryItemArt
-                          imageUrl={item.imageUrl}
-                          accent={item.accent}
-                          className="h-24 w-full"
-                          onClick={() =>
-                            setPreviewSkin({
-                              name: item.name,
-                              imageUrl: item.imageUrl,
-                              accent: item.accent,
-                              category: categoryLabels[group.category],
-                              rarity: item.rarity,
-                              weaponName: item.weaponName,
-                              paintkitName: item.paintkitName,
-                              stattrak: item.stattrak,
-                            })
-                          }
-                        />
-                        {item.stattrak && (
-                          <span className="absolute left-5 top-5 rounded bg-amber-500/90 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-black">
-                            ST
-                          </span>
-                        )}
-                      </div>
-                      <div className="border-t border-white/5 px-3 pb-3">
-                        <p className="line-clamp-1 text-xs font-semibold text-foreground">
-                          {item.weaponName}
-                        </p>
-                        <p className="line-clamp-1 text-[11px] text-muted">{item.paintkitName}</p>
-                        <SkinRarityBadge
-                          rarity={item.rarity}
-                          accent={item.accent}
-                          className="mt-2"
-                        />
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </div>
+            {sides.map((side) => (
+              <SideSkins key={side.team} side={side} categoryLabels={categoryLabels} />
             ))}
           </div>
         </>
       )}
-      <SkinPreviewModal
-        open={previewSkin !== null}
-        skin={previewSkin}
-        onClose={() => setPreviewSkin(null)}
-      />
     </motion.div>
   );
 }

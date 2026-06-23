@@ -1,6 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { CsgoApiError } from "@/lib/csgo-api/http";
 import { getCatalogIdsToUnequipOnEquip } from "@/lib/inventory/equip-slot-rules";
+import {
+  buildTeamEquipCreateData,
+  buildTeamEquipUpdateData,
+  unequipSlotForTeam,
+} from "@/lib/inventory/loadout-equip-helpers";
+import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
 import type { InventoryCategory } from "@/lib/generated/prisma/client";
 
 const CATEGORY_WEAPON_SLOT: Partial<Record<InventoryCategory, string>> = {
@@ -10,7 +16,11 @@ const CATEGORY_WEAPON_SLOT: Partial<Record<InventoryCategory, string>> = {
   SMG: "weapon_mp9",
 };
 
-export async function equipInventoryItemForUser(userId: string, inventoryItemId: string) {
+export async function equipInventoryItemForUser(
+  userId: string,
+  inventoryItemId: string,
+  team: LoadoutTeam,
+) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { id: true, steamId: true },
@@ -59,11 +69,7 @@ export async function equipInventoryItemForUser(userId: string, inventoryItemId:
     });
 
     const catalogIdsForSlot = await getCatalogIdsToUnequipOnEquip(tx, weaponId);
-
-    await tx.csgoPlayerSkin.updateMany({
-      where: { steamId: user.steamId!, equipped: true, skinId: { in: catalogIdsForSlot } },
-      data: { equipped: false },
-    });
+    await unequipSlotForTeam(tx, user.steamId!, catalogIdsForSlot, team);
 
     let playerSkin = await tx.csgoPlayerSkin.findFirst({
       where: { steamId: user.steamId!, skinId: catalog.id },
@@ -71,19 +77,18 @@ export async function equipInventoryItemForUser(userId: string, inventoryItemId:
 
     if (!playerSkin) {
       playerSkin = await tx.csgoPlayerSkin.create({
-        data: {
+        data: buildTeamEquipCreateData(team, {
           steamId: user.steamId!,
           skinId: catalog.id,
           wear: "field_tested",
           seed: 0,
           stattrak: false,
-          equipped: true,
-        },
+        }),
       });
     } else {
       playerSkin = await tx.csgoPlayerSkin.update({
         where: { id: playerSkin.id },
-        data: { equipped: true },
+        data: buildTeamEquipUpdateData(team, playerSkin),
       });
     }
   });
@@ -94,6 +99,7 @@ export async function equipInventoryItemForUser(userId: string, inventoryItemId:
     weaponId,
     paintkit: catalog.paintkit,
     category: item.category,
+    team,
     slotWeaponId: CATEGORY_WEAPON_SLOT[item.category] ?? weaponId,
   };
 }

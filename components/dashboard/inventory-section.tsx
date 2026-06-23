@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   PackageOpen,
+  Sticker,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { type InventoryCategoryKey } from "@/lib/profile";
@@ -29,6 +30,11 @@ import {
 import { SkinRarityBadge } from "@/components/skins/skin-rarity-badge";
 import { SkinRarityLegend } from "@/components/skins/skin-rarity-legend";
 import { SkinRarityLine } from "@/components/skins/skin-rarity-line";
+import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
+import {
+  WeaponStickerModal,
+  weaponSupportsStickers,
+} from "@/components/dashboard/weapon-sticker-modal";
 
 type CatalogSkin = {
   id: string;
@@ -53,6 +59,7 @@ type LoadoutItem = {
   imageUrl: string | null;
   rarity: string;
   accent: string;
+  team: LoadoutTeam;
   equippedAt: string;
 };
 
@@ -103,16 +110,20 @@ async function postJson(url: string, body: unknown) {
 
 function EquippedSidebar({
   loadout,
+  team,
   onRefresh,
   onUnequip,
   onPreview,
+  onStickers,
   unequippingId,
   refreshing,
 }: {
   loadout: LoadoutResponse | null;
+  team: LoadoutTeam;
   onRefresh: () => void;
   onUnequip: (item: LoadoutItem) => void;
   onPreview: (item: LoadoutItem) => void;
+  onStickers: (item: LoadoutItem) => void;
   unequippingId: string | null;
   refreshing: boolean;
 }) {
@@ -121,11 +132,16 @@ function EquippedSidebar({
 
   if (!loadout) return null;
 
+  const teamLabel = team === "T" ? t("teamT") : t("teamCT");
+  const sideItems = loadout.items.filter((item) => item.team === team);
+
   return (
     <aside className="lg:w-72 shrink-0">
       <div className="rounded-card glass-strong lg:sticky lg:top-24">
         <div className="flex items-center justify-between gap-2 border-b border-border/60 px-4 py-3">
-          <p className="text-sm font-semibold text-foreground">{t("loadoutSidebarTitle")}</p>
+          <p className="text-sm font-semibold text-foreground">
+            {t("loadoutSidebarTeam", { team: teamLabel })}
+          </p>
           <Button type="button" variant="ghost" size="sm" onClick={onRefresh}>
             <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
           </Button>
@@ -133,13 +149,13 @@ function EquippedSidebar({
 
         {!loadout.steamLinked ? (
           <p className="px-4 py-4 text-xs text-amber-200">{t("loadoutSteamRequired")}</p>
-        ) : loadout.items.length === 0 ? (
+        ) : sideItems.length === 0 ? (
           <p className="px-4 py-6 text-sm text-muted">{t("loadoutEmpty")}</p>
         ) : (
           <ul className="max-h-[min(70vh,520px)] space-y-2 overflow-y-auto p-3">
-            {loadout.items.map((item) => (
+            {sideItems.map((item) => (
               <li
-                key={item.catalogSkinId}
+                key={`${item.team}-${item.catalogSkinId}`}
                 className="flex items-center gap-2 rounded-xl bg-black/20 p-2 ring-1 ring-white/5"
               >
                 <InventoryItemArt
@@ -156,17 +172,31 @@ function EquippedSidebar({
                     className="mt-1"
                   />
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="shrink-0 px-2 text-[10px]"
-                  disabled={unequippingId === item.catalogSkinId ? true : undefined}
-                  confirm={confirmPresets.unequipSkin(item.name)}
-                  onClick={() => onUnequip(item)}
-                >
-                  {unequippingId === item.catalogSkinId ? "…" : t("unequip")}
-                </Button>
+                <div className="flex shrink-0 flex-col gap-1">
+                  {weaponSupportsStickers(item.weaponId) && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="px-2 text-[10px]"
+                      onClick={() => onStickers(item)}
+                    >
+                      <Sticker className="mr-1 h-3 w-3" />
+                      {t("stickersShort")}
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="px-2 text-[10px]"
+                    disabled={unequippingId === item.catalogSkinId ? true : undefined}
+                    confirm={confirmPresets.unequipSkin(item.name)}
+                    onClick={() => onUnequip(item)}
+                  >
+                    {unequippingId === item.catalogSkinId ? "…" : t("unequip")}
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
@@ -214,6 +244,7 @@ export function InventorySection() {
 
   const [items, setItems] = useState<CatalogSkin[]>([]);
   const [loadout, setLoadout] = useState<LoadoutResponse | null>(null);
+  const [loadoutTeam, setLoadoutTeam] = useState<LoadoutTeam>("CT");
   const [filter, setFilter] = useState<"all" | InventoryCategoryKey>("all");
   const [weaponFilter, setWeaponFilter] = useState("");
   const [weaponOptions, setWeaponOptions] = useState<
@@ -232,6 +263,7 @@ export function InventorySection() {
   const [unequippingId, setUnequippingId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [previewSkin, setPreviewSkin] = useState<SkinPreviewData | null>(null);
+  const [stickerTarget, setStickerTarget] = useState<LoadoutItem | null>(null);
   const [mounted, setMounted] = useState(false);
 
   const reqIdRef = useRef(0);
@@ -246,15 +278,16 @@ export function InventorySection() {
   const fetchLoadout = useCallback(async () => {
     setRefreshing(true);
     try {
-      const response = await fetch("/api/inventory/loadout", {
+      const response = await fetch(`/api/inventory/loadout?team=${loadoutTeam}`, {
         credentials: "same-origin",
       });
       if (!response.ok) return;
-      setLoadout((await response.json()) as LoadoutResponse);
+      const data = (await response.json()) as LoadoutResponse;
+      setLoadout(data);
     } finally {
       setRefreshing(false);
     }
-  }, []);
+  }, [loadoutTeam]);
 
   const fetchSkins = useCallback(async () => {
     const reqId = ++reqIdRef.current;
@@ -267,6 +300,7 @@ export function InventorySection() {
         limit: "36",
         category: filter,
         search,
+        team: loadoutTeam,
       });
       if (weaponFilter) params.set("weaponId", weaponFilter);
 
@@ -296,7 +330,7 @@ export function InventorySection() {
     } finally {
       if (reqId === reqIdRef.current) setLoading(false);
     }
-  }, [filter, page, search, weaponFilter]);
+  }, [filter, page, search, weaponFilter, loadoutTeam]);
 
   useEffect(() => {
     const timer = setTimeout(() => setSearch(searchInput.trim()), 350);
@@ -306,7 +340,7 @@ export function InventorySection() {
   useEffect(() => {
     setPage(1);
     setWeaponFilter("");
-  }, [filter, search]);
+  }, [filter, search, loadoutTeam]);
 
   useEffect(() => {
     fetchLoadout();
@@ -321,7 +355,7 @@ export function InventorySection() {
     setEquipError(null);
     setEquippingId(item.id);
     try {
-      await postJson("/api/inventory/equip", { catalogSkinId: item.id });
+      await postJson("/api/inventory/equip", { catalogSkinId: item.id, team: loadoutTeam });
       setItems((prev) =>
         prev.map((entry) => ({
           ...entry,
@@ -344,7 +378,7 @@ export function InventorySection() {
     setEquipError(null);
     setUnequippingId(catalogSkinId);
     try {
-      await postJson("/api/inventory/unequip", { catalogSkinId });
+      await postJson("/api/inventory/unequip", { catalogSkinId, team: loadoutTeam });
       setItems((prev) =>
         prev.map((entry) =>
           entry.weaponId === weaponId ? { ...entry, equipped: false } : entry,
@@ -396,15 +430,41 @@ export function InventorySection() {
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <EquippedSidebar
           loadout={loadout}
+          team={loadoutTeam}
           onRefresh={fetchLoadout}
           refreshing={refreshing}
           unequippingId={unequippingId}
           onUnequip={(item) => handleUnequip(item.catalogSkinId, item.weaponId)}
           onPreview={openLoadoutPreview}
+          onStickers={(item) => setStickerTarget(item)}
         />
 
         <div className="min-w-0 flex-1">
           <div className="mb-4 rounded-card glass-strong p-4">
+            <div className="mb-3 flex flex-wrap gap-2">
+              {(["CT", "T"] as const).map((team) => {
+                const active = loadoutTeam === team;
+                const label = team === "T" ? t("teamT") : t("teamCT");
+                return (
+                  <button
+                    key={team}
+                    type="button"
+                    onClick={() => setLoadoutTeam(team)}
+                    className={cn(
+                      "inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold transition-all",
+                      active
+                        ? team === "T"
+                          ? "bg-amber-500/20 text-amber-200 ring-1 ring-amber-400/40"
+                          : "bg-sky-500/20 text-sky-200 ring-1 ring-sky-400/40"
+                        : "text-muted hover:bg-white/5 hover:text-foreground",
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
               <input
@@ -642,6 +702,14 @@ export function InventorySection() {
               }
             : undefined
         }
+      />
+
+      <WeaponStickerModal
+        open={stickerTarget !== null}
+        weaponId={stickerTarget?.weaponId ?? ""}
+        weaponName={stickerTarget?.name ?? ""}
+        team={loadoutTeam}
+        onClose={() => setStickerTarget(null)}
       />
     </section>
   );

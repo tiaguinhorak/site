@@ -20,6 +20,7 @@ import {
   ShoppingBag,
   Gamepad2,
   CloudCog,
+  Sparkles,
   ChevronDown,
   type LucideIcon,
 } from "lucide-react";
@@ -47,6 +48,7 @@ const iconMap: Record<string, LucideIcon> = {
   ShoppingBag,
   Gamepad2,
   CloudCog,
+  Sparkles,
 };
 
 function isActive(pathname: string, href: string) {

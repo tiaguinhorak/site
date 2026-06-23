@@ -17,10 +17,7 @@ import {
   type SkinExportWeapon,
 } from "@/lib/csgo-api/skin-export-format";
 import { steamIdForGamePlugin } from "@/lib/steam/steam-id";
-import {
-  isGlovesWeaponId,
-  resolveGloveDefIndex,
-} from "@/lib/inventory/glove-defindex";
+import { buildSyncWeaponsFromEquipped } from "@/lib/inventory/loadout-sync";
 
 type CreateCatalogInput = z.infer<typeof createSkinCatalogSchema>;
 type GiveSkinInput = z.infer<typeof giveSkinSchema>;
@@ -200,71 +197,46 @@ export type PlayerLoadoutSyncPayload = {
     nametag: string | null;
     /** Glove type defindex (from catalog weaponDefIndex) — needed for glove sync. */
     defIndex?: number;
+    /** Terrorist / CT glove loadouts are synced independently. */
+    team?: "T" | "CT";
   }>;
 };
 
 export async function getPlayerLoadoutForSync(steamId64: string): Promise<PlayerLoadoutSyncPayload> {
   const equipped = await prisma.csgoPlayerSkin.findMany({
-    where: { steamId: steamId64, equipped: true },
+    where: {
+      steamId: steamId64,
+      OR: [{ equippedT: true }, { equippedCT: true }],
+    },
     include: { skin: true },
   });
 
   return {
     steamId: steamIdForGamePlugin(steamId64),
-    weapons: equipped
-      .filter((s) => s.skin.paintkit > 0)
-      .map((s) => {
-        const defIndex =
-          isGlovesWeaponId(s.skin.weaponId)
-            ? resolveGloveDefIndex(s.skin.weaponId, s.skin.weaponDefIndex)
-            : s.skin.weaponDefIndex;
-        return {
-          weaponId: s.skin.weaponId,
-          paintkit: s.skin.paintkit,
-          wear: parseFloat(WEAR_FLOAT[s.wear] ?? "0.15"),
-          seed: s.seed,
-          stattrak: s.stattrak,
-          stattrakCount: s.stattrakCount,
-          nametag: s.nametag,
-          defIndex: defIndex ?? undefined,
-        };
-      }),
+    weapons: buildSyncWeaponsFromEquipped(equipped),
   };
 }
 
 /** All equipped loadouts for api-csgo bulk sync (JSON — no KeyValues file). */
 export async function getAllEquippedLoadoutsForSync(): Promise<PlayerLoadoutSyncPayload[]> {
   const equipped = await prisma.csgoPlayerSkin.findMany({
-    where: { equipped: true },
+    where: {
+      OR: [{ equippedT: true }, { equippedCT: true }],
+    },
     include: { skin: true },
   });
 
-  const bySteam = new Map<string, PlayerLoadoutSyncPayload["weapons"]>();
+  const bySteam = new Map<string, typeof equipped>();
 
   for (const row of equipped) {
-    if (row.skin.paintkit <= 0) continue;
-
-    const weapons = bySteam.get(row.steamId) ?? [];
-    weapons.push({
-      weaponId: row.skin.weaponId,
-      paintkit: row.skin.paintkit,
-      wear: parseFloat(WEAR_FLOAT[row.wear] ?? "0.15"),
-      seed: row.seed,
-      stattrak: row.stattrak,
-      stattrakCount: row.stattrakCount,
-      nametag: row.nametag,
-      defIndex:
-        isGlovesWeaponId(row.skin.weaponId)
-          ? resolveGloveDefIndex(row.skin.weaponId, row.skin.weaponDefIndex) ??
-            undefined
-          : row.skin.weaponDefIndex ?? undefined,
-    });
-    bySteam.set(row.steamId, weapons);
+    const list = bySteam.get(row.steamId) ?? [];
+    list.push(row);
+    bySteam.set(row.steamId, list);
   }
 
-  return [...bySteam.entries()].map(([steamId64, weapons]) => ({
+  return [...bySteam.entries()].map(([steamId64, rows]) => ({
     steamId: steamIdForGamePlugin(steamId64),
-    weapons,
+    weapons: buildSyncWeaponsFromEquipped(rows),
   }));
 }
 

@@ -21,6 +21,7 @@ const unequipSchema = z
   .object({
     catalogSkinId: z.string().min(1).optional(),
     weaponId: z.string().min(1).optional(),
+    team: z.enum(["T", "CT"]).optional(),
   })
   .refine((data) => data.catalogSkinId || data.weaponId, {
     message: "catalogSkinId ou weaponId é obrigatório.",
@@ -48,14 +49,18 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const team = parsed.data.team ?? "CT";
     const result = parsed.data.catalogSkinId
-      ? await unequipCatalogSkinForUser(session!.userId, parsed.data.catalogSkinId)
-      : await unequipWeaponForUser(session!.userId, parsed.data.weaponId!);
+      ? await unequipCatalogSkinForUser(session!.userId, parsed.data.catalogSkinId, team)
+      : await unequipWeaponForUser(session!.userId, parsed.data.weaponId!, team);
 
     let gameSync = { ok: true as boolean };
     if (result.steamId) {
+      const isGlove = result.weaponId.toLowerCase().includes("gloves") ||
+        result.weaponId.toLowerCase().includes("handwraps");
       gameSync = await pushPlayerLoadoutToGameServer(result.steamId, {
         clearWeaponIds: [result.weaponId],
+        clearGloveTeam: isGlove ? team : undefined,
       });
     }
 

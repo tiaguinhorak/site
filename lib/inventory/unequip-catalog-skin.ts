@@ -2,10 +2,13 @@ import { prisma } from "@/lib/prisma";
 import { CsgoApiError } from "@/lib/csgo-api/http";
 import { isAllSkinsEquipEnabled } from "@/lib/inventory/catalog-access";
 import { getCatalogIdsToUnequipOnEquip } from "@/lib/inventory/equip-slot-rules";
+import { unequipSlotForTeam } from "@/lib/inventory/loadout-equip-helpers";
+import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
 
 export async function unequipCatalogSkinForUser(
   userId: string,
   catalogSkinId: string,
+  team: LoadoutTeam,
 ) {
   if (!isAllSkinsEquipEnabled()) {
     throw new CsgoApiError("Catálogo completo não habilitado para esta conta.", 403);
@@ -25,26 +28,23 @@ export async function unequipCatalogSkinForUser(
   if (!catalog) throw new CsgoApiError("Skin não encontrada no catálogo.", 404);
 
   const catalogIdsForSlot = await getCatalogIdsToUnequipOnEquip(prisma, catalog.weaponId);
-
-  await prisma.csgoPlayerSkin.updateMany({
-    where: {
-      steamId: user.steamId,
-      equipped: true,
-      skinId: { in: catalogIdsForSlot },
-    },
-    data: { equipped: false },
-  });
+  await unequipSlotForTeam(prisma, user.steamId, catalogIdsForSlot, team);
 
   return {
     ok: true,
     steamId: user.steamId,
     catalogSkinId,
     weaponId: catalog.weaponId,
+    team,
     unequipped: true,
   };
 }
 
-export async function unequipWeaponForUser(userId: string, weaponId: string) {
+export async function unequipWeaponForUser(
+  userId: string,
+  weaponId: string,
+  team: LoadoutTeam,
+) {
   if (!isAllSkinsEquipEnabled()) {
     throw new CsgoApiError("Catálogo completo não habilitado para esta conta.", 403);
   }
@@ -63,14 +63,7 @@ export async function unequipWeaponForUser(userId: string, weaponId: string) {
     throw new CsgoApiError("Arma não encontrada no catálogo.", 404);
   }
 
-  await prisma.csgoPlayerSkin.updateMany({
-    where: {
-      steamId: user.steamId,
-      equipped: true,
-      skinId: { in: catalogIdsForSlot },
-    },
-    data: { equipped: false },
-  });
+  await unequipSlotForTeam(prisma, user.steamId, catalogIdsForSlot, team);
 
-  return { ok: true, steamId: user.steamId, weaponId, unequipped: true };
+  return { ok: true, steamId: user.steamId, weaponId, team, unequipped: true };
 }

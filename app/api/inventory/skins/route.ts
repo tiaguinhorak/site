@@ -4,6 +4,7 @@ import { getSessionUserId } from "@/lib/auth/session-user";
 import { getCatalogSkinsForUser } from "@/lib/inventory/get-catalog-skins";
 import { jsonErrorKey } from "@/lib/i18n/api-route";
 import type { InventoryCategoryKey } from "@/lib/profile";
+import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
 
 const CATEGORIES = new Set<InventoryCategoryKey | "all">([
   "all",
@@ -31,12 +32,17 @@ export async function GET(request: NextRequest) {
   const page = Number(params.get("page") ?? "1");
   const limit = Number(params.get("limit") ?? "36");
 
+  const teamParam = params.get("team");
+  const team =
+    teamParam === "T" || teamParam === "CT" ? (teamParam as LoadoutTeam) : undefined;
+
   const result = await getCatalogSkinsForUser(userId, {
     category,
     search,
     weaponId,
     page: Number.isFinite(page) ? page : 1,
     limit: Number.isFinite(limit) ? limit : 36,
+    team,
   });
 
   return NextResponse.json(result);

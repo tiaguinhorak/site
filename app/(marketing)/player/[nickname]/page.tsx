@@ -31,12 +31,12 @@ export default async function PlayerProfilePage({ params }: PageProps) {
   if (!user) notFound();
 
   const player = serializePublicPlayer(user);
-  const { groups } = await getPublicPlayerSkins(user.steamId);
+  const { sides } = await getPublicPlayerSkins(user.steamId);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 pb-24 pt-28 sm:px-6 sm:pt-32">
       <PublicProfilePage initialPlayer={player} />
-      <PublicProfileSkins groups={groups} />
+      <PublicProfileSkins sides={sides} />
     </div>
   );
 }

@@ -628,13 +628,21 @@ model CsgoSkinCatalog {
   imageUrl       String?
   /** CS:GO item definition index (e.g. glove type 5030). From CSGO-API weapon.weapon_id. */
   weaponDefIndex Int?
+  /** Visible in inventory and synced to game allowlist when true. */
+  enabled        Boolean @default(true)
+  /** sync | admin | import */
+  source         String  @default("sync")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   playerSkins     CsgoPlayerSkin[]
   inventoryItems  InventoryItem[]
 
+  @@unique([weaponId, paintkit])
   @@index([weaponId])
   @@index([category])
   @@index([category, weaponName])
+  @@index([enabled])
 }
 
 model CsgoPlayerSkin {
@@ -647,10 +655,53 @@ model CsgoPlayerSkin {
   stattrakCount Int          @default(0)
   nametag       String?
   equipped      Boolean      @default(false)
+  equippedT     Boolean      @default(false)
+  equippedCT    Boolean      @default(false)
   createdAt     DateTime     @default(now())
 
   skin CsgoSkinCatalog @relation(fields: [skinId], references: [id], onDelete: Cascade)
 
   @@index([steamId])
   @@index([steamId, equipped])
+  @@index([steamId, equippedT])
+  @@index([steamId, equippedCT])
+}
+
+model CsgoStickerCatalog {
+  id          String  @id
+  defIndex    Int     @unique
+  name        String
+  imageUrl    String?
+  rarity      String
+  stickerType String?
+  effect      String?
+  tournament  String?
+  enabled     Boolean @default(true)
+  source      String  @default("import")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([enabled])
+}
+
+model CsgoPlayerWeaponSticker {
+  id        String   @id @default(cuid())
+  steamId   String
+  weaponId  String
+  team      String
+  slot0     Int      @default(0)
+  slot1     Int      @default(0)
+  slot2     Int      @default(0)
+  slot3     Int      @default(0)
+  slot4     Int      @default(0)
+  wear0     Float    @default(0)
+  wear1     Float    @default(0)
+  wear2     Float    @default(0)
+  wear3     Float    @default(0)
+  wear4     Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([steamId, weaponId, team])
+  @@index([steamId])
 }
