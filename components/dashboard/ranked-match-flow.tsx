@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ServerConnectActions } from "@/components/ui/server-connect-actions";
 import { useRankedParty } from "@/components/providers/ranked-party-provider";
 import { useConfirmPresets } from "@/lib/use-confirm-presets";
+import { useUser } from "@/lib/hooks/use-user";
 import { RANKED_MAP_LABELS } from "@/lib/ranked/constants";
 import type { RankedPartyMemberView } from "@/lib/ranked/party-shared";
 
@@ -43,6 +44,7 @@ export function RankedMatchFlow() {
     reopenVoteModal,
     reopenConnectModal,
   } = useRankedParty();
+  const { user } = useUser();
   const t = useTranslations("ranked.match");
   const confirmPresets = useConfirmPresets();
 
@@ -132,7 +134,8 @@ export function RankedMatchFlow() {
             </div>
             {session.status === "starting" &&
               !session.serverHost &&
-              launchMessage?.includes("Nenhum servidor") && (
+              launchMessage?.includes("Nenhum servidor") &&
+              user?.isAdmin && (
                 <p className="mt-3 text-sm text-amber-400">
                   {t("registerServer")}{" "}
                   <Link

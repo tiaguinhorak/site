@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getSessionUser } from "@/lib/auth/session-user";
 import { fetchLiveServerStats } from "@/lib/csgo-api/live-server-stats";
-import { readSessionFromCookieHeader } from "@/lib/security/session";
 
 export async function GET(request: NextRequest) {
   const servers = await fetchLiveServerStats();
 
-  const session = readSessionFromCookieHeader(request.headers.get("cookie"));
-  const isAdmin = session?.isAdmin === true;
+  const user = await getSessionUser(request);
+  const isAdmin = user?.isAdmin === true;
 
   return NextResponse.json({
-    isAdmin,
     servers: servers.map((server) => ({
       id: server.id,
       name: server.name,

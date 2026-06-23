@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { ServerConnectActions } from "@/components/ui/server-connect-actions";
 import { LiveServerAdminActions } from "@/components/admin/live-server-admin-actions";
 import { useLiveServerStats, type LiveServerStatView } from "@/lib/hooks/use-live-server-stats";
+import { useUser } from "@/lib/hooks/use-user";
 import { cn } from "@/lib/utils";
 
 function pingColor(ping: number) {
@@ -71,7 +72,9 @@ function ServerCard({
 
 export function LiveServersPanel() {
   const t = useTranslations("liveServers");
-  const { statsByKey, loading, refresh, isAdmin } = useLiveServerStats(true);
+  const { user } = useUser();
+  const isAdmin = user?.isAdmin === true;
+  const { statsByKey, loading, refresh } = useLiveServerStats(true);
   const servers = Object.values(statsByKey);
   const onlineCount = servers.filter((s) => s.online).length;
 

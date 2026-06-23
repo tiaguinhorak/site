@@ -8,6 +8,7 @@ import { verifySessionTokenEdge } from "@/lib/security/session-edge";
 const AUTH_PATHS = ["/login", "/register"];
 const PROTECTED_PREFIX = "/dashboard";
 const ADMIN_PREFIX = "/admin";
+const ADMIN_API_PREFIX = "/api/admin";
 const COMPLETE_PROFILE_PATH = "/completar-perfil";
 
 function apiRateLimitResponse(retryAfterMs: number): NextResponse {
@@ -43,6 +44,16 @@ export async function middleware(request: NextRequest) {
   const needsProfileCompletion =
     isAuthenticated && session?.profileComplete === false;
   const isAdmin = isAuthenticated && session?.isAdmin === true;
+
+  if (pathname.startsWith(ADMIN_API_PREFIX)) {
+    if (!isAuthenticated) {
+      return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    }
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Acesso restrito." }, { status: 403 });
+    }
+    return NextResponse.next();
+  }
 
   if (pathname.startsWith(ADMIN_PREFIX)) {
     if (!isAuthenticated) {
