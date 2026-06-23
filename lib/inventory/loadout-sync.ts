@@ -68,7 +68,9 @@ export function buildSyncWeaponsFromEquipped(rows: EquippedRow[]): SyncWeaponEnt
   for (const row of rows) {
     if (isGlovesWeaponId(row.skin.weaponId)) continue;
     if (row.skin.paintkit <= 0) continue;
-    if (row.equippedT || row.equippedCT || row.equipped) {
+    if (row.equippedT || row.equippedCT) {
+      weaponIds.add(row.skin.weaponId);
+    } else if (row.equipped) {
       weaponIds.add(row.skin.weaponId);
     }
   }
