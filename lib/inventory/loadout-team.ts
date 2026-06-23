@@ -1,10 +1,14 @@
 export type LoadoutTeam = "T" | "CT";
 
-/** Terrorist-only buy weapons (shared rifles like AK/AWP are not listed). */
+/**
+ * Weapons only available to Terrorists in the buy menu — cannot equip skins on CT.
+ * Shared weapons (AWP, Deagle, Nova, etc.) are intentionally omitted.
+ */
 const T_ONLY_WEAPON_IDS = new Set([
   "weapon_glock",
   "weapon_tec9",
   "weapon_galilar",
+  "weapon_ak47",
   "weapon_sg556",
   "weapon_g3sg1",
   "weapon_mac10",
@@ -12,7 +16,7 @@ const T_ONLY_WEAPON_IDS = new Set([
   "weapon_scar20",
 ]);
 
-/** Counter-terrorist-only buy weapons. */
+/** Weapons only available to Counter-Terrorists in the buy menu — cannot equip on T. */
 const CT_ONLY_WEAPON_IDS = new Set([
   "weapon_hkp2000",
   "weapon_usp_silencer",

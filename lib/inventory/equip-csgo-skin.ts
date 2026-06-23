@@ -6,7 +6,10 @@ import {
   buildTeamEquipUpdateData,
   unequipSlotForTeam,
 } from "@/lib/inventory/loadout-equip-helpers";
-import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
+import {
+  weaponAllowedOnTeam,
+  type LoadoutTeam,
+} from "@/lib/inventory/loadout-team";
 import type { InventoryCategory } from "@/lib/generated/prisma/client";
 
 const CATEGORY_WEAPON_SLOT: Partial<Record<InventoryCategory, string>> = {
@@ -50,6 +53,15 @@ export async function equipInventoryItemForUser(
 
   const catalog = item.catalogSkin;
   const weaponId = catalog.weaponId;
+
+  if (!weaponAllowedOnTeam(weaponId, team)) {
+    throw new CsgoApiError(
+      team === "T"
+        ? "Esta arma não está disponível para o time Terrorista."
+        : "Esta arma não está disponível para o time Counter-Terrorist.",
+      400,
+    );
+  }
 
   await prisma.$transaction(async (tx) => {
     const sameCategoryItems = await tx.inventoryItem.findMany({

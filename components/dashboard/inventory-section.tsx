@@ -340,7 +340,21 @@ export function InventorySection() {
   useEffect(() => {
     setPage(1);
     setWeaponFilter("");
+    reqIdRef.current += 1;
+    setItems([]);
+    setPreviewSkin((prev) => (prev ? { ...prev, equipped: false } : null));
   }, [filter, search, loadoutTeam]);
+
+  useEffect(() => {
+    if (!previewSkin?.id) return;
+    const match = items.find((entry) => entry.id === previewSkin.id);
+    setPreviewSkin((prev) => {
+      if (!prev || prev.id !== previewSkin.id) return prev;
+      const equipped = match?.equipped ?? false;
+      if (prev.equipped === equipped) return prev;
+      return { ...prev, equipped };
+    });
+  }, [items, previewSkin?.id]);
 
   useEffect(() => {
     fetchLoadout();
@@ -356,14 +370,8 @@ export function InventorySection() {
     setEquippingId(item.id);
     try {
       await postJson("/api/inventory/equip", { catalogSkinId: item.id, team: loadoutTeam });
-      setItems((prev) =>
-        prev.map((entry) => ({
-          ...entry,
-          equipped:
-            entry.weaponId === item.weaponId ? entry.id === item.id : entry.equipped,
-        })),
-      );
       await fetchLoadout();
+      await fetchSkins();
       setPreviewSkin((prev) =>
         prev?.id === item.id ? { ...prev, equipped: true } : prev,
       );
@@ -379,12 +387,8 @@ export function InventorySection() {
     setUnequippingId(catalogSkinId);
     try {
       await postJson("/api/inventory/unequip", { catalogSkinId, team: loadoutTeam });
-      setItems((prev) =>
-        prev.map((entry) =>
-          entry.weaponId === weaponId ? { ...entry, equipped: false } : entry,
-        ),
-      );
       await fetchLoadout();
+      await fetchSkins();
       setPreviewSkin((prev) =>
         prev?.id === catalogSkinId ? { ...prev, equipped: false } : prev,
       );
