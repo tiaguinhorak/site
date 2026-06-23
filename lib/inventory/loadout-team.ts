@@ -9,11 +9,9 @@ const T_ONLY_WEAPON_IDS = new Set([
   "weapon_tec9",
   "weapon_galilar",
   "weapon_ak47",
-  "weapon_sg556",
   "weapon_g3sg1",
   "weapon_mac10",
   "weapon_sawedoff",
-  "weapon_scar20",
 ]);
 
 /** Weapons only available to Counter-Terrorists in the buy menu — cannot equip on T. */
@@ -26,6 +24,8 @@ const CT_ONLY_WEAPON_IDS = new Set([
   "weapon_m4a1",
   "weapon_m4a1_silencer",
   "weapon_aug",
+  "weapon_sg556",
+  "weapon_scar20",
   "weapon_mp9",
   "weapon_mag7",
 ]);
