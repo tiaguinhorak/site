@@ -4,7 +4,12 @@ import { useState } from "react";
 import { Copy, Check, Play } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button, ButtonLink } from "@/components/ui/button";
+import { useAuthSession } from "@/lib/hooks/use-auth-session";
 import { steamConnectUrl } from "@/lib/servers/connect";
+import {
+  getServerConnectEligibility,
+  serverConnectHref,
+} from "@/lib/servers/connect-eligibility";
 import { cn } from "@/lib/utils";
 
 type ServerConnectActionsProps = {
@@ -13,6 +18,7 @@ type ServerConnectActionsProps = {
   className?: string;
   size?: "sm" | "md";
   showSteamLink?: boolean;
+  fromPath?: string;
 };
 
 export function ServerConnectActions({
@@ -21,11 +27,15 @@ export function ServerConnectActions({
   className,
   size = "sm",
   showSteamLink = true,
+  fromPath = "/dashboard",
 }: ServerConnectActionsProps) {
   const t = useTranslations("common");
+  const { authenticated, steamLinked, loading } = useAuthSession();
   const [copied, setCopied] = useState(false);
   const connectCommand = `connect ${host}:${port}`;
-  const steamUrl = steamConnectUrl(host, port);
+  const eligibility = getServerConnectEligibility(authenticated, steamLinked);
+  const steamUrl =
+    eligibility === "connect" ? steamConnectUrl(host, port) : null;
 
   async function copyConnect() {
     try {
@@ -35,6 +45,25 @@ export function ServerConnectActions({
     } catch {
       /* clipboard blocked */
     }
+  }
+
+  if (loading) {
+    return null;
+  }
+
+  if (eligibility !== "connect") {
+    return (
+      <div className={cn("flex flex-wrap items-center gap-2", className)}>
+        <ButtonLink
+          href={serverConnectHref(eligibility, fromPath)}
+          variant="primary"
+          size={size}
+        >
+          <Play className="h-3.5 w-3.5" />
+          {eligibility === "login" ? t("loginToConnect") : t("linkSteamToConnect")}
+        </ButtonLink>
+      </div>
+    );
   }
 
   return (

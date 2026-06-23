@@ -354,15 +354,7 @@ export function SteamCompleteProfileForm() {
           />
         </div>
 
-        <PhoneInput
-          value={phone}
-          countryCode={country}
-          onChange={setPhone}
-          onCountryChange={setCountry}
-          error={fieldErrors.phone}
-        />
-
-        <div className="relative">
+        <div className="grid gap-4 sm:grid-cols-2">
           <CountryPicker
             value={country}
             onChange={(code) => {
@@ -372,6 +364,13 @@ export function SteamCompleteProfileForm() {
             }}
             error={fieldErrors.country}
             id="complete-profile-country"
+          />
+          <PhoneInput
+            value={phone}
+            countryCode={country}
+            onChange={setPhone}
+            hideDialPicker
+            error={fieldErrors.phone}
           />
         </div>
 

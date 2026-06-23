@@ -128,7 +128,7 @@ export function ProfileBasicForm({
             value={profile.phone}
             countryCode={profile.country}
             onChange={(phone) => onChange({ phone })}
-            onCountryChange={(country) => onChange({ country })}
+            hideDialPicker
             error={fieldErrors.phone}
             hint={t("phoneHint")}
           />

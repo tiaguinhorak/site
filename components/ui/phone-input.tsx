@@ -26,6 +26,8 @@ type PhoneInputProps = {
   countryCode: string;
   onChange: (phone: string) => void;
   onCountryChange?: (code: string) => void;
+  /** When true, dial code follows `countryCode` only (no second flag dropdown). */
+  hideDialPicker?: boolean;
   error?: string;
   hint?: string;
   id?: string;
@@ -192,6 +194,7 @@ export function PhoneInput({
   countryCode,
   onChange,
   onCountryChange,
+  hideDialPicker = false,
   error,
   hint,
   id = "phone-input",
@@ -203,6 +206,7 @@ export function PhoneInput({
   const nationalDigits = extractNationalDigits(value, countryCode);
   const displayValue = formatNationalNumber(nationalDigits, countryCode);
   const errorId = error ? `${id}-error` : undefined;
+  const selected = getCountry(countryCode);
 
   function updatePhone(nextCountry: string, nextNational: string) {
     onChange(buildPhoneValue(nextNational, nextCountry));
@@ -233,12 +237,22 @@ export function PhoneInput({
           error && "[&_button]:border-rose-500/60 [&_input]:border-rose-500/60",
         )}
       >
-        <CountryDialDropdown
-          value={countryCode}
-          onChange={handleCountryChange}
-          open={dialOpen}
-          onOpenChange={setDialOpen}
-        />
+        {hideDialPicker ? (
+          <span
+            className="flex h-12 shrink-0 items-center gap-1.5 rounded-xl glass-input px-3 font-mono text-sm text-muted"
+            aria-hidden
+          >
+            <span className="text-lg leading-none">{selected?.flag ?? "🌐"}</span>
+            <span>{selected?.dial ?? "+55"}</span>
+          </span>
+        ) : (
+          <CountryDialDropdown
+            value={countryCode}
+            onChange={handleCountryChange}
+            open={dialOpen}
+            onOpenChange={setDialOpen}
+          />
+        )}
 
         <input
           id={id}

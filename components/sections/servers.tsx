@@ -8,6 +8,10 @@ import { ButtonLink } from "@/components/ui/button";
 import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { useAuthSession } from "@/lib/hooks/use-auth-session";
 import { formatConnectAddress, steamConnectUrl } from "@/lib/servers/connect";
+import {
+  getServerConnectEligibility,
+  serverConnectHref,
+} from "@/lib/servers/connect-eligibility";
 import { formatMapLabel } from "@/lib/servers/maps";
 import { useLiveServerStats } from "@/lib/hooks/use-live-server-stats";
 import { cn } from "@/lib/utils";
@@ -43,11 +47,8 @@ export function Servers({
   const hasLiveServers = servers.some((server) => server.isLiveSynced);
   const { statsByKey } = useLiveServerStats(hasLiveServers);
 
-  const connectHref = authenticated
-    ? steamLinked
-      ? "/dashboard"
-      : "/api/auth/steam?mode=link"
-    : "/login";
+  const eligibility = getServerConnectEligibility(authenticated, steamLinked);
+  const canSteamConnect = eligibility === "connect";
 
   return (
     <section
@@ -109,8 +110,11 @@ export function Servers({
               const isOffline = liveStat ? !liveStat.online : server.map === "offline";
               const full = players >= slots && slots > 0;
               const pct = slots > 0 ? Math.min((players / slots) * 100, 100) : 0;
-              const steamUrl = steamConnectUrl(server.host, server.port);
-              const canDirectConnect = Boolean(connectAddress && steamUrl && !isOffline);
+              const steamUrl = canSteamConnect ? steamConnectUrl(server.host, server.port) : null;
+              const canDirectConnect = Boolean(
+                canSteamConnect && connectAddress && steamUrl && !isOffline,
+              );
+              const fallbackHref = serverConnectHref(eligibility, "/servidores");
               return (
                 <motion.li
                   key={server.isLiveSynced ? `${server.name}-${connectAddress}` : server.name}
@@ -180,7 +184,7 @@ export function Servers({
                         size="sm"
                         className="w-full md:w-auto"
                         confirm={
-                          authenticated
+                          canSteamConnect
                             ? confirmPresets.connectServer(server.name, server.mode)
                             : undefined
                         }
@@ -190,12 +194,12 @@ export function Servers({
                       </ButtonLink>
                     ) : (
                       <ButtonLink
-                        href={connectHref}
+                        href={fallbackHref}
                         variant={full ? "outline" : "primary"}
                         size="sm"
                         className="w-full md:w-auto"
                         confirm={
-                          authenticated
+                          canSteamConnect
                             ? full
                               ? confirmPresets.joinQueue(server.name)
                               : confirmPresets.connectServer(server.name, server.mode)
