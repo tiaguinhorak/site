@@ -2,7 +2,8 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import type { InventoryCategoryKey } from "@/lib/profile";
-import { isAllSkinsEquipEnabled } from "@/lib/inventory/catalog-access";
+import { canUserAccessAllCatalogSkins } from "@/lib/inventory/catalog-access";
+import { getOwnedCatalogSkinIdsForUser } from "@/lib/inventory/inventory-ownership";
 import {
   ensureCatalogReady,
   getCatalogTotalCached,
@@ -120,7 +121,8 @@ export async function getCatalogSkinsForUser(
   ]);
 
   const equippedIds = new Set(equippedRows.map((row) => row.skinId));
-  const allSkins = isAllSkinsEquipEnabled();
+  const allSkins = await canUserAccessAllCatalogSkins(userId);
+  const ownedCatalogIds = allSkins ? null : await getOwnedCatalogSkinIdsForUser(userId);
 
   const items: CatalogSkinRow[] = rows.map((row) => ({
     id: row.id,
@@ -134,7 +136,7 @@ export async function getCatalogSkinsForUser(
     paintkit: row.paintkit,
     paintkitName: row.paintkitName,
     equipped: equippedIds.has(row.id),
-    owned: allSkins,
+    owned: allSkins || ownedCatalogIds?.has(row.id) === true,
   }));
 
   const filteredWeaponOptions = team

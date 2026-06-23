@@ -805,6 +805,16 @@
     }
   },
   "notificationMessages": {
+    "inventory": {
+      "grant": {
+        "title": "New skin in inventory",
+        "body": "You received: {skinName}. Equip it in inventory to use on the server."
+      },
+      "revoke": {
+        "title": "Skin removed",
+        "body": "{skinName} was removed from your inventory."
+      }
+    },
     "match": {
       "ready": {
         "title": "Ranked match found",

@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 import { CsgoApiError } from "@/lib/csgo-api/http";
-import { isAllSkinsEquipEnabled } from "@/lib/inventory/catalog-access";
 import { getCatalogIdsToUnequipOnEquip } from "@/lib/inventory/equip-slot-rules";
 import { unequipSlotForTeam } from "@/lib/inventory/loadout-equip-helpers";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
@@ -10,10 +9,6 @@ export async function unequipCatalogSkinForUser(
   catalogSkinId: string,
   team: LoadoutTeam,
 ) {
-  if (!isAllSkinsEquipEnabled()) {
-    throw new CsgoApiError("Catálogo completo não habilitado para esta conta.", 403);
-  }
-
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { steamId: true },
@@ -45,10 +40,6 @@ export async function unequipWeaponForUser(
   weaponId: string,
   team: LoadoutTeam,
 ) {
-  if (!isAllSkinsEquipEnabled()) {
-    throw new CsgoApiError("Catálogo completo não habilitado para esta conta.", 403);
-  }
-
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { steamId: true },

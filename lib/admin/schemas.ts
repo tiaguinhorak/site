@@ -257,3 +257,7 @@ export const adminStickerCatalogUpdateSchema = z.object({
   enabled: z.boolean().optional(),
   imageUrl: z.string().url().max(500).optional().nullable(),
 });
+
+export const adminInventoryGrantSchema = z.object({
+  catalogSkinId: z.string().min(1).max(64),
+});

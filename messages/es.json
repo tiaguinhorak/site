@@ -805,6 +805,16 @@
     }
   },
   "notificationMessages": {
+    "inventory": {
+      "grant": {
+        "title": "Nueva skin en el inventario",
+        "body": "Recibiste: {skinName}. Equípala en el inventario para usarla en el servidor."
+      },
+      "revoke": {
+        "title": "Skin eliminada",
+        "body": "{skinName} fue eliminada de tu inventario."
+      }
+    },
     "match": {
       "ready": {
         "title": "Partida rankeada encontrada",

@@ -20,6 +20,7 @@ import { secureApi } from "@/lib/api/client";
 import { confirmPresets } from "@/lib/confirm-presets";
 import { punishmentTypeLabel, punishmentServerLabel } from "@/lib/admin/punishment-labels";
 import { AdminRankedQueuePanel } from "@/components/admin/admin-ranked-queue-panel";
+import { AdminUserInventoryPanel } from "@/components/admin/admin-user-inventory-panel";
 import type { PunishmentType } from "@/lib/generated/prisma/client";
 import { cn } from "@/lib/utils";
 
@@ -70,7 +71,7 @@ type UserDetail = {
   punishments: Punishment[];
 };
 
-const TABS = ["resumo", "editar", "punicoes", "notificar"] as const;
+const TABS = ["resumo", "editar", "inventario", "punicoes", "notificar"] as const;
 const PUNISHMENT_TYPES: PunishmentType[] = ["BAN", "MUTE", "WARNING", "KICK", "RESTRICT"];
 
 export function AdminUserDetail({ userId }: { userId: string }) {
@@ -389,6 +390,7 @@ export function AdminUserDetail({ userId }: { userId: string }) {
             >
               {t === "resumo" && "Resumo"}
               {t === "editar" && "Editar"}
+              {t === "inventario" && "Inventário"}
               {t === "punicoes" && "Punições"}
               {t === "notificar" && "Notificar"}
             </button>
@@ -571,6 +573,23 @@ export function AdminUserDetail({ userId }: { userId: string }) {
               </ul>
             </div>
             </div>
+          </div>
+        )}
+
+        {tab === "inventario" && (
+          <div className="mt-6">
+            <AdminUserInventoryPanel
+              userId={userId}
+              nickname={user.nickname}
+              onSuccess={(msg) => {
+                setFormError(null);
+                setFormSuccess(msg);
+              }}
+              onError={(msg) => {
+                setFormSuccess(null);
+                setFormError(msg);
+              }}
+            />
           </div>
         )}
 

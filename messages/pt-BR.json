@@ -805,6 +805,16 @@
     }
   },
   "notificationMessages": {
+    "inventory": {
+      "grant": {
+        "title": "Nova skin no inventário",
+        "body": "Você recebeu: {skinName}. Equipe no inventário para usar no servidor."
+      },
+      "revoke": {
+        "title": "Skin removida",
+        "body": "{skinName} foi removida do seu inventário."
+      }
+    },
     "match": {
       "ready": {
         "title": "Partida rankeada encontrada",

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { CsgoApiError } from "@/lib/csgo-api/http";
-import { isAllSkinsEquipEnabled } from "@/lib/inventory/catalog-access";
+import { canUserAccessAllCatalogSkins } from "@/lib/inventory/catalog-access";
+import { userOwnsCatalogSkin } from "@/lib/inventory/inventory-ownership";
 import { assertPaintkitCsgoCompatible, isCatalogGameClientCs2 } from "@/lib/inventory/csgo-paintkit-compat";
 import { getCatalogIdsToUnequipOnEquip } from "@/lib/inventory/equip-slot-rules";
 import {
@@ -19,8 +20,9 @@ export async function equipCatalogSkinForUser(
   catalogSkinId: string,
   team: LoadoutTeam,
 ) {
-  if (!isAllSkinsEquipEnabled()) {
-    throw new CsgoApiError("Catálogo completo não habilitado para esta conta.", 403);
+  const canAccessAll = await canUserAccessAllCatalogSkins(userId);
+  if (!canAccessAll && !(await userOwnsCatalogSkin(userId, catalogSkinId))) {
+    throw new CsgoApiError("Você não possui esta skin no inventário.", 403);
   }
 
   const user = await prisma.user.findUnique({
