@@ -202,11 +202,15 @@ export type PlayerLoadoutSyncPayload = {
   }>;
 };
 
+const EQUIPPED_LOADOUT_WHERE = {
+  OR: [{ equippedT: true }, { equippedCT: true }, { equipped: true }],
+} as const;
+
 export async function getPlayerLoadoutForSync(steamId64: string): Promise<PlayerLoadoutSyncPayload> {
   const equipped = await prisma.csgoPlayerSkin.findMany({
     where: {
       steamId: steamId64,
-      OR: [{ equippedT: true }, { equippedCT: true }],
+      ...EQUIPPED_LOADOUT_WHERE,
     },
     include: { skin: true },
   });
@@ -220,9 +224,7 @@ export async function getPlayerLoadoutForSync(steamId64: string): Promise<Player
 /** All equipped loadouts for api-csgo bulk sync (JSON — no KeyValues file). */
 export async function getAllEquippedLoadoutsForSync(): Promise<PlayerLoadoutSyncPayload[]> {
   const equipped = await prisma.csgoPlayerSkin.findMany({
-    where: {
-      OR: [{ equippedT: true }, { equippedCT: true }],
-    },
+    where: EQUIPPED_LOADOUT_WHERE,
     include: { skin: true },
   });
 
