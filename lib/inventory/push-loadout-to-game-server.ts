@@ -2,6 +2,7 @@ import "server-only";
 
 import { getPlayerLoadoutForSync } from "@/lib/csgo-api/services/skins";
 import { isMeleeWeaponId } from "@/lib/inventory/equip-slot-rules";
+import { pushPlayerStickersToGameServer } from "@/lib/inventory/push-stickers-to-game-server";
 import { getCsgoApiBaseUrl, csgoBackendAuthHeaders } from "@/lib/csgo-api/config";
 import { getSkinsSyncKey } from "@/lib/env/skins-sync";
 
@@ -59,6 +60,10 @@ export async function pushPlayerLoadoutToGameServer(
       });
 
       if (res.ok) {
+        const stickerResult = await pushPlayerStickersToGameServer(steamId64);
+        if (!stickerResult.ok) {
+          console.warn("[Clutch] pushPlayerStickersToGameServer:", stickerResult.error);
+        }
         return { ok: true };
       }
 

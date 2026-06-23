@@ -106,6 +106,44 @@ export type StickerSyncEntry = {
   wears: number[];
 };
 
+export async function getAllPlayerStickersForSync(): Promise<
+  Array<{ steamId: string; entries: StickerSyncEntry[] }>
+> {
+  const rows = await prisma.csgoPlayerWeaponSticker.findMany();
+
+  const bySteam = new Map<string, typeof rows>();
+
+  for (const row of rows) {
+    const list = bySteam.get(row.steamId) ?? [];
+    list.push(row);
+    bySteam.set(row.steamId, list);
+  }
+
+  const result: Array<{ steamId: string; entries: StickerSyncEntry[] }> = [];
+
+  for (const [steamId64, playerRows] of bySteam.entries()) {
+    const entries: StickerSyncEntry[] = [];
+
+    for (const row of playerRows) {
+      const weaponIndex = await weaponIdToItemDefIndex(row.weaponId);
+      if (!weaponIndex) continue;
+
+      entries.push({
+        weaponIndex,
+        slots: [row.slot0, row.slot1, row.slot2, row.slot3, row.slot4],
+        wears: [row.wear0, row.wear1, row.wear2, row.wear3, row.wear4],
+      });
+    }
+
+    result.push({
+      steamId: steamIdForGamePlugin(steamId64),
+      entries,
+    });
+  }
+
+  return result;
+}
+
 export async function getPlayerStickersForSync(steamId64: string): Promise<{
   steamId: string;
   entries: StickerSyncEntry[];
