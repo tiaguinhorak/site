@@ -58,16 +58,26 @@ export async function getCatalogSkinsForUser(
   const limit = Math.min(MAX_LIMIT, Math.max(1, options.limit ?? DEFAULT_LIMIT));
   const search = options.search?.trim() ?? "";
   const category = options.category ?? "all";
-  const weaponFilter = options.weaponId?.trim() ?? "";
+  const weaponIdParam = options.weaponId?.trim() ?? "";
   const team = options.team;
 
   await ensureCatalogReady();
 
+  let weaponIdWhere: string | { notIn: string[] } | undefined;
+  if (weaponIdParam) {
+    // Explicit weapon from dropdown — do not overwrite with team notIn (was breaking filters).
+    weaponIdWhere = weaponIdParam;
+  } else if (team) {
+    const excluded = excludedWeaponIdsForTeam(team);
+    if (excluded.length > 0) {
+      weaponIdWhere = { notIn: excluded };
+    }
+  }
+
   const where = {
     enabled: true,
     ...(category !== "all" ? { category } : {}),
-    ...(weaponFilter ? { weaponId: weaponFilter } : {}),
-    ...(team ? { weaponId: { notIn: excludedWeaponIdsForTeam(team) } } : {}),
+    ...(weaponIdWhere !== undefined ? { weaponId: weaponIdWhere } : {}),
     ...(search
       ? {
           OR: [
