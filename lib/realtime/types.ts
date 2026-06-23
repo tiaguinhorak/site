@@ -15,7 +15,16 @@ export type RealtimeChannel =
 export type RealtimeEvent =
   | { type: "connected"; at: number }
   | { type: "ping"; at: number }
-  | { type: "invalidate"; scope: RealtimeInvalidateScope; at: number };
+  | { type: "invalidate"; scope: RealtimeInvalidateScope; at: number }
+  | {
+      type: "match_live";
+      at: number;
+      sessionId: string;
+      scoreTeamA: number;
+      scoreTeamB: number;
+      round: number;
+      phase: string;
+    };
 
 export function channelKey(channel: RealtimeChannel): string {
   switch (channel.kind) {

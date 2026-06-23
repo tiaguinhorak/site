@@ -29,6 +29,7 @@ import {
   reconcileStaleSessionsForUser,
 } from "@/lib/ranked/reconcile-stale-sessions";
 import { formatConnectAddress, formatConnectCommand } from "@/lib/servers/connect";
+import type { CsgoMatchLiveView } from "@/lib/csgo-api/match-live";
 import {
   RankedPartyError,
   partyInclude,
@@ -92,6 +93,7 @@ function isBotEmail(email: string | null | undefined): boolean {
 export function serializeSession(
   session: SessionWithRelations,
   viewerUserId?: string,
+  live?: CsgoMatchLiveView | null,
 ): RankedMatchSessionView {
   const teamSize = session.teamSize ?? 5;
   const partyA = serializeParty(session.partyA, viewerUserId, teamSize);
@@ -134,6 +136,11 @@ export function serializeSession(
     youAccepted: acceptances.find((a) => a.isYou)?.accepted ?? false,
     yourTeam,
     isCaptain,
+    scoreTeamA: session.scoreTeamA ?? live?.scoreTeamA ?? null,
+    scoreTeamB: session.scoreTeamB ?? live?.scoreTeamB ?? null,
+    winnerTeam: session.winnerTeam ?? live?.winner ?? null,
+    livePhase: live?.phase ?? null,
+    liveRound: live?.round ?? null,
   };
 }
 

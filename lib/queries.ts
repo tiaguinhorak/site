@@ -142,7 +142,44 @@ export async function getLiveSyncedServers() {
 
 export async function getLeaderboard() {
   return unstable_cache(
-    async () => prisma.leaderboardEntry.findMany({ orderBy: { rank: "asc" } }),
+    async () => {
+      const users = await prisma.user.findMany({
+        where: {
+          OR: [
+            { competitivePoints: { gt: 0 } },
+            { rankedWins: { gt: 0 } },
+            { rankedLosses: { gt: 0 } },
+          ],
+        },
+        orderBy: [{ competitivePoints: "desc" }, { rankedWins: "desc" }],
+        take: 50,
+        select: {
+          nickname: true,
+          kd: true,
+          competitivePoints: true,
+        },
+      });
+
+      if (users.length > 0) {
+        return users.map((user, index) => ({
+          rank: index + 1,
+          name: user.nickname,
+          kd: user.kd,
+          points: user.competitivePoints,
+        }));
+      }
+
+      const seed = await prisma.leaderboardEntry.findMany({
+        orderBy: { rank: "asc" },
+        take: 50,
+      });
+      return seed.map((entry) => ({
+        rank: entry.rank,
+        name: entry.name,
+        kd: entry.kd,
+        points: entry.points,
+      }));
+    },
     ["site-leaderboard"],
     { revalidate: 120 },
   )();

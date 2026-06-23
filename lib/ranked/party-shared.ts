@@ -98,6 +98,11 @@ export type RankedMatchSessionView = {
   youAccepted: boolean;
   yourTeam: "A" | "B" | null;
   isCaptain: boolean;
+  scoreTeamA?: number | null;
+  scoreTeamB?: number | null;
+  winnerTeam?: string | null;
+  livePhase?: string | null;
+  liveRound?: number | null;
 };
 
 export type RankedMapVoteOption = {

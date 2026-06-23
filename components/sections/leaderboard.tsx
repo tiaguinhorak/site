@@ -28,7 +28,52 @@ export function Leaderboard({
 }) {
   const t = useTranslations("marketing");
   const { authenticated, steamLinked } = useAuthSession();
-  const [top, ...rest] = leaderboard;
+  const top = leaderboard[0];
+  const rest = top ? leaderboard.slice(1) : [];
+
+  if (!top) {
+    return (
+      <section
+        id={embedded ? undefined : "ranking"}
+        className={cn(embedded ? "" : "relative scroll-mt-24 py-24")}
+      >
+        <div className={cn(embedded ? "" : "mx-auto max-w-6xl px-4 sm:px-6")}>
+          {!embedded && (
+            <SectionHeading
+              eyebrow={t("rankingEyebrow")}
+              title={
+                <>
+                  {t("rankingTitleA")}{" "}
+                  <span className="text-gradient">{t("rankingTitleB")}</span> {t("rankingTitleC")}
+                </>
+              }
+              description={t("rankingDesc")}
+            />
+          )}
+          <div
+            className={cn(
+              "rounded-card glass border border-border p-10 text-center",
+              !embedded && "mt-12",
+            )}
+          >
+            <Medal className="mx-auto h-10 w-10 text-muted" aria-hidden />
+            <p className="mt-4 text-muted">{t("leaderboardEmpty")}</p>
+            <div className="mt-6 flex justify-center">
+              {authenticated ? (
+                <ButtonLink href="/dashboard/ranked" variant="primary" size="sm">
+                  {t("viewDashboard")}
+                </ButtonLink>
+              ) : (
+                <ButtonLink href="/login" variant="primary" size="sm">
+                  {t("loginForRank")}
+                </ButtonLink>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section

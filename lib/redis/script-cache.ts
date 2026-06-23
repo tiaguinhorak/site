@@ -19,7 +19,10 @@ export async function invalidateCatalogRedisKeys(): Promise<void> {
 
   try {
     await client.connect();
-    await client.del(`${CACHE_PREFIX}catalog:ready`, `${CACHE_PREFIX}catalog:total`);
+    await client.del([
+      `${CACHE_PREFIX}catalog:ready`,
+      `${CACHE_PREFIX}catalog:total`,
+    ]);
   } catch {
     // Redis optional in local dev
   } finally {

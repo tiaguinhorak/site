@@ -42,6 +42,7 @@ import {
 } from "@/lib/ranked/polling";
 import {
   useRealtimeInvalidate,
+  useRealtimeMatchLive,
   useRealtimeStatus,
 } from "@/components/providers/realtime-provider";
 import { invalidateScopeToRefreshTier } from "@/lib/realtime/client-scope";
@@ -352,6 +353,20 @@ export function RankedPartyProvider({ children }: { children: ReactNode }) {
     Boolean(userId),
   );
 
+  useRealtimeMatchLive((event) => {
+    if (sessionRef.current?.id !== event.sessionId) return;
+    setSession((prev) => {
+      if (!prev || prev.id !== event.sessionId) return prev;
+      return {
+        ...prev,
+        scoreTeamA: event.scoreTeamA,
+        scoreTeamB: event.scoreTeamB,
+        livePhase: event.phase,
+        liveRound: event.round,
+      };
+    });
+  }, Boolean(userId));
+
   useEffect(() => {
     if (!userId) return;
 
@@ -364,7 +379,8 @@ export function RankedPartyProvider({ children }: { children: ReactNode }) {
 
       if (realtimeConnected) {
         const needsSession =
-          isActiveRankedSession(sessionRef.current) ||
+          (isActiveRankedSession(sessionRef.current) &&
+            sessionRef.current?.status !== "live") ||
           queueRef.current?.searching ||
           postMatchRef.current;
         if (needsSession) {
@@ -393,9 +409,11 @@ export function RankedPartyProvider({ children }: { children: ReactNode }) {
     document.addEventListener("visibilitychange", onVisibility);
 
     const intervalMs = realtimeConnected
-      ? isActiveRankedSession(session) || queue?.searching || postMatch
-        ? 4000
-        : null
+      ? sessionRef.current?.status === "live"
+        ? null
+        : isActiveRankedSession(sessionRef.current) || queueRef.current?.searching || postMatchRef.current
+          ? 12000
+          : null
       : rankedPollIntervalMs(
           onPlayPage,
           sessionRef.current,

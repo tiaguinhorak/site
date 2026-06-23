@@ -43,3 +43,45 @@ export function alternateSteam2(steam2: string): string | null {
   if (trimmed.startsWith("STEAM_1:")) return `STEAM_0:${trimmed.slice(8)}`;
   return null;
 }
+
+/** Normalize STEAM_X:Y:Z to a comparable account id (works across X variants). */
+export function steamIdToAccountId(steamId: string): number | null {
+  const trimmed = steamId.trim();
+  if (isSteamId64(trimmed)) {
+    return Number(BigInt(trimmed) - STEAM_ID64_BASE);
+  }
+  const legacy = trimmed.match(/^STEAM_[0-5]:([0-1]):(\d+)$/i);
+  if (legacy) {
+    return Number(legacy[2]) * 2 + Number(legacy[1]);
+  }
+  return null;
+}
+
+export function steamIdsMatch(a: string, b: string): boolean {
+  const idA = steamIdToAccountId(a);
+  const idB = steamIdToAccountId(b);
+  if (idA != null && idB != null) return idA === idB;
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+/** All STEAM_X:Y:Z variants for the same account (X is cosmetic). */
+export function steamIdVariants(steamId: string): string[] {
+  const accountId = steamIdToAccountId(steamId);
+  if (accountId == null) return [steamId.trim()];
+
+  const z = Math.floor(accountId / 2);
+  const y = accountId % 2;
+  const variants = new Set<string>();
+  variants.add(steamId.trim());
+  const steam0 = `STEAM_0:${y}:${z}`;
+  const steam1 = `STEAM_1:${y}:${z}`;
+  variants.add(steam0);
+  variants.add(steam1);
+  const alt0 = alternateSteam2(steam0);
+  const alt1 = alternateSteam2(steam1);
+  if (alt0) variants.add(alt0);
+  if (alt1) variants.add(alt1);
+  const steam64 = steam2ToSteamId64(steam0);
+  if (steam64) variants.add(steam64);
+  return [...variants];
+}

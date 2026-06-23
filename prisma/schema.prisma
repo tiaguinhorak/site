@@ -82,6 +82,11 @@ model User {
   rankedQueueDodges     Int       @default(0)
   rankedRestrictedUntil DateTime?
   rankedLastDodgeAt     DateTime?
+  rankedWins            Int       @default(0)
+  rankedLosses          Int       @default(0)
+  rankedKills           Int       @default(0)
+  rankedDeaths          Int       @default(0)
+  competitivePoints     Int       @default(0)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -98,6 +103,7 @@ model User {
   rankedPartyMessages  RankedPartyMessage[]
   rankedMatchAcceptances RankedMatchAcceptance[]
   rankedMapVotes       RankedMapVote[]
+  rankedMatchPlayerStats RankedMatchPlayerStat[]
   lobbyJoinQueues      LobbyJoinQueue[]
   rankedQueueEntries   RankedQueueEntry[] @relation("RankedQueueLeader")
   notificationPreferences UserNotificationPreferences?
@@ -105,6 +111,7 @@ model User {
 
   @@index([rank])
   @@index([elo])
+  @@index([competitivePoints])
 }
 
 model Punishment {
@@ -345,9 +352,16 @@ model RankedMatchSession {
   serverHost  String?
   serverPort  Int?
   vetoData    Json?
-  voteEndsAt  DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  voteEndsAt       DateTime?
+  scoreTeamA       Int?
+  scoreTeamB       Int?
+  winnerTeam       String?
+  liveStartedAt    DateTime?
+  matchFinishedAt  DateTime?
+  durationSec      Int?
+  resultSyncedAt   DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   challenge   RankedChallenge?        @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   lobbyRoom   LobbyRoom?              @relation(fields: [lobbyRoomId], references: [id], onDelete: SetNull)
@@ -355,6 +369,7 @@ model RankedMatchSession {
   partyB      RankedParty             @relation("MatchPartyB", fields: [partyBId], references: [id], onDelete: Cascade)
   acceptances RankedMatchAcceptance[]
   mapVotes    RankedMapVote[]
+  playerStats RankedMatchPlayerStat[]
 
   @@index([partyAId])
   @@index([partyBId])
@@ -389,6 +404,29 @@ model RankedMapVote {
 
   @@unique([sessionId, userId])
   @@index([sessionId])
+}
+
+model RankedMatchPlayerStat {
+  id        String   @id @default(cuid())
+  sessionId String
+  userId    String?
+  steamId   String
+  team      String
+  kills     Int      @default(0)
+  deaths    Int      @default(0)
+  assists   Int      @default(0)
+  score     Int      @default(0)
+  mvp       Int      @default(0)
+  won       Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  session RankedMatchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([sessionId, steamId])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([steamId])
 }
 
 model LobbyMember {

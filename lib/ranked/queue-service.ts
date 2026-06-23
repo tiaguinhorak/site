@@ -316,6 +316,11 @@ export async function joinRankedQueue(userId: string) {
   return getRankedQueueStatus(userId);
 }
 
+/** Try to form a new ranked match after parties return to queue (e.g. post-match). */
+export async function triggerQueueMatchmaking(): Promise<void> {
+  await tryFormMatchFromQueue();
+}
+
 export async function leaveRankedQueue(userId: string) {
   const membership = await prisma.rankedPartyMember.findUnique({
     where: { userId },

@@ -166,6 +166,7 @@
     "kdRatio": "K/D Ratio",
     "points": "Puntos",
     "yourPosition": "Tu posición:",
+    "leaderboardEmpty": "Aún no hay jugadores en el ranking. Juega ranked para aparecer aquí.",
     "viewDashboard": "Ver en el panel",
     "linkSteam": "Vincular Steam",
     "loginForRank": "Inicia sesión para ver tu rango",
