@@ -8,6 +8,7 @@ import {
   type CatalogRowFromApi,
 } from "@/lib/inventory/csgo-api-index";
 import { invalidateCatalogReadyCache } from "@/lib/inventory/ensure-catalog-synced";
+import { triggerWeaponsCfgSyncOnVps } from "@/lib/inventory/trigger-weapons-cfg-sync";
 import { wsCatalogKey } from "@/lib/inventory/ws-allowlist";
 
 export type CatalogSkinSource = "sync" | "admin" | "import";
@@ -106,6 +107,11 @@ async function upsertCatalogRow(input: UpsertInput, apiRow: CatalogRowFromApi | 
   return serializeRow(row);
 }
 
+async function afterCatalogMutation(): Promise<void> {
+  await invalidateCatalogReadyCache();
+  triggerWeaponsCfgSyncOnVps();
+}
+
 export async function upsertCatalogSkinFromPaintkit(input: UpsertInput) {
   const apiRow = await lookupCatalogFromApi(input.weaponId, input.paintkit);
   if (!apiRow && !input.paintkitName) {
@@ -114,7 +120,7 @@ export async function upsertCatalogSkinFromPaintkit(input: UpsertInput) {
     );
   }
   const row = await upsertCatalogRow(input, apiRow);
-  await invalidateCatalogReadyCache();
+  await afterCatalogMutation();
   return row;
 }
 
@@ -142,7 +148,7 @@ export async function importWeaponSkinsFromApi(
     imported += 1;
   }
 
-  await invalidateCatalogReadyCache();
+  await afterCatalogMutation();
   return { imported, weaponId };
 }
 
@@ -206,13 +212,13 @@ export async function updateCatalogSkinAdmin(
       ...(data.paintkitName !== undefined ? { paintkitName: data.paintkitName } : {}),
     },
   });
-  await invalidateCatalogReadyCache();
+  await afterCatalogMutation();
   return serializeRow(row);
 }
 
 export async function deleteCatalogSkinAdmin(id: string) {
   await prisma.csgoSkinCatalog.delete({ where: { id } });
-  await invalidateCatalogReadyCache();
+  await afterCatalogMutation();
   return { ok: true };
 }
 
