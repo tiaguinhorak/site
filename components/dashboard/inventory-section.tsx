@@ -821,7 +821,7 @@ export function InventoryPreview() {
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {equipped.slice(0, 6).map((item) => (
-        <div key={item.catalogSkinId} className="rounded-xl glass p-3">
+        <div key={`${item.team}-${item.catalogSkinId}`} className="rounded-xl glass p-3">
           <InventoryItemArt imageUrl={item.imageUrl} accent={item.accent} className="h-12" />
           <p className="mt-2 truncate text-sm font-semibold text-foreground">{item.name}</p>
         </div>
