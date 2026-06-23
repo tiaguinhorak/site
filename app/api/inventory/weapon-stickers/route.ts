@@ -9,14 +9,14 @@ import {
 } from "@/lib/inventory/player-weapon-stickers";
 import { listEnabledStickersForPicker } from "@/lib/inventory/sticker-catalog-admin";
 import { pushPlayerStickersToGameServer } from "@/lib/inventory/push-stickers-to-game-server";
+import { getSessionUserId } from "@/lib/auth/session-user";
 import {
   applyApiGuards,
   parseJsonBody,
-  requireSession,
 } from "@/lib/security/api-guard";
 import { RATE_LIMITS } from "@/lib/security/constants";
 import { getRequestLocale, apiErrorMessage } from "@/lib/i18n/server";
-import { zodErrorResponse } from "@/lib/i18n/api-route";
+import { jsonErrorKey, zodErrorResponse } from "@/lib/i18n/api-route";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
 
 const saveSchema = z.object({
@@ -38,16 +38,10 @@ async function requireUserSteamId(userId: string): Promise<string> {
 }
 
 export async function GET(request: NextRequest) {
-  const guardError = await applyApiGuards(
-    request,
-    "inventory-weapon-stickers",
-    RATE_LIMITS.profile.limit,
-    RATE_LIMITS.profile.windowMs,
-  );
-  if (guardError) return guardError;
-
-  const { session, error: sessionError } = requireSession(request);
-  if (sessionError) return sessionError;
+  const userId = await getSessionUserId(request);
+  if (!userId) {
+    return jsonErrorKey(request, 401, "unauthorized");
+  }
 
   const params = request.nextUrl.searchParams;
   const picker = params.get("picker") === "1";
@@ -75,7 +69,7 @@ export async function GET(request: NextRequest) {
   const locale = await getRequestLocale(request);
 
   try {
-    const steamId = await requireUserSteamId(session!.userId);
+    const steamId = await requireUserSteamId(userId);
     const stickers = await getPlayerWeaponStickers(steamId, weaponId, team);
     return NextResponse.json({ weaponId, team, ...stickers });
   } catch (err) {
@@ -98,12 +92,14 @@ export async function PUT(request: NextRequest) {
   );
   if (guardError) return guardError;
 
-  const { session, error: sessionError } = requireSession(request);
-  if (sessionError) return sessionError;
-
   const locale = await getRequestLocale(request);
   const { data, error: parseError } = await parseJsonBody(request);
   if (parseError) return parseError;
+
+  const userId = await getSessionUserId(request);
+  if (!userId) {
+    return jsonErrorKey(request, 401, "unauthorized");
+  }
 
   const parsed = saveSchema.safeParse(data);
   if (!parsed.success) {
@@ -111,7 +107,7 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const steamId = await requireUserSteamId(session!.userId);
+    const steamId = await requireUserSteamId(userId);
     const result = await savePlayerWeaponStickers(
       steamId,
       parsed.data.weaponId,
