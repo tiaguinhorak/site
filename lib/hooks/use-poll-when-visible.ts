@@ -17,7 +17,11 @@ export function usePollWhenVisible(
 
     async function tick() {
       if (cancelled || document.visibilityState !== "visible") return;
-      await callbackRef.current();
+      try {
+        await callbackRef.current();
+      } catch {
+        /* network / aborted */
+      }
     }
 
     void tick();

@@ -67,28 +67,30 @@ export function useNotifications(options?: {
       return;
     }
 
-    const res = await fetch(`/api/notifications${buildQueryString(query)}`, {
-      credentials: "same-origin",
-    });
-    if (res.status === 401) {
-      setNotifications([]);
+    try {
+      const res = await fetch(`/api/notifications${buildQueryString(query)}`, {
+        credentials: "same-origin",
+      });
+      if (res.status === 401) {
+        setNotifications([]);
+        return;
+      }
+      if (!res.ok) return;
+
+      const data = await res.json();
+      setNotifications(data.notifications ?? []);
+      setMeta({
+        total: data.total ?? 0,
+        unreadTotal: data.unreadTotal ?? 0,
+        page: data.page ?? 1,
+        limit: data.limit ?? 15,
+        hasMore: data.hasMore ?? false,
+      });
+    } catch {
+      /* network / aborted — ignore poll errors */
+    } finally {
       setLoading(false);
-      return;
     }
-    if (!res.ok) {
-      setLoading(false);
-      return;
-    }
-    const data = await res.json();
-    setNotifications(data.notifications ?? []);
-    setMeta({
-      total: data.total ?? 0,
-      unreadTotal: data.unreadTotal ?? 0,
-      page: data.page ?? 1,
-      limit: data.limit ?? 15,
-      hasMore: data.hasMore ?? false,
-    });
-    setLoading(false);
   }, [enabled, query?.page, query?.limit, query?.type, query?.read]);
 
   useEffect(() => {
