@@ -1,11 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Package, Search, Trash2 } from "lucide-react";
+import { Loader2, Package, Search, Send, Trash2 } from "lucide-react";
+import { InventoryItemArt } from "@/components/dashboard/inventory-item-art";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { secureApi } from "@/lib/api/client";
 import { confirmPresets } from "@/lib/confirm-presets";
+import { rarityAccent } from "@/lib/inventory/catalog-categories";
+import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
 import { cn } from "@/lib/utils";
 
 type GrantedSkin = {
@@ -14,6 +17,7 @@ type GrantedSkin = {
   weaponId: string;
   category: string;
   rarity: string;
+  accent: string;
   imageUrl: string | null;
 };
 
@@ -25,7 +29,12 @@ type CatalogSearchItem = {
   paintkit: number;
   rarity: string;
   enabled: boolean;
+  imageUrl: string | null;
 };
+
+function skinDisplayName(item: { weaponName: string; paintkitName: string }): string {
+  return `${item.weaponName} | ${item.paintkitName}`;
+}
 
 export function AdminUserInventoryPanel({
   userId,
@@ -95,7 +104,7 @@ export function AdminUserInventoryPanel({
       onError(result.error);
       return;
     }
-    onSuccess(`Skin concedida: ${name}`);
+    onSuccess(`Skin enviada: ${name}`);
     setSearch("");
     setResults([]);
     await loadGranted();
@@ -121,7 +130,7 @@ export function AdminUserInventoryPanel({
       <div className="rounded-xl border border-border p-4 space-y-3">
         <h3 className="flex items-center gap-2 font-display font-bold">
           <Search className="h-4 w-4 text-primary" />
-          Conceder skin a {nickname}
+          Enviar skin para {nickname}
         </h3>
         <div className="flex gap-2">
           <Input
@@ -140,30 +149,43 @@ export function AdminUserInventoryPanel({
           </Button>
         </div>
         {results.length > 0 && (
-          <ul className="max-h-64 space-y-2 overflow-y-auto">
-            {results.map((item) => (
-              <li
-                key={item.id}
-                className="flex items-center justify-between gap-2 rounded-lg border border-border/60 p-2 text-sm"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-medium">
-                    {item.weaponName} | {item.paintkitName}
-                  </p>
-                  <p className="text-xs text-muted">{item.weaponId} · pk {item.paintkit}</p>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={actingId === item.id}
-                  onClick={() =>
-                    void grantSkin(item.id, `${item.weaponName} | ${item.paintkitName}`)
-                  }
+          <ul className="max-h-80 space-y-2 overflow-y-auto">
+            {results.map((item) => {
+              const name = skinDisplayName(item);
+              const accent = rarityAccent(item.rarity);
+              return (
+                <li
+                  key={item.id}
+                  className="flex items-center gap-3 rounded-lg border border-border/60 p-2 text-sm"
                 >
-                  {actingId === item.id ? "…" : "Dar"}
-                </Button>
-              </li>
-            ))}
+                  <InventoryItemArt
+                    imageUrl={item.imageUrl}
+                    accent={accent}
+                    className="h-14 w-16 shrink-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{name}</p>
+                    <p className="text-xs text-muted">{item.weaponId} · pk {item.paintkit}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={actingId === item.id}
+                    confirm={confirmPresets.grantSkinToUser(nickname, name)}
+                    onClick={() => void grantSkin(item.id, name)}
+                  >
+                    {actingId === item.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <>
+                        <Send className="h-3.5 w-3.5" />
+                        Enviar
+                      </>
+                    )}
+                  </Button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
@@ -171,24 +193,29 @@ export function AdminUserInventoryPanel({
       <div className="rounded-xl border border-border p-4">
         <h3 className="flex items-center gap-2 font-display font-bold">
           <Package className="h-4 w-4 text-primary" />
-          Skins concedidas ({granted.length})
+          Skins no inventário ({granted.length})
         </h3>
         {loading ? (
           <div className="flex justify-center py-8 text-muted">
             <Loader2 className="h-5 w-5 animate-spin" />
           </div>
         ) : granted.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">Nenhuma skin concedida por admin.</p>
+          <p className="mt-3 text-sm text-muted">Nenhuma skin enviada por admin.</p>
         ) : (
           <ul className="mt-3 max-h-80 space-y-2 overflow-y-auto">
             {granted.map((item) => (
               <li
                 key={item.catalogSkinId}
                 className={cn(
-                  "flex items-center justify-between gap-2 rounded-lg border border-border/60 p-2 text-sm",
+                  "flex items-center gap-3 rounded-lg border border-border/60 p-2 text-sm",
                 )}
               >
-                <div className="min-w-0">
+                <InventoryItemArt
+                  imageUrl={item.imageUrl}
+                  accent={item.accent}
+                  className="h-14 w-16 shrink-0"
+                />
+                <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{item.name}</p>
                   <p className="text-xs text-muted">{item.category} · {item.rarity}</p>
                 </div>

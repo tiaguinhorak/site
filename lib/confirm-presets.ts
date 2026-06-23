@@ -192,6 +192,13 @@ export const confirmPresets = {
     cancelLabel: "Cancelar",
     tone: "warning" as const,
   }),
+  grantSkinToUser: (nickname: string, skinName: string) => ({
+    title: `Enviar skin a ${nickname}?`,
+    description: `${skinName} será adicionada ao inventário do jogador. Ele precisará equipar no painel para usar no servidor.`,
+    confirmLabel: "Enviar",
+    cancelLabel: "Cancelar",
+    tone: "default" as const,
+  }),
   revokePunishment: (type: string) => ({
     title: `Revogar ${type}?`,
     description: "A punição será marcada como revogada no histórico.",
