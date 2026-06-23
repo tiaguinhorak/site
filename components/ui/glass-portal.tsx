@@ -92,7 +92,7 @@ export function GlassPortal({
         onClick={onClose}
       />
       <div
-        className={`glass-menu fixed z-[90] overflow-hidden rounded-2xl shadow-2xl ${panelClassName}`}
+        className={`glass-menu fixed z-[90] overflow-visible rounded-2xl shadow-2xl ${panelClassName}`}
         style={style}
       >
         {children}

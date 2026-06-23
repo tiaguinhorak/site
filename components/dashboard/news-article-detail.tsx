@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2, UserRound } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { AvatarImage } from "@/components/ui/avatar-image";
 import { cn } from "@/lib/utils";
 
 type Article = {
@@ -126,17 +127,12 @@ export function NewsArticleDetail({ slug }: Props) {
 
         {article.authorNickname && (
           <div className="mt-6 flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[linear-gradient(135deg,var(--primary-soft),var(--primary))] text-white">
-              {article.authorAvatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={article.authorAvatarUrl}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <UserRound className="h-5 w-5" />
-              )}
+            <div className="flex h-10 w-10 shrink-0 overflow-hidden rounded-full ring-2 ring-[color-mix(in_srgb,var(--primary)_25%,transparent)]">
+              <AvatarImage
+                src={article.authorAvatarUrl ?? undefined}
+                size={40}
+                className="rounded-full"
+              />
             </div>
             <div>
               <p className="text-xs text-muted">{t("author")}</p>
@@ -149,7 +145,13 @@ export function NewsArticleDetail({ slug }: Props) {
 
         <div className="mt-8 border-t border-border pt-8">
           {article.body ? (
-            <div className="prose prose-invert max-w-none text-sm leading-relaxed text-foreground/90 sm:text-base">
+            <div
+              className={cn(
+                "prose max-w-none text-sm leading-relaxed sm:text-base",
+                "prose-headings:text-foreground prose-p:text-foreground/90",
+                "dark:prose-invert",
+              )}
+            >
               {article.body.split(/\n\n+/).map((paragraph, i) => (
                 <p key={i} className="mb-4 last:mb-0">{paragraph}</p>
               ))}

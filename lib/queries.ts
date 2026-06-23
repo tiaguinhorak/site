@@ -35,13 +35,20 @@ export async function getUserNotifications(userId: string) {
   });
 }
 
+const newsAuthorSelect = {
+  nickname: true,
+  avatarUrl: true,
+  avatarPreset: true,
+  steamAvatarUrl: true,
+} as const;
+
 export async function getNewsArticles() {
   return prisma.newsArticle.findMany({
     where: { archivedAt: null },
     orderBy: { publishedAt: "desc" },
     take: 100,
     include: {
-      author: { select: { nickname: true, avatarUrl: true } },
+      author: { select: newsAuthorSelect },
     },
   });
 }
@@ -50,7 +57,7 @@ export async function getNewsArticleBySlug(slug: string) {
   return prisma.newsArticle.findFirst({
     where: { slug, archivedAt: null },
     include: {
-      author: { select: { nickname: true, avatarUrl: true } },
+      author: { select: newsAuthorSelect },
     },
   });
 }

@@ -143,7 +143,7 @@ export function AccountDropdown({ className }: Props) {
             type="button"
             variant="ghost"
             size="sm"
-            className="w-full justify-center gap-2 normal-case tracking-normal text-rose-300"
+            className="w-full justify-center gap-2 normal-case tracking-normal text-rose-600 dark:text-rose-300"
             confirm={confirmPresets.logout}
             onClick={async () => {
               setOpen(false);

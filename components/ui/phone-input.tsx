@@ -111,7 +111,7 @@ function CountryDialDropdown({
 
       {open && (
         <div
-          className="absolute left-0 z-50 mt-2 w-[min(100vw-2rem,320px)] overflow-hidden rounded-xl border border-border glass-menu shadow-xl"
+          className="absolute left-0 z-[200] mt-2 w-[min(100vw-2rem,320px)] overflow-hidden rounded-xl border border-border glass-menu shadow-xl"
           role="listbox"
         >
           <div className="border-b border-border p-2">

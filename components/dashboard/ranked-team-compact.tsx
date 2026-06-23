@@ -24,6 +24,7 @@ import type { RankedPartyMemberView, RankedPartyView } from "@/lib/ranked/party-
 import { AvatarImage } from "@/components/ui/avatar-image";
 import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
 import { cn } from "@/lib/utils";
+import { textWarningClass, textWarningSoftClass } from "@/lib/ui/theme-surfaces";
 
 function CompactSlot({
   player,
@@ -142,7 +143,7 @@ export function RankedTeamCompact({
             )}
           >
             {team.visibility === "private" ? (
-              <Lock className="h-3.5 w-3.5 shrink-0 text-amber-300" />
+              <Lock className={cn("h-3.5 w-3.5 shrink-0", textWarningSoftClass)} />
             ) : (
               <Globe className="h-3.5 w-3.5 shrink-0 text-emerald-300" />
             )}
@@ -254,7 +255,7 @@ export function RankedTeamCompact({
           {t("ready")}
         </p>
       ) : (
-        <p className="mt-4 text-sm text-amber-200">
+        <p className={cn("mt-4 text-sm", textWarningClass)}>
           {t("need", { count: RANKED_TEAM_SIZE - team.memberCount })}
         </p>
       )}

@@ -44,7 +44,7 @@ import { cn } from "@/lib/utils";
 const planBadge = {
   free: "bg-muted/20 text-muted",
   premium: "bg-primary/20 text-primary",
-  elite: "bg-amber-500/20 text-amber-400",
+  elite: "bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-400",
 };
 
 type ProfileTab = "general" | "security" | "steam" | "notifications";
@@ -257,7 +257,7 @@ export function ProfileSection() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="overflow-hidden rounded-card glass-strong"
+        className="rounded-card glass-strong"
       >
         <div className="relative p-6 sm:p-8">
           <div
@@ -359,7 +359,7 @@ export function ProfileSection() {
           {!profile.anticheatInstalled && (
             <div className="mt-6 flex flex-col items-start justify-between gap-3 rounded-xl glass border border-amber-400/30 p-4 sm:flex-row sm:items-center">
               <div className="flex items-center gap-3">
-                <ShieldAlert className="h-5 w-5 shrink-0 text-amber-400" />
+                <ShieldAlert className="h-5 w-5 shrink-0 text-amber-700 dark:text-amber-400" />
                 <p className="text-sm text-foreground">
                   {t("anticheatNotDetected")}
                 </p>
@@ -379,7 +379,7 @@ export function ProfileSection() {
         </div>
       </motion.div>
 
-      <div className="overflow-hidden rounded-card glass-strong">
+      <div className="rounded-card glass-strong">
         <div className="border-b border-border px-4 sm:px-6">
           <nav className="flex gap-1 overflow-x-auto py-3" aria-label={t("settingsAria")}>
             {tabs.map((tab) => {
@@ -437,7 +437,7 @@ export function ProfileSection() {
                 hideSave
               />
               {hasUnsavedChanges && (
-                <p className="text-sm text-amber-400/90">{tForm("unsavedHint")}</p>
+                <p className="text-sm text-amber-800 dark:text-amber-400/90">{tForm("unsavedHint")}</p>
               )}
               <div className="flex justify-end border-t border-border pt-6">
                 <Button

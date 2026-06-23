@@ -7,6 +7,7 @@ import type { RankedPartyMemberView, RankedPartyView } from "@/lib/ranked/party-
 import { AvatarImage } from "@/components/ui/avatar-image";
 import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
 import { cn } from "@/lib/utils";
+import { textWarningSoftClass } from "@/lib/ui/theme-surfaces";
 
 const RANKED_SLOTS = 5;
 
@@ -103,7 +104,7 @@ export function RankedRoomCard({
       <div className="min-w-0">
         <h3 className="flex items-center gap-1.5 truncate font-display text-base font-bold text-foreground">
           {room.visibility === "private" && (
-            <Lock className="h-3.5 w-3.5 shrink-0 text-amber-300" aria-label={t("privateAria")} />
+            <Lock className={cn("h-3.5 w-3.5 shrink-0", textWarningSoftClass)} aria-label={t("privateAria")} />
           )}
           <span className="truncate">{room.name}</span>
         </h3>
@@ -112,7 +113,7 @@ export function RankedRoomCard({
           {room.isMember && ` · ${t("youAreHere")}`}
         </p>
         {(room.minLevel > 1 || room.maxLevel < 20) && (
-          <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-300/80">
+          <p className={cn("mt-0.5 text-[10px] font-semibold uppercase tracking-wider", textWarningSoftClass)}>
             {t("levelRange", { min: room.minLevel, max: room.maxLevel })}
           </p>
         )}

@@ -6,6 +6,7 @@ import {
   parseArticleTranslations,
 } from "@/lib/i18n-content";
 import { resolveArticleForLocale } from "@/lib/i18n/auto-resolve-content";
+import { resolveUserAvatarUrl } from "@/lib/profile/avatar";
 import { formatNewsCategory } from "@/lib/i18n/news-category";
 import { defaultLocale, isLocale, LOCALE_COOKIE, type Locale } from "@/lib/i18n";
 
@@ -32,7 +33,14 @@ export async function GET(
   const article = await prisma.newsArticle.findUnique({
     where: { slug },
     include: {
-      author: { select: { nickname: true, avatarUrl: true } },
+      author: {
+        select: {
+          nickname: true,
+          avatarUrl: true,
+          avatarPreset: true,
+          steamAvatarUrl: true,
+        },
+      },
     },
   });
 
@@ -69,7 +77,9 @@ export async function GET(
       imageUrl: article.imageUrl ?? undefined,
       featured: article.featured,
       authorNickname: article.author?.nickname ?? null,
-      authorAvatarUrl: article.author?.avatarUrl ?? null,
+      authorAvatarUrl: article.author
+        ? resolveUserAvatarUrl(article.author)
+        : null,
       publishedAt: article.publishedAt.toISOString(),
     },
   });

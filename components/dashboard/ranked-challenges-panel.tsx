@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useRankedParty } from "@/components/providers/ranked-party-provider";
 import type { RankedPartyView } from "@/lib/ranked/party-shared";
 import { cn } from "@/lib/utils";
+import { textWarningClass, textWarningPanelClass, textWarningSoftClass } from "@/lib/ui/theme-surfaces";
 
 function OpponentRow({
   room,
@@ -110,7 +111,7 @@ export function RankedChallengesPanel({ className }: { className?: string }) {
       </header>
 
       {!partyFull && (
-        <p className="mt-3 rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-100">
+        <p className={cn("mt-3 rounded-xl border px-3 py-2.5 text-xs", textWarningPanelClass)}>
           <Users className="mb-1 inline h-3.5 w-3.5 mr-1" />
           {t("waitingFull", { count: party.slots - party.memberCount })}
         </p>
@@ -133,7 +134,7 @@ export function RankedChallengesPanel({ className }: { className?: string }) {
                 className="rounded-xl border border-primary/30 bg-primary/5 p-3"
               >
                 <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                  <Crown className="h-3.5 w-3.5 text-amber-300" />
+                  <Crown className={cn("h-3.5 w-3.5", textWarningSoftClass)} />
                   {c.fromLeaderNickname}
                 </p>
                 <p className="mt-0.5 text-[11px] text-muted">{t("wantPlay")}</p>
@@ -177,7 +178,7 @@ export function RankedChallengesPanel({ className }: { className?: string }) {
 
       {isLeader && hasOutgoing && (
         <div className="mt-4">
-          <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-300">
+          <h4 className={cn("flex items-center gap-2 text-xs font-bold uppercase tracking-wider", textWarningSoftClass)}>
             <Send className="h-3.5 w-3.5" />
             {t("outgoing", { count: outgoingChallenges.length })}
           </h4>
@@ -188,7 +189,7 @@ export function RankedChallengesPanel({ className }: { className?: string }) {
                 className="flex items-center justify-between gap-2 rounded-xl border border-border px-3 py-2.5 text-sm"
               >
                 <span className="truncate font-medium">{c.toLeaderNickname}</span>
-                <span className="inline-flex shrink-0 items-center gap-1 text-[10px] text-amber-300">
+                <span className={cn("inline-flex shrink-0 items-center gap-1 text-[10px]", textWarningSoftClass)}>
                   <Loader2 className="h-3 w-3 animate-spin" />
                   {t("pending")}
                 </span>

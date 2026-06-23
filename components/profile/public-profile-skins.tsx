@@ -12,6 +12,11 @@ import { SkinRarityLine } from "@/components/skins/skin-rarity-line";
 import type { InventoryCategoryKey } from "@/lib/profile";
 import type { PublicLoadoutSide, PublicSkinGroup } from "@/lib/inventory/get-public-player-skins";
 import { cn } from "@/lib/utils";
+import {
+  chipInactiveHoverClass,
+  surfaceSubtleClass,
+  teamLabelClass,
+} from "@/lib/ui/theme-surfaces";
 
 const CATEGORY_ICON: Record<"all" | InventoryCategoryKey, typeof LayoutGrid> = {
   all: LayoutGrid,
@@ -54,13 +59,10 @@ function SideSkins({
   const teamLabel = side.team === "T" ? t("teamT") : t("teamCT");
 
   return (
-    <div className="rounded-xl border border-white/5 bg-black/15 p-4 sm:p-5">
+    <div className={cn("rounded-xl border border-border p-4 sm:p-5", surfaceSubtleClass)}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h3
-          className={cn(
-            "text-xs font-bold uppercase tracking-wider",
-            side.team === "T" ? "text-amber-300" : "text-sky-300",
-          )}
+          className={cn("text-xs font-bold uppercase tracking-wider", teamLabelClass(side.team))}
         >
           {teamLabel}
         </h3>
@@ -88,7 +90,9 @@ function SideSkins({
               <span
                 className={cn(
                   "rounded-full px-1.5 text-[10px] font-bold",
-                  isActive ? "bg-black/20" : "bg-white/10",
+                  isActive
+                    ? "bg-[color-mix(in_srgb,var(--foreground)_12%,transparent)] dark:bg-black/20"
+                    : "bg-[color-mix(in_srgb,var(--foreground)_8%,transparent)] dark:bg-white/10",
                 )}
               >
                 {tab.count}

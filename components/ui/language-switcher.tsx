@@ -152,7 +152,9 @@ export function LanguageSwitcher({ variant = "menu", className }: Props) {
         />
       </button>
       {open && !pending && (
-        <div className="absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-xl border border-border glass-strong p-1 shadow-2xl">
+        <div
+          className="absolute right-0 z-[200] mt-2 w-52 overflow-hidden rounded-xl border border-border glass-strong p-1 shadow-2xl"
+        >
           {locales.map((locale) => (
             <button
               key={locale}

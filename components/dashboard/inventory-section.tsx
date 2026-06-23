@@ -22,6 +22,13 @@ import { Button } from "@/components/ui/button";
 import { type InventoryCategoryKey } from "@/lib/profile";
 import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { cn } from "@/lib/utils";
+import {
+  chipInactiveHoverClass,
+  surfaceInputClass,
+  surfaceSubtleClass,
+  teamPillClass,
+  textWarningClass,
+} from "@/lib/ui/theme-surfaces";
 import { InventoryItemArt } from "@/components/dashboard/inventory-item-art";
 import {
   SkinPreviewModal,
@@ -148,7 +155,7 @@ function EquippedSidebar({
         </div>
 
         {!loadout.steamLinked ? (
-          <p className="px-4 py-4 text-xs text-amber-200">{t("loadoutSteamRequired")}</p>
+          <p className={cn("px-4 py-4 text-xs", textWarningClass)}>{t("loadoutSteamRequired")}</p>
         ) : sideItems.length === 0 ? (
           <p className="px-4 py-6 text-sm text-muted">{t("loadoutEmpty")}</p>
         ) : (
@@ -156,7 +163,7 @@ function EquippedSidebar({
             {sideItems.map((item) => (
               <li
                 key={`${item.team}-${item.catalogSkinId}`}
-                className="flex items-center gap-2 rounded-xl bg-black/20 p-2 ring-1 ring-white/5"
+                className={cn("flex items-center gap-2 rounded-xl p-2", surfaceSubtleClass)}
               >
                 <InventoryItemArt
                   imageUrl={item.imageUrl}
@@ -456,11 +463,7 @@ export function InventorySection() {
                     onClick={() => setLoadoutTeam(team)}
                     className={cn(
                       "inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold transition-all",
-                      active
-                        ? team === "T"
-                          ? "bg-amber-500/20 text-amber-200 ring-1 ring-amber-400/40"
-                          : "bg-sky-500/20 text-sky-200 ring-1 ring-sky-400/40"
-                        : "text-muted hover:bg-white/5 hover:text-foreground",
+                      teamPillClass(team, active),
                     )}
                   >
                     {label}
@@ -476,7 +479,7 @@ export function InventorySection() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder={t("searchPlaceholder")}
-                className="w-full rounded-xl border border-white/10 bg-black/25 py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className={cn("w-full rounded-xl py-2.5 pl-10 pr-4 text-sm", surfaceInputClass)}
               />
             </div>
 
@@ -493,7 +496,7 @@ export function InventorySection() {
                       "inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
                       active
                         ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground"
-                        : "text-muted hover:bg-white/5 hover:text-foreground",
+                        : chipInactiveHoverClass,
                     )}
                   >
                     <Icon className="h-3.5 w-3.5" />
@@ -514,7 +517,7 @@ export function InventorySection() {
                     setWeaponFilter(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-sm text-foreground focus:border-primary/50 focus:outline-none"
+                  className={cn("w-full rounded-lg px-3 py-2 text-sm", surfaceInputClass)}
                 >
                   <option value="">{t("catAllWeapons")}</option>
                   {weaponOptions.map((w) => (
@@ -541,14 +544,14 @@ export function InventorySection() {
           {equipError && (
             <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/5 p-3">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
-              <p className="text-sm text-red-300">{equipError}</p>
+              <p className="text-sm text-red-700 dark:text-red-300">{equipError}</p>
             </div>
           )}
 
           {loading && items.length === 0 ? (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-56 animate-pulse rounded-card bg-white/5" />
+                <div key={i} className="h-56 animate-pulse rounded-card bg-[color-mix(in_srgb,var(--foreground)_8%,transparent)] dark:bg-white/5" />
               ))}
             </div>
           ) : loadError ? (

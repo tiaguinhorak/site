@@ -104,7 +104,7 @@ export function CountryPicker({
 
       {open && (
         <div
-          className="absolute z-50 mt-2 w-full min-w-[min(100%,280px)] overflow-hidden rounded-xl border border-border glass-menu shadow-xl"
+          className="absolute z-[200] mt-2 w-full min-w-[min(100%,280px)] overflow-hidden rounded-xl border border-border glass-menu shadow-xl"
           role="listbox"
         >
           <div className="border-b border-border p-2">

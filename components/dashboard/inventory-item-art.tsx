@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { surfaceSubtleClass } from "@/lib/ui/theme-surfaces";
 import { RemoteImage } from "@/components/ui/remote-image";
 
 type InventoryItemArtProps = {
@@ -35,7 +36,8 @@ export function InventoryItemArt({
         type="button"
         onClick={onClick}
         className={cn(
-          "relative overflow-hidden rounded-xl bg-black/25 ring-1 ring-white/5 transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+          "relative overflow-hidden rounded-xl transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+          surfaceSubtleClass,
           className,
         )}
       >
@@ -46,10 +48,7 @@ export function InventoryItemArt({
 
   return (
     <div
-      className={cn(
-        "relative overflow-hidden rounded-xl bg-black/25 ring-1 ring-white/5",
-        className,
-      )}
+      className={cn("relative overflow-hidden rounded-xl", surfaceSubtleClass, className)}
     >
       {inner}
     </div>

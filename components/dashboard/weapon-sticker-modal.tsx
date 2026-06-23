@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import { Loader2, Search, Sticker, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
+import { chipInactiveHoverClass, surfaceInputClass, surfaceSubtleClass } from "@/lib/ui/theme-surfaces";
+import { cn } from "@/lib/utils";
 
 type PickerSticker = {
   id: string;
@@ -162,7 +164,7 @@ export function WeaponStickerModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
-        className="absolute inset-0 bg-black/70"
+        className="absolute inset-0 scrim-dim"
         aria-label="Close"
         onClick={onClose}
       />
@@ -199,7 +201,7 @@ export function WeaponStickerModal({
             {slots.map((defIndex, index) => (
               <div
                 key={index}
-                className="flex items-center gap-2 rounded-xl bg-black/20 p-2 ring-1 ring-white/5"
+                className={cn("flex items-center gap-2 rounded-xl p-2", surfaceSubtleClass)}
               >
                 <span className="w-8 text-center text-xs font-medium text-muted">
                   {index + 1}
@@ -237,14 +239,14 @@ export function WeaponStickerModal({
         )}
 
         {activeSlot !== null && (
-          <div className="mt-4 rounded-xl border border-white/10 bg-black/30 p-3">
+          <div className={cn("mt-4 rounded-xl border p-3", surfaceSubtleClass)}>
             <p className="text-xs font-medium text-muted">
               {t("stickersSlotPicker", { slot: activeSlot + 1 })}
             </p>
             <div className="relative mt-2">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
               <input
-                className="w-full rounded-lg border border-white/10 bg-black/25 py-2 pl-9 pr-3 text-sm"
+                className={cn("w-full rounded-lg py-2 pl-9 pr-3 text-sm", surfaceInputClass)}
                 placeholder={t("stickersSearchPlaceholder")}
                 value={pickerSearch}
                 onChange={(e) => setPickerSearch(e.target.value)}
@@ -260,7 +262,7 @@ export function WeaponStickerModal({
                   <li key={item.id}>
                     <button
                       type="button"
-                      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-white/5"
+                      className={cn("flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left", chipInactiveHoverClass)}
                       onClick={() => selectSticker(item.defIndex, item.name)}
                     >
                       {item.imageUrl ? (
