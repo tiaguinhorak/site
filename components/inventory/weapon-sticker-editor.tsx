@@ -73,8 +73,6 @@ export function WeaponStickerEditor({
         ))}
       </div>
 
-      <p className="mt-3 text-[10px] leading-relaxed text-muted">{t("stickersHint")}</p>
-
       <div className="mt-4 flex justify-end gap-2">
         <Button type="button" disabled={state.saving} onClick={save}>
           {state.saving ? t("stickersSaving") : t("stickersSave")}

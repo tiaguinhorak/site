@@ -163,7 +163,7 @@ async function postJson(
     throw new Error(payload?.error ?? "Request failed.");
   }
   if (payload?.gameSync && !payload.gameSync.ok) {
-    throw new Error(payload.gameSync.error ?? partialSyncMessage);
+    throw new Error(partialSyncMessage);
   }
   return payload;
 }
@@ -269,8 +269,8 @@ export function InventorySection() {
             ? t("gameSyncImmediate")
             : t("gameSyncStaged"),
         );
-      } else if (payload?.gameSync?.error) {
-        throw new Error(payload.gameSync.error);
+      } else if (payload?.gameSync && !payload.gameSync.ok) {
+        throw new Error(t("gameSyncPartial"));
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("syncLoadoutFailed"));

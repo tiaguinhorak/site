@@ -153,8 +153,13 @@ export function SkinWorkspace({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
   }, [open, onClose]);
 
   const pendingSideLabel = useMemo(() => {
@@ -205,10 +210,22 @@ export function SkinWorkspace({
     stickerState.loadPicker("");
   }
 
+  function openStickersTab() {
+    setTab("stickers");
+    if (stickerState.activeSlot === null) {
+      stickerState.setActiveSlot(0);
+    }
+    stickerState.loadPicker(stickerState.pickerSearch);
+  }
+
+  const activeSlotIndex = stickerState.activeSlot;
+  const selectedStickerDefIndex =
+    activeSlotIndex !== null ? stickerState.slots[activeSlotIndex] : 0;
+
   const busy = savingAll || actionLoading || stickerState.saving;
 
   return (
-    <div className="fixed inset-0 z-140 flex items-center justify-center p-3 sm:p-6">
+    <div className="fixed inset-0 z-140 flex flex-col">
       <button
         type="button"
         className="scrim-dim absolute inset-0"
@@ -220,19 +237,19 @@ export function SkinWorkspace({
         role="dialog"
         aria-modal
         aria-labelledby="skin-workspace-title"
-        initial={{ opacity: 0, scale: 0.97, y: 16 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="relative z-10 flex h-[min(92vh,900px)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl glass-modal shadow-2xl"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative z-10 flex h-full w-full flex-col overflow-hidden glass-modal"
       >
         {/* Header */}
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border/40 px-4 py-4 sm:px-6">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border/40 px-4 py-4 sm:px-6 lg:px-8">
           <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
               {t("workspaceBrandLabel")}
             </p>
             <h2
               id="skin-workspace-title"
-              className="mt-1 font-display text-lg font-bold leading-tight text-foreground sm:text-xl"
+              className="mt-1 font-display text-lg font-bold leading-tight text-foreground sm:text-2xl"
             >
               {skin.name}
             </h2>
@@ -256,116 +273,122 @@ export function SkinWorkspace({
           </button>
         </div>
 
-        {/* Hero preview */}
-        <div className="relative shrink-0 px-4 pt-4 sm:px-6">
-          <div
-            className={cn(
-              "pointer-events-none absolute inset-x-6 top-6 h-40 rounded-full opacity-40 blur-3xl",
-              "bg-linear-to-r",
-              skin.accent,
-            )}
-            aria-hidden
-          />
-          <div className="relative overflow-hidden rounded-xl border border-border/50 glass">
-            <SkinRarityLine accent={skin.accent} rarity={skin.rarity} />
-            <div
-              className={cn(
-                "relative aspect-[16/10] bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)]",
-                !skin.imageUrl && "bg-linear-to-br",
-                !skin.imageUrl && skin.accent,
-              )}
-            >
-              {skin.imageUrl ? (
-                <RemoteImage
-                  src={skin.imageUrl}
-                  alt=""
-                  fill
-                  sizes="(max-width: 768px) 100vw, 672px"
-                  priority
-                  className="object-contain p-6 sm:p-10"
-                />
-              ) : null}
-            </div>
-            <SkinRarityLine accent={skin.accent} rarity={skin.rarity} position="bottom" />
-
-            {supportsStickers && (
-              <div className="flex items-center justify-center gap-1.5 border-t border-border/40 bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)] px-3 py-2.5">
-                {Array.from({ length: STICKER_SLOT_COUNT }).map((_, index) => {
-                  const filled = stickerState.slots[index] > 0;
-                  const active = stickerState.activeSlot === index && tab === "stickers";
-                  return (
-                    <button
-                      key={index}
-                      type="button"
-                      onClick={() => openSlot(index)}
-                      className={cn(
-                        "flex h-10 w-10 items-center justify-center rounded-lg border transition-all",
-                        surfaceSubtleClass,
-                        active && "ring-2 ring-primary/60 scale-105",
-                        filled && "border-primary/40",
-                        !filled && "opacity-70 hover:opacity-100",
-                      )}
-                      aria-label={t("stickersSlotPicker", { slot: index + 1 })}
-                    >
-                      {filled && stickerState.slotImageUrls[index] ? (
-                        <img
-                          src={stickerState.slotImageUrls[index]}
-                          alt=""
-                          className="h-7 w-7 object-contain"
-                        />
-                      ) : (
-                        <span className="text-[10px] font-bold text-muted">{index + 1}</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {skin.paintkitName && skin.weaponName && (
-            <p className="mt-2 text-center text-xs text-muted">
-              {skin.weaponName} · {skin.paintkitName}
-            </p>
-          )}
-        </div>
-
-        {/* Segment tabs */}
-        <div className="shrink-0 px-4 pt-4 sm:px-6">
-          <div className="flex rounded-xl border border-border/40 p-1 glass">
-            <button
-              type="button"
-              onClick={() => setTab("settings")}
-              className={cn(
-                "flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all",
-                tab === "settings"
-                  ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground shadow-sm"
-                  : "text-muted hover:text-foreground",
-              )}
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              {t("workspaceEquipTab")}
-            </button>
-            {supportsStickers && (
-              <button
-                type="button"
-                onClick={() => setTab("stickers")}
+        <div className="min-h-0 flex-1 lg:grid lg:grid-cols-2">
+          {/* Preview column */}
+          <div className="relative flex min-h-0 flex-col border-b border-border/40 lg:border-b-0 lg:border-r">
+            <div className="relative flex min-h-0 flex-1 flex-col px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
+              <div
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all",
-                  tab === "stickers"
-                    ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground shadow-sm"
-                    : "text-muted hover:text-foreground",
+                  "pointer-events-none absolute inset-x-8 top-8 h-48 rounded-full opacity-35 blur-3xl lg:h-64",
+                  "bg-linear-to-r",
+                  skin.accent,
                 )}
-              >
-                <Sticker className="h-4 w-4" />
-                {t("workspaceTabStickers")}
-              </button>
-            )}
-          </div>
-        </div>
+                aria-hidden
+              />
+              <div className="relative mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col overflow-hidden rounded-xl border border-border/50 glass">
+                <SkinRarityLine accent={skin.accent} rarity={skin.rarity} />
+                <div
+                  className={cn(
+                    "relative min-h-[200px] flex-1 bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)]",
+                    !skin.imageUrl && "bg-linear-to-br",
+                    !skin.imageUrl && skin.accent,
+                  )}
+                >
+                  {skin.imageUrl ? (
+                    <RemoteImage
+                      src={skin.imageUrl}
+                      alt=""
+                      fill
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                      priority
+                      className="object-contain p-6 sm:p-10 lg:p-12"
+                    />
+                  ) : null}
+                </div>
+                <SkinRarityLine accent={skin.accent} rarity={skin.rarity} position="bottom" />
 
-        {/* Tab content */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+                {supportsStickers && (
+                  <div className="flex shrink-0 items-center justify-center gap-2 border-t border-border/40 bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)] px-3 py-3">
+                    {Array.from({ length: STICKER_SLOT_COUNT }).map((_, index) => {
+                      const filled = stickerState.slots[index] > 0;
+                      const active = activeSlotIndex === index;
+                      return (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => openSlot(index)}
+                          className={cn(
+                            "flex h-11 w-11 items-center justify-center rounded-lg border-2 transition-all",
+                            surfaceSubtleClass,
+                            active
+                              ? "border-primary ring-2 ring-primary/45 shadow-[0_0_14px_color-mix(in_srgb,var(--primary)_40%,transparent)] scale-105"
+                              : filled
+                                ? "border-primary/50"
+                                : "border-border/40 opacity-75 hover:opacity-100",
+                          )}
+                          aria-label={t("stickersSlotPicker", { slot: index + 1 })}
+                          aria-pressed={active}
+                        >
+                          {filled && stickerState.slotImageUrls[index] ? (
+                            <img
+                              src={stickerState.slotImageUrls[index]}
+                              alt=""
+                              className="h-8 w-8 object-contain"
+                            />
+                          ) : (
+                            <span className="text-[10px] font-bold text-muted">{index + 1}</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {skin.paintkitName && skin.weaponName && (
+                <p className="mt-3 text-center text-xs text-muted">
+                  {skin.weaponName} · {skin.paintkitName}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Controls column */}
+          <div className="flex min-h-0 flex-col">
+            <div className="shrink-0 px-4 pt-4 sm:px-6 lg:px-8">
+              <div className="flex rounded-xl border border-border/40 p-1 glass">
+                <button
+                  type="button"
+                  onClick={() => setTab("settings")}
+                  className={cn(
+                    "flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all",
+                    tab === "settings"
+                      ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground shadow-sm"
+                      : "text-muted hover:text-foreground",
+                  )}
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  {t("workspaceEquipTab")}
+                </button>
+                {supportsStickers && (
+                  <button
+                    type="button"
+                    onClick={openStickersTab}
+                    className={cn(
+                      "flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all",
+                      tab === "stickers"
+                        ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground shadow-sm"
+                        : "text-muted hover:text-foreground",
+                    )}
+                  >
+                    <Sticker className="h-4 w-4" />
+                    {t("workspaceTabStickers")}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 lg:px-8">
           {tab === "settings" ? (
             <div className="space-y-4">
               {!skin.owned ? (
@@ -511,39 +534,47 @@ export function SkinWorkspace({
                       <Loader2 className="h-6 w-6 motion-safe-spin text-muted" />
                     </div>
                   ) : (
-                    <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
-                      {stickerState.pickerItems.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() =>
-                            stickerState.selectSticker(
-                              item.defIndex,
-                              item.name,
-                              stickerState.activeSlot ?? 0,
-                              item.imageUrl,
-                            )
-                          }
-                          className={cn(
-                            "flex flex-col items-center rounded-xl border border-border/30 p-2 transition-colors",
-                            surfaceSubtleClass,
-                            chipInactiveHoverClass,
-                          )}
-                        >
-                          {item.imageUrl ? (
-                            <img
-                              src={item.imageUrl}
-                              alt=""
-                              className="h-12 w-12 object-contain"
-                            />
-                          ) : (
-                            <div className="h-12 w-12 rounded-lg bg-white/5" />
-                          )}
-                          <span className="mt-1.5 line-clamp-2 text-center text-[10px] leading-tight text-foreground">
-                            {item.name}
-                          </span>
-                        </button>
-                      ))}
+                    <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+                      {stickerState.pickerItems.map((item) => {
+                        const isSelected =
+                          item.defIndex > 0 && item.defIndex === selectedStickerDefIndex;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() =>
+                              stickerState.selectSticker(
+                                item.defIndex,
+                                item.name,
+                                stickerState.activeSlot ?? 0,
+                                item.imageUrl,
+                              )
+                            }
+                            className={cn(
+                              "flex flex-col items-center rounded-xl border-2 p-2 transition-all",
+                              surfaceSubtleClass,
+                              isSelected
+                                ? "border-primary ring-2 ring-primary/35 shadow-[0_0_12px_color-mix(in_srgb,var(--primary)_35%,transparent)]"
+                                : "border-border/30",
+                              !isSelected && chipInactiveHoverClass,
+                            )}
+                            aria-pressed={isSelected}
+                          >
+                            {item.imageUrl ? (
+                              <img
+                                src={item.imageUrl}
+                                alt=""
+                                className="h-12 w-12 object-contain"
+                              />
+                            ) : (
+                              <div className="h-12 w-12 rounded-lg bg-white/5" />
+                            )}
+                            <span className="mt-1.5 line-clamp-2 text-center text-[10px] leading-tight text-foreground">
+                              {item.name}
+                            </span>
+                          </button>
+                        );
+                      })}
                       {stickerState.pickerItems.length === 0 && (
                         <p className="col-span-full py-8 text-center text-sm text-muted">
                           {t("stickersNoResults")}
@@ -551,27 +582,24 @@ export function SkinWorkspace({
                       )}
                     </div>
                   )}
-
-                  <p className="mt-4 text-[10px] leading-relaxed text-muted">
-                    {t("stickersHint")}
-                  </p>
                 </>
               )}
             </div>
           )}
-        </div>
+            </div>
 
-        {/* Footer */}
-        <div className="shrink-0 border-t border-border/40 px-4 py-4 sm:px-6">
-          <Button
-            type="button"
-            variant="primary"
-            className="w-full font-display text-sm uppercase tracking-wider"
-            disabled={busy || (!skin.owned && !anyEquipped) ? true : undefined}
-            onClick={handleSave}
-          >
-            {busy ? t("workspaceSaving") : t("workspaceSaveLoadout")}
-          </Button>
+            <div className="shrink-0 border-t border-border/40 px-4 py-4 sm:px-6 lg:px-8">
+              <Button
+                type="button"
+                variant="primary"
+                className="w-full font-display text-sm uppercase tracking-wider"
+                disabled={busy || (!skin.owned && !anyEquipped) ? true : undefined}
+                onClick={handleSave}
+              >
+                {busy ? t("workspaceSaving") : t("workspaceSaveLoadout")}
+              </Button>
+            </div>
+          </div>
         </div>
       </motion.div>
     </div>

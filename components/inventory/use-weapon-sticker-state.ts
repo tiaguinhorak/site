@@ -130,7 +130,6 @@ export function useWeaponStickerState(
       next[target] = imageUrl ?? "";
       return next;
     });
-    setActiveSlot(null);
     setPickerSearch("");
   }
 
@@ -171,9 +170,6 @@ export function useWeaponStickerState(
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? t("stickersSaveFailed"));
-      if (data.gameSync && !data.gameSync.ok) {
-        throw new Error(data.gameSync.error ?? t("stickersSavePartial"));
-      }
       return true;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("stickersSaveFailed"));
