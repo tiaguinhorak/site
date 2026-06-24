@@ -73,7 +73,19 @@ async function syncCsgoPublicServersNow(): Promise<void> {
 
     seenIds.add(server.id);
     const liveMatch = liveByServer.get(server.id);
-    const mode = liveMatch ? "Competitivo" : "Público";
+    const pool = server.pool ?? "public";
+    const existing = await prisma.publicServer.findUnique({
+      where: { csgoServerId: server.id },
+    });
+    let mode = liveMatch ? "Competitivo" : "Público";
+    if (
+      pool === "warmup" &&
+      existing?.mode &&
+      existing.mode !== "Competitivo" &&
+      existing.mode !== "Público"
+    ) {
+      mode = existing.mode;
+    }
     const map = reachable ? (live.mapRaw ?? live.map) : "offline";
 
     await prisma.publicServer.upsert({

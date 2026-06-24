@@ -378,6 +378,27 @@ export async function registerCsgoServer(input: RegisterCsgoServerInput): Promis
   }
 }
 
+export async function updateCsgoServerMetadata(
+  serverId: string,
+  patch: { name?: string; pool?: "ranked" | "warmup" | "public" },
+): Promise<ServerControlResult> {
+  try {
+    const server = await csgoBackendFetch<CsgoGameServer>(`/api/servers/${serverId}`, {
+      method: "PATCH",
+      body: patch,
+    });
+    return {
+      ok: true,
+      message: `Servidor ${server.name} atualizado na API.`,
+      server,
+    };
+  } catch (err) {
+    const message =
+      err instanceof CsgoBackendError ? err.message : "Falha ao atualizar servidor na API.";
+    return { ok: false, message };
+  }
+}
+
 export async function deleteCsgoServer(serverId: string): Promise<ServerControlResult> {
   const before = await getServer(serverId);
   const live = await queryCsgoServerLive(before.host, before.port);

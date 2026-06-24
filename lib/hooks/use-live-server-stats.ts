@@ -16,11 +16,15 @@ export type LiveServerStatView = {
   online: boolean;
   connectCommand: string;
   csgoServerId?: string | null;
+  pool?: "ranked" | "warmup" | "public";
 };
 
 const POLL_MS = 30_000;
 
-export function useLiveServerStats(enabled: boolean) {
+export function useLiveServerStats(
+  enabled: boolean,
+  pool?: "ranked" | "warmup",
+) {
   const [statsByKey, setStatsByKey] = useState<Record<string, LiveServerStatView>>({});
   const [loading, setLoading] = useState(enabled);
   const inflightRef = useRef<AbortController | null>(null);
@@ -32,8 +36,10 @@ export function useLiveServerStats(enabled: boolean) {
     const controller = new AbortController();
     inflightRef.current = controller;
 
+    const query = pool ? `?pool=${pool}` : "";
+
     try {
-      const res = await fetch("/api/live-servers", {
+      const res = await fetch(`/api/live-servers${query}`, {
         signal: controller.signal,
       });
       if (!res.ok) return;
@@ -53,7 +59,7 @@ export function useLiveServerStats(enabled: boolean) {
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [enabled]);
+  }, [enabled, pool]);
 
   usePollWhenVisible(refresh, enabled ? POLL_MS : 0, enabled);
 

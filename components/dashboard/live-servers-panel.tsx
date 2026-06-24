@@ -3,79 +3,16 @@
 import Link from "next/link";
 import { Server, Settings2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { ServerConnectActions } from "@/components/ui/server-connect-actions";
-import { LiveServerAdminActions } from "@/components/admin/live-server-admin-actions";
-import { useLiveServerStats, type LiveServerStatView } from "@/lib/hooks/use-live-server-stats";
+import { LiveServerCard } from "@/components/admin/live-server-manage-panel";
+import { useLiveServerStats } from "@/lib/hooks/use-live-server-stats";
 import { useUser } from "@/lib/hooks/use-user";
-import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-
-function pingColor(ping: number) {
-  if (ping <= 13) return "text-emerald-400";
-  if (ping <= 25) return "text-amber-400";
-  return "text-rose-400";
-}
-
-function ServerCard({
-  server,
-  isAdmin,
-  onAdminAction,
-}: {
-  server: LiveServerStatView;
-  isAdmin: boolean;
-  onAdminAction: () => void;
-}) {
-  const t = useTranslations("liveServers");
-  return (
-    <li className="rounded-xl border border-border bg-[color-mix(in_srgb,var(--foreground)_3%,transparent)] p-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="font-display font-semibold text-foreground">{server.name}</p>
-          <p className="text-xs text-muted">
-            {server.mode} · {server.map}
-          </p>
-        </div>
-        <div className="flex items-center gap-3 text-xs">
-          <span className="font-mono text-foreground">
-            {server.online ? `${server.players}/${server.slots}` : "—"}
-          </span>
-          <span className={cn("inline-flex items-center gap-1 font-mono", pingColor(server.ping))}>
-            {server.online ? `${server.ping}ms` : "—"}
-          </span>
-          <span
-            className={cn(
-              "inline-flex items-center gap-1.5 font-semibold",
-              server.online ? "text-emerald-400" : "text-muted",
-            )}
-          >
-            <span
-              className={cn(
-                "h-2 w-2 rounded-full",
-                server.online ? "animate-pulse bg-emerald-400" : "bg-zinc-500",
-              )}
-            />
-            {server.online ? t("online") : t("offline")}
-          </span>
-        </div>
-      </div>
-      {server.online && <ServerConnectActions host={server.host} port={server.port} />}
-      {isAdmin && (
-        <LiveServerAdminActions
-          serverName={server.name}
-          csgoServerId={server.csgoServerId}
-          online={server.online}
-          onActionComplete={onAdminAction}
-        />
-      )}
-    </li>
-  );
-}
 
 export function LiveServersPanel() {
   const t = useTranslations("liveServers");
   const { user } = useUser();
   const isAdmin = user?.isAdmin === true;
-  const { statsByKey, loading, refresh } = useLiveServerStats(true);
+  const { statsByKey, loading, refresh } = useLiveServerStats(true, "ranked");
   const servers = Object.values(statsByKey);
   const onlineCount = servers.filter((s) => s.online).length;
 
@@ -123,13 +60,13 @@ export function LiveServersPanel() {
         {t("updateNote")}
         {isAdmin && (
           <span className="mt-1 block text-xs">
-            Como admin, você pode derrubar servidores aqui ou abrir Infra CS:GO para controle completo.
+            Como admin, clique em Editar no servidor para mudar nome, modo ou mapa.
           </span>
         )}
       </p>
       <ul className="space-y-4">
         {servers.map((server) => (
-          <ServerCard
+          <LiveServerCard
             key={server.id}
             server={server}
             isAdmin={isAdmin}

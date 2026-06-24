@@ -22,6 +22,7 @@
     "overview": "Visão geral",
     "play": "Jogar",
     "lobby": "Lobby",
+    "warmup": "Warmup",
     "ranked": "Rankeado",
     "profile": "Perfil",
     "notifications": "Notificações",
@@ -281,6 +282,8 @@
   "pageHeaders": {
     "lobbyTitle": "Lobby",
     "lobbyDesc": "Warmup casual — entre em salas abertas gerenciadas pelo sistema.",
+    "warmupTitle": "Warmup",
+    "warmupDesc": "Deathmatch, Surf, Retake, KZ e outros modos — entre direto nos servidores.",
     "rankedTitle": "Modo rankeado",
     "rankedDesc": "Salas 5x5 — crie ou entre em um time e desafie outras salas (Premium ou Elite).",
     "modesDesc": "Escolha uma sala para entrar.",
@@ -622,6 +625,15 @@
     "offline": "Offline",
     "onlineCount": "{count} online",
     "updateNote": "Stats atualizados a cada 30s enquanto esta página estiver aberta."
+  },
+  "warmup": {
+    "modesTitle": "Modos warmup",
+    "modesDesc": "Escolha um modo e entre nos servidores disponíveis. Stats atualizados a cada 30s.",
+    "allModes": "Todos",
+    "serversTitleAll": "Servidores warmup",
+    "serversTitleMode": "Servidores — {mode}",
+    "noServers": "Nenhum servidor neste modo no momento. Volte em breve ou escolha outro modo.",
+    "onlineCount": "{count} online"
   },
   "profileForm": {
     "firstName": "Nome",

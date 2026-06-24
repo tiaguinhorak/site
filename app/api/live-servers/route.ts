@@ -4,7 +4,14 @@ import { getSessionUser } from "@/lib/auth/session-user";
 import { fetchLiveServerStats } from "@/lib/csgo-api/live-server-stats";
 
 export async function GET(request: NextRequest) {
-  const servers = await fetchLiveServerStats();
+  const poolFilter = request.nextUrl.searchParams.get("pool");
+  let servers = await fetchLiveServerStats();
+
+  if (poolFilter === "warmup") {
+    servers = servers.filter((server) => server.pool === "warmup");
+  } else if (poolFilter === "ranked") {
+    servers = servers.filter((server) => server.pool !== "warmup");
+  }
 
   const user = await getSessionUser(request);
   const isAdmin = user?.isAdmin === true;
@@ -23,6 +30,7 @@ export async function GET(request: NextRequest) {
         ping: server.ping,
         online: server.online,
         connectCommand: server.connectCommand,
+        pool: server.pool,
         csgoServerId: isAdmin ? server.csgoServerId : null,
       })),
     },

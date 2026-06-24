@@ -13,6 +13,8 @@ import {
   firstZodError,
 } from "@/lib/security/schemas";
 import { logAdminAction } from "@/lib/admin/audit";
+import { afterCsgoServerMutation } from "@/lib/csgo-api/invalidate-caches";
+import { updateCsgoServerMetadata } from "@/lib/csgo-api/server-control";
 import { adminServerUpdateSchema } from "@/lib/admin/schemas";
 
 export async function PATCH(
@@ -54,6 +56,14 @@ export async function PATCH(
     where: { id },
     data: parsed.data,
   });
+
+  if (existing.csgoServerId && parsed.data.name) {
+    await updateCsgoServerMetadata(existing.csgoServerId, { name: parsed.data.name });
+  }
+
+  if (existing.isLiveSynced) {
+    await afterCsgoServerMutation();
+  }
 
   await logAdminAction({
     adminId: admin!.id,

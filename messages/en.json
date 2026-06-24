@@ -22,6 +22,7 @@
     "overview": "Overview",
     "play": "Play",
     "lobby": "Lobby",
+    "warmup": "Warmup",
     "ranked": "Ranked",
     "profile": "Profile",
     "notifications": "Notifications",
@@ -281,6 +282,8 @@
   "pageHeaders": {
     "lobbyTitle": "Lobby",
     "lobbyDesc": "Casual warmup — join open rooms managed by the system.",
+    "warmupTitle": "Warmup",
+    "warmupDesc": "Deathmatch, Surf, Retake, KZ and more — connect directly to public servers.",
     "rankedTitle": "Ranked mode",
     "rankedDesc": "5v5 rooms — create or join a team and challenge other rooms (Premium or Elite).",
     "modesDesc": "Pick a room to join.",
@@ -622,6 +625,15 @@
     "offline": "Offline",
     "onlineCount": "{count} online",
     "updateNote": "Stats updated every 30s while this page is open."
+  },
+  "warmup": {
+    "modesTitle": "Warmup modes",
+    "modesDesc": "Pick a mode and join available servers. Stats refresh every 30s.",
+    "allModes": "All",
+    "serversTitleAll": "Warmup servers",
+    "serversTitleMode": "Servers — {mode}",
+    "noServers": "No servers in this mode right now. Try another mode or check back soon.",
+    "onlineCount": "{count} online"
   },
   "profileForm": {
     "firstName": "First name",

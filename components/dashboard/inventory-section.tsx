@@ -204,8 +204,8 @@ function EquippedSidebar({
   const sideItems = loadout.items.filter((item) => item.team === team);
 
   return (
-    <aside className="lg:w-80 shrink-0">
-      <div className="rounded-card glass-strong lg:sticky lg:top-24">
+    <aside className="lg:w-[22rem] shrink-0 self-stretch">
+      <div className="rounded-card glass-strong lg:sticky lg:top-24 lg:max-h-[calc(100vh-6rem)] lg:flex lg:flex-col">
         <div className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3.5">
           <p className="text-sm font-semibold leading-snug text-foreground">
             {t("loadoutSidebarTeam", { team: teamLabel })}
@@ -222,7 +222,7 @@ function EquippedSidebar({
         ) : sideItems.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-muted">{t("loadoutEmpty")}</p>
         ) : (
-          <ul className="max-h-[min(70vh,560px)] space-y-3 overflow-y-auto p-3">
+          <ul className="max-h-[min(72vh,640px)] space-y-3 overflow-y-auto p-3 lg:max-h-none lg:flex-1 lg:min-h-0">
             {sideItems.map((item) => {
               const supportsStickers = weaponSupportsStickers(item.weaponId);
               const isUnequipping = unequippingId === item.catalogSkinId;
@@ -485,19 +485,32 @@ export function InventorySection() {
     setWeaponFilter("");
     reqIdRef.current += 1;
     setItems([]);
-    setPreviewSkin((prev) => (prev ? { ...prev, equipped: false } : null));
   }, [filter, search, loadoutTeam]);
+
+  useEffect(() => {
+    setPreviewSkin((prev) => {
+      if (!prev?.id) return prev;
+      const stillEquipped = loadout?.items.some(
+        (entry) => entry.catalogSkinId === prev.id && entry.team === loadoutTeam,
+      );
+      if (prev.equipped === (stillEquipped ?? false)) return prev;
+      return { ...prev, equipped: stillEquipped ?? false };
+    });
+  }, [loadout, loadoutTeam]);
 
   useEffect(() => {
     if (!previewSkin?.id) return;
     const match = items.find((entry) => entry.id === previewSkin.id);
+    const loadoutEquipped = loadout?.items.some(
+      (entry) => entry.catalogSkinId === previewSkin.id && entry.team === loadoutTeam,
+    );
     setPreviewSkin((prev) => {
       if (!prev || prev.id !== previewSkin.id) return prev;
-      const equipped = match?.equipped ?? false;
+      const equipped = match?.equipped ?? loadoutEquipped ?? prev.equipped;
       if (prev.equipped === equipped) return prev;
       return { ...prev, equipped };
     });
-  }, [items, previewSkin?.id]);
+  }, [items, previewSkin?.id, loadout, loadoutTeam]);
 
   useEffect(() => {
     fetchLoadout();

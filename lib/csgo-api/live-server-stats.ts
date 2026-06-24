@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import { csgoBackendFetch } from "@/lib/csgo-api/client";
 import { cached } from "@/lib/csgo-api/request-cache";
 import { queryCsgoServersLive } from "@/lib/csgo-api/query-live-server";
 import { syncCsgoPublicServers } from "@/lib/csgo-api/sync-public-servers";
@@ -20,6 +21,7 @@ export type LiveServerStatPayload = {
   online: boolean;
   connectCommand: string;
   csgoServerId: string | null;
+  pool: "ranked" | "warmup" | "public";
 };
 
 function toPayload(
@@ -32,6 +34,7 @@ function toPayload(
     csgoServerId: string | null;
   },
   live: LiveServerQueryResult,
+  pool: "ranked" | "warmup" | "public",
 ): LiveServerStatPayload {
   return {
     id: row.id,
@@ -46,7 +49,23 @@ function toPayload(
     online: live.online,
     connectCommand: formatConnectCommand(row.host, row.port) ?? "",
     csgoServerId: row.csgoServerId,
+    pool,
   };
+}
+
+async function listCsgoApiServersForPool(): Promise<Map<string, "ranked" | "warmup" | "public">> {
+  try {
+    const servers = await csgoBackendFetch<
+      Array<{ id: string; pool?: "ranked" | "warmup" | "public" }>
+    >("/api/servers");
+    const map = new Map<string, "ranked" | "warmup" | "public">();
+    for (const server of servers) {
+      map.set(server.id, server.pool ?? "public");
+    }
+    return map;
+  } catch {
+    return new Map();
+  }
 }
 
 export async function fetchLiveServerStats(options?: { forceSync?: boolean }): Promise<LiveServerStatPayload[]> {
@@ -72,6 +91,7 @@ export async function fetchLiveServerStats(options?: { forceSync?: boolean }): P
       .map((row) => ({ host: row.host, port: row.port }));
 
     const liveByKey = await queryCsgoServersLive(targets);
+    const poolByCsgoId = await listCsgoApiServersForPool();
 
     return rows
       .filter((row): row is typeof row & { host: string; port: number } => row.host != null && row.port != null)
@@ -88,7 +108,11 @@ export async function fetchLiveServerStats(options?: { forceSync?: boolean }): P
           bots: 0,
           ping: 0,
         };
-        return toPayload(row, live);
+        const pool =
+          row.csgoServerId != null
+            ? (poolByCsgoId.get(row.csgoServerId) ?? "public")
+            : "public";
+        return toPayload(row, live, pool);
       });
   });
 }

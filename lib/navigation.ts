@@ -83,6 +83,14 @@ export const dashboardNav = [
         i18nKey: "lobby",
       },
       {
+        label: "Warmup",
+        href: "/dashboard/warmup",
+        icon: "Zap",
+        title: "Warmup",
+        description: "Deathmatch, Surf, Retake e outros modos públicos.",
+        i18nKey: "warmup",
+      },
+      {
         label: "Rankeado",
         href: "/dashboard/ranked",
         icon: "Trophy",
