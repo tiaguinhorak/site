@@ -1,14 +1,39 @@
 import "server-only";
 
-export function getCsgoApiBaseUrl(): string {
-  const raw = process.env.CSGO_API_URL?.trim();
-  if (!raw) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("CSGO_API_URL must be set in production.");
+function normalizeCsgoApiUrl(raw: string): string {
+  return raw.trim().replace(/\/$/, "");
+}
+
+/** All api-csgo bases that receive equip/sticker pushes (ranked + warmup + extras). */
+export function getCsgoApiPushTargets(): string[] {
+  const urls: string[] = [];
+
+  const primary = process.env.CSGO_API_URL?.trim();
+  if (primary) urls.push(normalizeCsgoApiUrl(primary));
+
+  const warmup = process.env.CSGO_WARMUP_API_URL?.trim();
+  if (warmup) urls.push(normalizeCsgoApiUrl(warmup));
+
+  const list = process.env.CSGO_API_URLS?.trim();
+  if (list) {
+    for (const part of list.split(",")) {
+      const trimmed = part.trim();
+      if (trimmed) urls.push(normalizeCsgoApiUrl(trimmed));
     }
-    return "http://127.0.0.1:3000";
   }
-  return raw.replace(/\/$/, "");
+
+  return [...new Set(urls)];
+}
+
+export function getCsgoApiBaseUrl(): string {
+  const targets = getCsgoApiPushTargets();
+  if (targets.length > 0) {
+    return targets[0];
+  }
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("CSGO_API_URL must be set in production.");
+  }
+  return "http://127.0.0.1:3000";
 }
 
 /** Chave obrigatória em produção — nunca exposta ao browser. */
