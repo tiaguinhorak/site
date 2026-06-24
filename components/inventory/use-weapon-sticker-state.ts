@@ -96,9 +96,9 @@ export function useWeaponStickerState(
     void loadCurrent();
   }, [enabled, resourceKey, loadCurrent]);
 
-  const loadPicker = useCallback(async (search: string) => {
+  const loadPicker = useCallback(async (search: string, force = false) => {
     const query = search.trim();
-    if (lastPickerQueryRef.current === query) return;
+    if (!force && lastPickerQueryRef.current === query) return;
     lastPickerQueryRef.current = query;
     setPickerLoading(true);
     try {

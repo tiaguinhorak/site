@@ -213,7 +213,7 @@ export function SkinWorkspace({
     setTab("stickers");
     stickerState.setActiveSlot(slotIndex);
     stickerState.setPickerSearch("");
-    stickerState.loadPicker("");
+    stickerState.loadPicker("", true);
   }
 
   function openStickersTab() {
@@ -221,7 +221,7 @@ export function SkinWorkspace({
     if (stickerState.activeSlot === null) {
       stickerState.setActiveSlot(0);
     }
-    stickerState.loadPicker(stickerState.pickerSearch);
+    stickerState.loadPicker(stickerState.pickerSearch, true);
   }
 
   const activeSlotIndex = stickerState.activeSlot;
@@ -318,33 +318,56 @@ export function SkinWorkspace({
                     {Array.from({ length: STICKER_SLOT_COUNT }).map((_, index) => {
                       const filled = stickerState.slots[index] > 0;
                       const active = activeSlotIndex === index;
+                      const slotLabel = stickerState.slotLabels[index];
+                      const slotImage = stickerState.slotImageUrls[index];
                       return (
-                        <button
-                          key={index}
-                          type="button"
-                          onClick={() => openSlot(index)}
-                          className={cn(
-                            "flex h-11 w-11 items-center justify-center rounded-lg border-2 transition-all",
-                            surfaceSubtleClass,
-                            active
-                              ? "border-primary ring-2 ring-primary/45 shadow-[0_0_14px_color-mix(in_srgb,var(--primary)_40%,transparent)] scale-105"
-                              : filled
-                                ? "border-primary/50"
-                                : "border-border/40 opacity-75 hover:opacity-100",
+                        <div key={index} className="relative">
+                          <button
+                            type="button"
+                            onClick={() => openSlot(index)}
+                            className={cn(
+                              "flex h-11 w-11 items-center justify-center rounded-lg border-2 transition-all",
+                              surfaceSubtleClass,
+                              active
+                                ? "border-primary ring-2 ring-primary/45 shadow-[0_0_14px_color-mix(in_srgb,var(--primary)_40%,transparent)] scale-105"
+                                : filled
+                                  ? "border-primary/50"
+                                  : "border-border/40 opacity-75 hover:opacity-100",
+                            )}
+                            aria-label={t("stickersSlotPicker", { slot: index + 1 })}
+                            aria-pressed={active}
+                          >
+                            {filled && slotImage ? (
+                              <img
+                                src={slotImage}
+                                alt=""
+                                className="h-8 w-8 object-contain"
+                              />
+                            ) : filled ? (
+                              <span className="line-clamp-2 px-0.5 text-center text-[8px] font-semibold leading-tight text-foreground">
+                                {slotLabel || `#${stickerState.slots[index]}`}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-bold text-muted">{index + 1}</span>
+                            )}
+                          </button>
+                          {filled && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                stickerState.clearSlot(index);
+                                if (activeSlotIndex === index) {
+                                  stickerState.setActiveSlot(index);
+                                }
+                              }}
+                              className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-foreground/90 text-[9px] font-bold text-background shadow-sm hover:bg-destructive"
+                              aria-label={t("stickersClear")}
+                            >
+                              ×
+                            </button>
                           )}
-                          aria-label={t("stickersSlotPicker", { slot: index + 1 })}
-                          aria-pressed={active}
-                        >
-                          {filled && stickerState.slotImageUrls[index] ? (
-                            <img
-                              src={stickerState.slotImageUrls[index]}
-                              alt=""
-                              className="h-8 w-8 object-contain"
-                            />
-                          ) : (
-                            <span className="text-[10px] font-bold text-muted">{index + 1}</span>
-                          )}
-                        </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -530,9 +553,20 @@ export function SkinWorkspace({
                   </div>
 
                   {stickerState.activeSlot !== null && (
-                    <p className="mt-3 text-xs font-medium text-primary">
-                      {t("stickersSlotPicker", { slot: stickerState.activeSlot + 1 })}
-                    </p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <p className="text-xs font-medium text-primary">
+                        {t("stickersSlotPicker", { slot: stickerState.activeSlot + 1 })}
+                      </p>
+                      {stickerState.slots[stickerState.activeSlot] > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => stickerState.clearSlot(stickerState.activeSlot!)}
+                          className="text-xs font-medium text-muted underline-offset-2 hover:text-destructive hover:underline"
+                        >
+                          {t("stickersClear")}
+                        </button>
+                      )}
+                    </div>
                   )}
 
                   {stickerState.pickerLoading ? (

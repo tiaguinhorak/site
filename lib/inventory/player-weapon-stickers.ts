@@ -5,6 +5,10 @@ import { weaponIdToItemDefIndex } from "@/lib/inventory/weapon-defindex";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
 import { normalizeWeaponId } from "@/lib/inventory/loadout-team";
 import { steamIdForGamePlugin } from "@/lib/steam/steam-id";
+import {
+  lookupStickerFromApi,
+  type StickerCatalogRowFromApi,
+} from "@/lib/inventory/csgo-api-sticker-index";
 
 export type WeaponStickerSlots = {
   slots: number[];
@@ -67,16 +71,24 @@ export async function getPlayerWeaponStickers(
       : [];
   const catalogByDef = new Map(catalogStickers.map((entry) => [entry.defIndex, entry]));
 
+  const apiFallbacks = new Map<number, StickerCatalogRowFromApi>();
+  for (const defIndex of defIndices) {
+    if (catalogByDef.has(defIndex)) continue;
+    const apiRow = await lookupStickerFromApi(defIndex);
+    if (apiRow) apiFallbacks.set(defIndex, apiRow);
+  }
+
   const slotDetails: WeaponStickerSlotDetail[] = normalizedSlots.map((defIndex, slot) => {
     if (defIndex <= 0) {
       return { slot, defIndex: 0, name: "", imageUrl: null };
     }
     const catalog = catalogByDef.get(defIndex);
+    const api = apiFallbacks.get(defIndex);
     return {
       slot,
       defIndex,
-      name: catalog?.name ?? `Sticker ${defIndex}`,
-      imageUrl: catalog?.imageUrl ?? null,
+      name: catalog?.name ?? api?.name ?? `Sticker ${defIndex}`,
+      imageUrl: catalog?.imageUrl ?? api?.imageUrl ?? null,
     };
   });
 

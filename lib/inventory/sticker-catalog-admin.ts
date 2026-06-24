@@ -170,15 +170,38 @@ export async function deleteStickerCatalogAdmin(id: string) {
 }
 
 export async function listEnabledStickersForPicker(search?: string, limit = 60) {
+  const trimmed = search?.trim() ?? "";
   const rows = await prisma.csgoStickerCatalog.findMany({
     where: {
       enabled: true,
-      ...(search?.trim()
-        ? { name: { contains: search.trim(), mode: "insensitive" } }
+      ...(trimmed
+        ? { name: { contains: trimmed, mode: "insensitive" } }
         : {}),
     },
     orderBy: { name: "asc" },
     take: limit,
   });
-  return rows.map(serializeRow);
+
+  if (rows.length > 0) {
+    return rows.map(serializeRow);
+  }
+
+  const apiRows = await listAllStickersFromApi();
+  const filtered = trimmed
+    ? apiRows.filter((row) => row.name.toLowerCase().includes(trimmed.toLowerCase()))
+    : apiRows;
+
+  return filtered.slice(0, limit).map((row) => ({
+    id: row.id,
+    defIndex: row.defIndex,
+    name: row.name,
+    imageUrl: row.imageUrl,
+    rarity: row.rarity,
+    stickerType: row.stickerType,
+    effect: row.effect,
+    tournament: row.tournament,
+    enabled: true,
+    source: "api-fallback",
+    updatedAt: new Date().toISOString(),
+  }));
 }

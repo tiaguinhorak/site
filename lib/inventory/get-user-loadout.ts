@@ -10,6 +10,7 @@ import {
   type LoadoutTeam,
 } from "@/lib/inventory/loadout-team";
 import type { InventoryCategoryKey } from "@/lib/profile";
+import { lookupStickerFromApi } from "@/lib/inventory/csgo-api-sticker-index";
 
 export type LoadoutSticker = {
   slot: number;
@@ -89,6 +90,15 @@ export async function getUserServerLoadout(userId: string, team?: LoadoutTeam) {
     catalogStickers.map((entry) => [entry.defIndex, entry]),
   );
 
+  const apiStickerFallbacks = new Map<number, { name: string; imageUrl: string | null }>();
+  for (const defIndex of defIndices) {
+    if (stickerCatalogByDef.has(defIndex)) continue;
+    const api = await lookupStickerFromApi(defIndex);
+    if (api) {
+      apiStickerFallbacks.set(defIndex, { name: api.name, imageUrl: api.imageUrl });
+    }
+  }
+
   function stickersForWeapon(weaponId: string, side: LoadoutTeam): LoadoutSticker[] {
     const normalized = normalizeWeaponId(weaponId);
     const row = stickerRows.find(
@@ -102,11 +112,12 @@ export async function getUserServerLoadout(userId: string, team?: LoadoutTeam) {
     slotValues.forEach((defIndex, slot) => {
       if (defIndex <= 0) return;
       const catalog = stickerCatalogByDef.get(defIndex);
+      const api = apiStickerFallbacks.get(defIndex);
       stickers.push({
         slot,
         defIndex,
-        name: catalog?.name ?? `Sticker ${defIndex}`,
-        imageUrl: catalog?.imageUrl ?? null,
+        name: catalog?.name ?? api?.name ?? `Sticker ${defIndex}`,
+        imageUrl: catalog?.imageUrl ?? api?.imageUrl ?? null,
       });
     });
 
