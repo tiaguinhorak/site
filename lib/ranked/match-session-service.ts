@@ -364,6 +364,7 @@ async function applyConnectToSession(
       selectedMap: selectedMap ?? connect.selectedMap,
       serverHost,
       serverPort,
+      csgoServerId: connect.csgoServerId,
     },
   });
 

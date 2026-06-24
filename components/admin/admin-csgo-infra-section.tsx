@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AdminRankedSessionsPanel } from "@/components/admin/admin-ranked-sessions-panel";
+import { AdminWarmupProbePanel } from "@/components/admin/admin-warmup-probe-panel";
 import { MapPicker } from "@/components/admin/pickers/map-picker";
 import { ServerConnectActions } from "@/components/ui/server-connect-actions";
 import { confirmPresets } from "@/lib/confirm-presets";
@@ -86,6 +87,7 @@ const DEFAULT_REGISTER = {
   rconPassword: "",
   csgoDir: "/home/csgo/server",
   tickrate: "128",
+  pool: "ranked" as "ranked" | "warmup" | "public",
 };
 
 export function AdminCsgoInfraSection() {
@@ -264,6 +266,7 @@ export function AdminCsgoInfraSection() {
           rconPassword: registerForm.rconPassword,
           csgoDir: registerForm.csgoDir.trim(),
           tickrate: Number(registerForm.tickrate),
+          pool: registerForm.pool,
         },
       }),
     );
@@ -393,7 +396,7 @@ export function AdminCsgoInfraSection() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-muted">
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <Loader2 className="h-4 w-4 motion-safe-spin" />
         Carregando infra CS:GO…
       </div>
     );
@@ -401,6 +404,8 @@ export function AdminCsgoInfraSection() {
 
   return (
     <div className="space-y-8">
+      <AdminWarmupProbePanel />
+
       <AdminRankedSessionsPanel
         sessions={rankedSessions}
         busyId={busyId}
@@ -446,7 +451,7 @@ export function AdminCsgoInfraSection() {
                 onClick={() => void bootstrapServerFromEnv()}
               >
                 {busyId === "bootstrap" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 motion-safe-spin" />
                 ) : (
                   <Server className="h-4 w-4" />
                 )}
@@ -491,6 +496,23 @@ export function AdminCsgoInfraSection() {
                 value={registerForm.csgoDir}
                 onChange={(e) => setRegisterForm((f) => ({ ...f, csgoDir: e.target.value }))}
               />
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted">Pool</label>
+                <select
+                  value={registerForm.pool}
+                  onChange={(e) =>
+                    setRegisterForm((f) => ({
+                      ...f,
+                      pool: e.target.value as "ranked" | "warmup" | "public",
+                    }))
+                  }
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                >
+                  <option value="ranked">Ranked (5v5 — fila)</option>
+                  <option value="warmup">Warmup (público casual)</option>
+                  <option value="public">Público (legado)</option>
+                </select>
+              </div>
             </div>
             <div className="mt-4">
               <Button
@@ -501,7 +523,7 @@ export function AdminCsgoInfraSection() {
                 onClick={() => void registerServer()}
               >
                 {busyId === "register" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 motion-safe-spin" />
                 ) : (
                   <Plus className="h-4 w-4" />
                 )}
@@ -626,7 +648,7 @@ export function AdminCsgoInfraSection() {
                           onClick={() => void startServer(server)}
                         >
                           {busyId === `${server.id}:start` ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <Loader2 className="h-4 w-4 motion-safe-spin" />
                           ) : (
                             <Play className="h-4 w-4" />
                           )}
@@ -642,7 +664,7 @@ export function AdminCsgoInfraSection() {
                             onClick={() => void changeMap(server)}
                           >
                             {busyId === `${server.id}:change-map` ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <Loader2 className="h-4 w-4 motion-safe-spin" />
                             ) : (
                               <RotateCcw className="h-4 w-4" />
                             )}
@@ -656,7 +678,7 @@ export function AdminCsgoInfraSection() {
                             onClick={() => void stopServer(server)}
                           >
                             {busyId === `${server.id}:stop` ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <Loader2 className="h-4 w-4 motion-safe-spin" />
                             ) : (
                               <Power className="h-4 w-4" />
                             )}
@@ -673,7 +695,7 @@ export function AdminCsgoInfraSection() {
                         onClick={() => void deleteServer(server)}
                       >
                         {busyId === `${server.id}:delete` ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <Loader2 className="h-4 w-4 motion-safe-spin" />
                         ) : (
                           <Trash2 className="h-4 w-4" />
                         )}
@@ -729,7 +751,7 @@ export function AdminCsgoInfraSection() {
                     onClick={() => void cancelMatch(match)}
                   >
                     {busyId === `match:cancel:${match.id}` ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 className="h-4 w-4 motion-safe-spin" />
                     ) : (
                       <XCircle className="h-4 w-4" />
                     )}
@@ -744,7 +766,7 @@ export function AdminCsgoInfraSection() {
                       onClick={() => void endMatch(match)}
                     >
                       {busyId === `match:end:${match.id}` ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 motion-safe-spin" />
                       ) : (
                         <Flag className="h-4 w-4" />
                       )}
@@ -778,7 +800,7 @@ export function AdminCsgoInfraSection() {
             onClick={() => void create2x2LobbyRoom()}
           >
             {busyId === "lobby:2x2" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 motion-safe-spin" />
             ) : (
               <Plus className="h-4 w-4" />
             )}
@@ -805,7 +827,7 @@ export function AdminCsgoInfraSection() {
             onClick={() => void cleanupRankedStale()}
           >
             {busyId === "ranked:cleanup" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 motion-safe-spin" />
             ) : (
               <RotateCcw className="h-4 w-4" />
             )}
@@ -838,7 +860,7 @@ export function AdminCsgoInfraSection() {
             onClick={() => void simulateRankedMatch()}
           >
             {busyId === "ranked:simulate" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 motion-safe-spin" />
             ) : (
               <Play className="h-4 w-4" />
             )}

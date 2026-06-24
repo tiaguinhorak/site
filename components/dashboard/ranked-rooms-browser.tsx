@@ -140,7 +140,7 @@ export function RankedRoomsBrowser({
           </p>
         </div>
         <Button variant="ghost" size="sm" onClick={() => void handleRefresh()} disabled={refreshing}>
-          <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+          <RefreshCw className={cn("h-4 w-4", refreshing && "motion-safe-spin")} />
         </Button>
       </div>
 

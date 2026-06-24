@@ -163,7 +163,7 @@ function RoomActionButton({
           disabled={busy}
           onClick={() => onJoin(room.id)}
         >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
+          {busy ? <Loader2 className="h-4 w-4 motion-safe-spin" /> : <Users className="h-4 w-4" />}
           {t("join")}
         </Button>
       );
@@ -175,7 +175,7 @@ function RoomActionButton({
           disabled={busy}
           onClick={() => onChallenge(room.id)}
         >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Swords className="h-4 w-4" />}
+          {busy ? <Loader2 className="h-4 w-4 motion-safe-spin" /> : <Swords className="h-4 w-4" />}
           {t("challenge")}
         </Button>
       );

@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { useTranslations } from "next-intl";
 import { secureApi } from "@/lib/api/client";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 type Preferences = {
@@ -31,7 +33,6 @@ export function NotificationSettingsSection() {
   const [prefs, setPrefs] = useState<Preferences>(defaultPrefs);
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState<PrefKey | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/user/notification-preferences", { credentials: "same-origin" })
@@ -47,7 +48,7 @@ export function NotificationSettingsSection() {
           browserPush: p.browserPush ?? false,
         });
       })
-      .catch(() => setError(t("loadError")))
+      .catch(() => toast.error(t("loadError")))
       .finally(() => setLoading(false));
   }, [t]);
 
@@ -55,7 +56,6 @@ export function NotificationSettingsSection() {
     const next = !prefs[key];
     setPrefs((prev) => ({ ...prev, [key]: next }));
     setSavingKey(key);
-    setError(null);
 
     const result = await secureApi("/api/user/notification-preferences", {
       method: "PATCH",
@@ -65,14 +65,22 @@ export function NotificationSettingsSection() {
     setSavingKey(null);
     if (!result.ok) {
       setPrefs((prev) => ({ ...prev, [key]: !next }));
-      setError(result.error);
+      toast.error(result.error);
     }
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12 text-muted">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      <div className="space-y-4" aria-busy="true">
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-48" />
+          <SkeletonText className="w-64" />
+        </div>
+        <div className="space-y-2 rounded-xl glass overflow-hidden p-1">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-14 w-full rounded-lg" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -83,12 +91,6 @@ export function NotificationSettingsSection() {
         <h3 className="font-display text-lg font-bold text-foreground">{t("title")}</h3>
         <p className="mt-1 text-sm text-muted">{t("subtitle")}</p>
       </div>
-
-      {error && (
-        <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-400">
-          {error}
-        </p>
-      )}
 
       <div className="space-y-4">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted">
@@ -186,7 +188,7 @@ function PrefRow({
         />
         {disabled && (
           <span className="absolute inset-0 flex items-center justify-center">
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+            <Spinner size="xs" className="text-white" />
           </span>
         )}
       </button>

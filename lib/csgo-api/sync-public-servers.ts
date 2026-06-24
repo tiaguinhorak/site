@@ -117,7 +117,7 @@ async function syncCsgoPublicServersNow(): Promise<void> {
   await prisma.publicServer.deleteMany({
     where: {
       isLiveSynced: true,
-      csgoServerId: { notIn: [...seenIds] },
+      csgoServerId: { not: null, notIn: [...seenIds] },
     },
   });
 }

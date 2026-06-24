@@ -20,7 +20,6 @@ import {
   Users,
   Menu,
   X,
-  Globe,
   ChevronDown,
   MoreHorizontal,
   type LucideIcon,
@@ -29,7 +28,6 @@ import { useTranslations } from "next-intl";
 import { Logo } from "@/components/ui/logo";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { AccountDropdown } from "@/components/dashboard/account-dropdown";
-import { ButtonLink } from "@/components/ui/button";
 import { useUser } from "@/lib/hooks/use-user";
 import { cn } from "@/lib/utils";
 
@@ -102,12 +100,15 @@ const NAV_GROUPS: NavGroup[] = [
     i18nKey: "more",
     icon: "MoreHorizontal",
     items: [
-      { href: "/dashboard/noticias", icon: "Newspaper", i18nKey: "news" },
       { href: "/dashboard/anticheat", icon: "ShieldCheck", i18nKey: "anticheat" },
-      { href: "/dashboard/premium", icon: "Crown", i18nKey: "premium" },
       { href: "/dashboard/suporte", icon: "Headphones", i18nKey: "support" },
     ],
   },
+];
+
+const STANDALONE_NAV: NavLinkItem[] = [
+  { href: "/dashboard/noticias", icon: "Newspaper", i18nKey: "news" },
+  { href: "/dashboard/premium", icon: "Crown", i18nKey: "premium" },
 ];
 
 const ADMIN_LINK: NavLinkItem = {
@@ -124,6 +125,34 @@ function isActive(pathname: string, href: string) {
 
 function groupIsActive(pathname: string, group: NavGroup) {
   return group.items.some((item) => isActive(pathname, item.href));
+}
+
+function NavDirectLink({
+  item,
+  pathname,
+  tNav,
+}: {
+  item: NavLinkItem;
+  pathname: string;
+  tNav: ReturnType<typeof useTranslations<"nav">>;
+}) {
+  const Icon = iconMap[item.icon] ?? LayoutDashboard;
+  const active = isActive(pathname, item.href);
+
+  return (
+    <Link
+      href={item.href}
+      className={cn(
+        "flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors whitespace-nowrap",
+        active
+          ? "text-foreground bg-[color-mix(in_srgb,var(--primary)_16%,transparent)]"
+          : "text-muted hover:text-foreground hover:bg-[color-mix(in_srgb,var(--primary)_10%,transparent)]",
+      )}
+    >
+      <Icon className="h-4 w-4 shrink-0 text-primary" />
+      <span className="hidden lg:inline">{tNav(item.i18nKey)}</span>
+    </Link>
+  );
 }
 
 function NavDropdown({
@@ -347,20 +376,14 @@ export function DashboardNavbar() {
                 onClose={() => setOpenDropdown(null)}
               />
             ))}
+
+            {STANDALONE_NAV.map((item) => (
+              <NavDirectLink key={item.href} item={item} pathname={pathname} tNav={tNav} />
+            ))}
           </div>
 
           {/* Actions — always right-aligned on mobile */}
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
-            <ButtonLink
-              href="/"
-              variant="outline"
-              size="sm"
-              className="hidden lg:inline-flex normal-case tracking-normal"
-            >
-              <Globe className="h-4 w-4" />
-              {tNav("site")}
-            </ButtonLink>
-
             <AccountDropdown />
             <NotificationsDropdown />
 
@@ -413,6 +436,29 @@ export function DashboardNavbar() {
                 </Link>
 
                 <div className="mt-1 space-y-0.5">
+                  {STANDALONE_NAV.map((item) => {
+                    const ItemIcon = iconMap[item.icon] ?? LayoutDashboard;
+                    const itemActive = isActive(pathname, item.href);
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMobileOpen(false)}
+                        className={cn(
+                          "flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium transition-colors",
+                          itemActive
+                            ? "bg-[color-mix(in_srgb,var(--primary)_16%,transparent)] text-foreground"
+                            : "text-muted hover:bg-[color-mix(in_srgb,var(--primary)_10%,transparent)] hover:text-foreground",
+                        )}
+                      >
+                        <ItemIcon className="h-4.5 w-4.5 shrink-0 text-primary" />
+                        {tNav(item.i18nKey)}
+                      </Link>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-1 space-y-0.5">
                   {groups.map((group) => (
                     <MobileNavSection
                       key={group.id}
@@ -423,19 +469,6 @@ export function DashboardNavbar() {
                       defaultOpen={group.id === "play"}
                     />
                   ))}
-                </div>
-
-                <div className="mt-3 space-y-2 border-t border-border pt-3">
-                  <ButtonLink
-                    href="/"
-                    variant="outline"
-                    size="md"
-                    className="w-full normal-case tracking-normal"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    <Globe className="h-4 w-4" />
-                    {tNav("backToSite")}
-                  </ButtonLink>
                 </div>
               </motion.div>
             </>

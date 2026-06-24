@@ -1,5 +1,6 @@
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
+import { RouteKey } from "@/components/layout/route-key";
 
 export default function MarketingLayout({
   children,
@@ -9,7 +10,9 @@ export default function MarketingLayout({
   return (
     <>
       <Navbar />
-      <main className="relative">{children}</main>
+      <main className="relative">
+        <RouteKey>{children}</RouteKey>
+      </main>
       <Footer />
     </>
   );

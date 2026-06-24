@@ -305,14 +305,32 @@ button{
 @keyframes shine {
   to { background-position: 200% center; }
 }
+@keyframes motion-safe-spin {
+  to { transform: rotate(360deg); }
+}
+
+.motion-safe-spin {
+  animation: motion-safe-spin 0.75s linear infinite;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *:not([data-motion-safe]):not([data-skeleton]):not(.motion-safe-spin),
+  *:not([data-motion-safe]):not([data-skeleton]):not(.motion-safe-spin)::before,
+  *:not([data-motion-safe]):not([data-skeleton]):not(.motion-safe-spin)::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+
+  [data-motion-safe],
+  .motion-safe-spin {
+    animation-duration: 0.75s !important;
+    animation-iteration-count: infinite !important;
+  }
+
+  [data-skeleton] {
+    animation-duration: 2s !important;
+    animation-iteration-count: infinite !important;
   }
 }

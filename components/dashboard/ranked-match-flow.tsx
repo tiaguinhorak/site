@@ -82,7 +82,7 @@ export function RankedMatchFlow() {
                   {a.accepted ? (
                     <CheckCircle2 className="h-4 w-4 text-emerald-400" />
                   ) : (
-                    <Loader2 className="h-4 w-4 animate-spin text-muted" />
+                    <Loader2 className="h-4 w-4 motion-safe-spin text-muted" />
                   )}
                   {a.nickname}
                   {a.isYou && ` ${t("you")}`}

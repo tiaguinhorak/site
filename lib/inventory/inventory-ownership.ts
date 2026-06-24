@@ -1,9 +1,9 @@
 import "server-only";
 
-import type { InventoryCategory, InventoryRarity } from "@/lib/generated/prisma/client";
+import type { InventoryRarity } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { CsgoApiError } from "@/lib/csgo-api/http";
-import { rarityAccent } from "@/lib/inventory/catalog-categories";
+import { rarityAccent, inventoryCategoryToDb } from "@/lib/inventory/catalog-categories";
 
 function mapCatalogRarityToInventory(rarity: string): InventoryRarity {
   const value = rarity.toLowerCase();
@@ -50,7 +50,7 @@ export async function ensureInventoryItemForCatalogSkin(catalogSkinId: string) {
   return prisma.inventoryItem.create({
     data: {
       name: `${catalog.weaponName} | ${catalog.paintkitName}`,
-      category: catalog.category as InventoryCategory,
+      category: inventoryCategoryToDb(catalog.category, catalog.weaponId),
       rarity: mapCatalogRarityToInventory(catalog.rarity),
       accent: rarityAccent(catalog.rarity),
       sortOrder: 0,

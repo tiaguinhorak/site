@@ -68,7 +68,7 @@ export function RankedPostMatchModal({
             className="w-full justify-center"
           >
             {loading === "rematch" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 motion-safe-spin" />
             ) : (
               <RefreshCw className="h-4 w-4" />
             )}
@@ -81,7 +81,7 @@ export function RankedPostMatchModal({
             className="w-full justify-center"
           >
             {loading === "swap" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 motion-safe-spin" />
             ) : (
               <Shuffle className="h-4 w-4" />
             )}
@@ -94,7 +94,7 @@ export function RankedPostMatchModal({
             className="w-full justify-center text-muted"
           >
             {loading === "leave" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 motion-safe-spin" />
             ) : (
               <LogOut className="h-4 w-4" />
             )}

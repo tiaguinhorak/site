@@ -8,6 +8,7 @@ import { LiveServerAdminActions } from "@/components/admin/live-server-admin-act
 import { useLiveServerStats, type LiveServerStatView } from "@/lib/hooks/use-live-server-stats";
 import { useUser } from "@/lib/hooks/use-user";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function pingColor(ping: number) {
   if (ping <= 13) return "text-emerald-400";
@@ -79,7 +80,19 @@ export function LiveServersPanel() {
   const onlineCount = servers.filter((s) => s.online).length;
 
   if (loading && servers.length === 0) {
-    return null;
+    return (
+      <div className="rounded-card glass-strong p-6" aria-busy="true">
+        <div className="mb-5 flex items-center gap-2">
+          <Skeleton className="h-5 w-5 rounded-full" />
+          <Skeleton className="h-6 w-40" />
+        </div>
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 w-full rounded-xl" />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   if (servers.length === 0) {

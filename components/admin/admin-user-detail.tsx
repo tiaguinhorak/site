@@ -291,7 +291,7 @@ export function AdminUserDetail({ userId }: { userId: string }) {
   if (!user) {
     return (
       <div className="flex justify-center py-12 text-muted">
-        <Loader2 className="h-6 w-6 animate-spin" />
+        <Loader2 className="h-6 w-6 motion-safe-spin" />
       </div>
     );
   }
@@ -470,7 +470,7 @@ export function AdminUserDetail({ userId }: { userId: string }) {
             </div>
             <div className="sm:col-span-2">
               <Button type="button" disabled={saving} onClick={saveUser}>
-                {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : (
+                {saving ? <Loader2 className="h-5 w-5 motion-safe-spin" /> : (
                   <>
                     <Pencil className="h-4 w-4" />
                     Salvar alterações
@@ -610,7 +610,7 @@ export function AdminUserDetail({ userId }: { userId: string }) {
               />
             </div>
             <Button type="button" disabled={saving} onClick={sendNotification}>
-              {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : (
+              {saving ? <Loader2 className="h-5 w-5 motion-safe-spin" /> : (
                 <>
                   <Send className="h-4 w-4" />
                   Enviar

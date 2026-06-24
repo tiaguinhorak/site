@@ -38,8 +38,10 @@ import {
 } from "@/lib/profile/avatar-draft";
 import { compressImageFile } from "@/lib/client/compress-image";
 import { API_REQUEST_HEADER } from "@/lib/brand";
+import { toast } from "@/lib/toast";
 import { ALLOWED_AVATAR_TYPES } from "@/lib/security/constants";
 import { cn } from "@/lib/utils";
+import { ProfilePageSkeleton } from "@/components/loading/page-skeletons";
 
 const planBadge = {
   free: "bg-muted/20 text-muted",
@@ -77,8 +79,6 @@ export function ProfileSection() {
   const [activeTab, setActiveTab] = useState<ProfileTab>("general");
   const [draft, setDraft] = useState<UserProfile | null>(null);
   const [avatarDraft, setAvatarDraft] = useState<AvatarDraft>(unchangedAvatarDraft);
-  const [savedMessage, setSavedMessage] = useState<string | null>(null);
-  const [savedTone, setSavedTone] = useState<"ok" | "err">("ok");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -109,13 +109,10 @@ export function ProfileSection() {
     if (steamStatus === "linked") {
       refresh();
       setActiveTab("steam");
-      setSavedTone("ok");
-      setSavedMessage(t("steamLinkedSuccess"));
-      setTimeout(() => setSavedMessage(null), 5000);
+      toast.success(t("steamLinkedSuccess"));
     } else if (steamError === "steam_already_linked") {
       setActiveTab("steam");
-      setSavedTone("err");
-      setSavedMessage(t("steamAlreadyLinked"));
+      toast.error(t("steamAlreadyLinked"));
     }
   }, [searchParams, refresh, t]);
 
@@ -175,7 +172,6 @@ export function ProfileSection() {
     if (!profile || !draft) return;
     setFieldErrors({});
     setAvatarError(null);
-    setSavedMessage(null);
 
     const payload: Record<string, string> = {
       firstName: draft.firstName,
@@ -197,8 +193,7 @@ export function ProfileSection() {
 
     if (!parsed.success) {
       setFieldErrors(formatZodErrors(parsed.error));
-      setSavedTone("err");
-      setSavedMessage(t("fixFields"));
+      toast.error(t("fixFields"));
       return;
     }
 
@@ -219,36 +214,28 @@ export function ProfileSection() {
 
       if (!result.ok) {
         if (result.fieldErrors) setFieldErrors(result.fieldErrors);
-        setSavedTone("err");
-        setSavedMessage(result.error);
+        toast.error(result.error);
         return;
       }
 
       setUser(result.data.profile);
       setDraft(result.data.profile);
       setAvatarDraft(unchangedAvatarDraft);
-      setSavedTone("ok");
-      setSavedMessage(t("saved"));
-      setTimeout(() => setSavedMessage(null), 3000);
+      toast.success(t("saved"));
     } catch (err) {
       const key =
         err instanceof Error && err.message === "invalidFormat"
           ? t("avatarInvalidFormat")
           : t("saveFailed");
       setAvatarError(key);
-      setSavedTone("err");
-      setSavedMessage(key);
+      toast.error(key);
     } finally {
       setSaving(false);
     }
   }
 
   if (loading || !profile || !draft) {
-    return (
-      <div className="rounded-card glass p-8 text-center text-muted">
-        {t("loading")}
-      </div>
-    );
+    return <ProfilePageSkeleton />;
   }
 
   return (
@@ -406,20 +393,6 @@ export function ProfileSection() {
         </div>
 
         <div className="p-6 sm:p-8">
-          {savedMessage && (
-            <div
-              className={cn(
-                "mb-6 rounded-xl border px-4 py-3 text-sm",
-                savedTone === "ok"
-                  ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-400"
-                  : "border-rose-500/30 bg-rose-500/10 text-rose-400",
-              )}
-              role="status"
-            >
-              {savedMessage}
-            </div>
-          )}
-
           {activeTab === "general" && (
             <div className="space-y-8">
               <ProfileAvatarPicker

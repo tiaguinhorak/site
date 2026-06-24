@@ -2,13 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, User, Loader2, ArrowRight } from "lucide-react";
+import { Mail, Lock, User, ArrowRight } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { HoneypotField } from "@/components/ui/honeypot-field";
 import { SteamIcon } from "@/components/ui/icons";
 import { secureApi } from "@/lib/api/client";
+import { notifyAuthSessionChanged } from "@/lib/auth/auth-events";
+import { useUser } from "@/lib/hooks/use-user";
+import { toast } from "@/lib/toast";
 import {
   registerSchema,
   formatZodErrors,
@@ -18,9 +22,9 @@ import { sanitizeNickname } from "@/lib/security/sanitize";
 
 export function RegisterForm() {
   const router = useRouter();
+  const { refresh } = useUser();
   const t = useTranslations("authForm");
   const [loading, setLoading] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [nickname, setNickname] = useState("");
   const [email, setEmail] = useState("");
@@ -29,7 +33,6 @@ export function RegisterForm() {
   const [honeypot, setHoneypot] = useState("");
 
   async function submitRegister() {
-    setFormError(null);
     setFieldErrors({});
 
     const parsed = registerSchema.safeParse({
@@ -42,7 +45,7 @@ export function RegisterForm() {
 
     if (!parsed.success) {
       setFieldErrors(formatZodErrors(parsed.error));
-      setFormError(firstZodError(parsed.error));
+      toast.error(firstZodError(parsed.error));
       return;
     }
 
@@ -54,11 +57,13 @@ export function RegisterForm() {
     setLoading(false);
 
     if (!result.ok) {
-      setFormError(result.error);
+      toast.error(result.error);
       if (result.fieldErrors) setFieldErrors(result.fieldErrors);
       return;
     }
 
+    await refresh();
+    notifyAuthSessionChanged();
     router.push("/dashboard");
     router.refresh();
   }
@@ -90,12 +95,6 @@ export function RegisterForm() {
         noValidate
       >
         <HoneypotField value={honeypot} onChange={setHoneypot} />
-
-        {formError && (
-          <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-400" role="alert">
-            {formError}
-          </p>
-        )}
 
         <Input
           label={t("nickname")}
@@ -143,7 +142,7 @@ export function RegisterForm() {
 
         <Button type="submit" size="lg" className="w-full" disabled={loading}>
           {loading ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <Spinner size="md" />
           ) : (
             <>
               {t("createAccount")}

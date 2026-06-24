@@ -10,6 +10,13 @@ import {
 } from "@/lib/inventory/loadout-team";
 import type { InventoryCategoryKey } from "@/lib/profile";
 
+export type LoadoutSticker = {
+  slot: number;
+  defIndex: number;
+  name: string;
+  imageUrl: string | null;
+};
+
 export type UserLoadoutItem = {
   catalogSkinId: string;
   name: string;
@@ -22,6 +29,7 @@ export type UserLoadoutItem = {
   accent: string;
   team: LoadoutTeam;
   equippedAt: string;
+  stickers: LoadoutSticker[];
 };
 
 export async function getUserServerLoadout(userId: string, team?: LoadoutTeam) {
@@ -47,6 +55,57 @@ export async function getUserServerLoadout(userId: string, team?: LoadoutTeam) {
     include: { skin: true },
     orderBy: { createdAt: "desc" },
   });
+
+  const stickerRows = await prisma.csgoPlayerWeaponSticker.findMany({
+    where: {
+      steamId: user.steamId,
+      ...(team ? { team } : {}),
+    },
+  });
+
+  const defIndices = new Set<number>();
+  for (const row of stickerRows) {
+    for (const defIndex of [
+      row.slot0,
+      row.slot1,
+      row.slot2,
+      row.slot3,
+      row.slot4,
+    ]) {
+      if (defIndex > 0) defIndices.add(defIndex);
+    }
+  }
+
+  const catalogStickers =
+    defIndices.size > 0
+      ? await prisma.csgoStickerCatalog.findMany({
+          where: { defIndex: { in: [...defIndices] } },
+        })
+      : [];
+  const stickerCatalogByDef = new Map(
+    catalogStickers.map((entry) => [entry.defIndex, entry]),
+  );
+
+  function stickersForWeapon(weaponId: string, side: LoadoutTeam): LoadoutSticker[] {
+    const row = stickerRows.find((r) => r.weaponId === weaponId && r.team === side);
+    if (!row) return [];
+
+    const slotValues = [row.slot0, row.slot1, row.slot2, row.slot3, row.slot4];
+    const stickers: LoadoutSticker[] = [];
+
+    slotValues.forEach((defIndex, slot) => {
+      if (defIndex <= 0) return;
+      const catalog = stickerCatalogByDef.get(defIndex);
+      stickers.push({
+        slot,
+        defIndex,
+        name: catalog?.name ?? `Sticker ${defIndex}`,
+        imageUrl: catalog?.imageUrl ?? null,
+      });
+    });
+
+    return stickers;
+  }
 
   const items: UserLoadoutItem[] = [];
 
@@ -74,6 +133,7 @@ export async function getUserServerLoadout(userId: string, team?: LoadoutTeam) {
         accent: rarityAccent(row.skin.rarity),
         team: side,
         equippedAt: row.createdAt.toISOString(),
+        stickers: stickersForWeapon(row.skin.weaponId, side),
       });
     }
   }

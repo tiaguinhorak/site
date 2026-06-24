@@ -30,6 +30,7 @@ import {
   textWarningClass,
 } from "@/lib/ui/theme-surfaces";
 import { InventoryItemArt } from "@/components/dashboard/inventory-item-art";
+import { RemoteImage } from "@/components/ui/remote-image";
 import {
   SkinPreviewModal,
   type SkinPreviewData,
@@ -38,6 +39,15 @@ import { SkinRarityBadge } from "@/components/skins/skin-rarity-badge";
 import { SkinRarityLegend } from "@/components/skins/skin-rarity-legend";
 import { SkinRarityLine } from "@/components/skins/skin-rarity-line";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
+import {
+  catalogSkinToPreview,
+  loadoutItemToPreview,
+} from "@/lib/inventory/skin-preview-mappers";
+import { useSkinPreview } from "@/lib/use-skin-preview";
+import { useUser } from "@/lib/hooks/use-user";
+import { toast } from "@/lib/toast";
+import { InventoryPageSkeleton } from "@/components/loading/page-skeletons";
+import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
 import {
   WeaponStickerModal,
   weaponSupportsStickers,
@@ -58,6 +68,13 @@ type CatalogSkin = {
   owned: boolean;
 };
 
+type LoadoutSticker = {
+  slot: number;
+  defIndex: number;
+  name: string;
+  imageUrl: string | null;
+};
+
 type LoadoutItem = {
   catalogSkinId: string;
   name: string;
@@ -68,6 +85,7 @@ type LoadoutItem = {
   accent: string;
   team: LoadoutTeam;
   equippedAt: string;
+  stickers: LoadoutSticker[];
 };
 
 type LoadoutResponse = {
@@ -87,7 +105,11 @@ const CATEGORY_ICON: Record<"all" | InventoryCategoryKey, typeof LayoutGrid> = {
   agent: LayoutGrid,
 };
 
-async function postJson(url: string, body: unknown) {
+async function postJson(
+  url: string,
+  body: unknown,
+  partialSyncMessage: string,
+) {
   const response = await fetch(url, {
     method: "POST",
     credentials: "same-origin",
@@ -107,12 +129,51 @@ async function postJson(url: string, body: unknown) {
     throw new Error(payload?.error ?? "Request failed.");
   }
   if (payload?.gameSync && !payload.gameSync.ok) {
-    throw new Error(
-      payload.gameSync.error ??
-        "Salvo no site, mas falhou ao enviar ao servidor CS:GO. Tente respawn.",
-    );
+    throw new Error(payload.gameSync.error ?? partialSyncMessage);
   }
   return payload;
+}
+
+function LoadoutStickerRow({
+  stickers,
+  label,
+}: {
+  stickers: LoadoutSticker[];
+  label: string;
+}) {
+  if (stickers.length === 0) return null;
+
+  return (
+    <div className="mt-3 space-y-1.5">
+      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted">
+        <Sticker className="h-3 w-3 shrink-0" />
+        {label}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {stickers.map((sticker) => (
+          <div
+            key={`${sticker.slot}-${sticker.defIndex}`}
+            title={sticker.name}
+            className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-border/60 bg-black/35"
+          >
+            {sticker.imageUrl ? (
+              <RemoteImage
+                src={sticker.imageUrl}
+                alt=""
+                fill
+                sizes="40px"
+                className="object-contain p-0.5"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-muted">
+                <Sticker className="h-4 w-4" />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function EquippedSidebar({
@@ -143,74 +204,99 @@ function EquippedSidebar({
   const sideItems = loadout.items.filter((item) => item.team === team);
 
   return (
-    <aside className="lg:w-72 shrink-0">
+    <aside className="lg:w-80 shrink-0">
       <div className="rounded-card glass-strong lg:sticky lg:top-24">
-        <div className="flex items-center justify-between gap-2 border-b border-border/60 px-4 py-3">
-          <p className="text-sm font-semibold text-foreground">
+        <div className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3.5">
+          <p className="text-sm font-semibold leading-snug text-foreground">
             {t("loadoutSidebarTeam", { team: teamLabel })}
           </p>
-          <Button type="button" variant="ghost" size="sm" onClick={onRefresh}>
-            <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
+          <Button type="button" variant="ghost" size="sm" onClick={onRefresh} aria-label={t("retry")}>
+            <RefreshCw className={cn("h-4 w-4", refreshing && "motion-safe-spin")} />
           </Button>
         </div>
 
         {!loadout.steamLinked ? (
-          <p className={cn("px-4 py-4 text-xs", textWarningClass)}>{t("loadoutSteamRequired")}</p>
+          <p className={cn("px-4 py-5 text-xs leading-relaxed", textWarningClass)}>
+            {t("loadoutSteamRequired")}
+          </p>
         ) : sideItems.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-muted">{t("loadoutEmpty")}</p>
+          <p className="px-4 py-8 text-center text-sm text-muted">{t("loadoutEmpty")}</p>
         ) : (
-          <ul className="max-h-[min(70vh,520px)] space-y-2 overflow-y-auto p-3">
-            {sideItems.map((item) => (
-              <li
-                key={`${item.team}-${item.catalogSkinId}`}
-                className={cn("flex items-center gap-2 rounded-xl p-2", surfaceSubtleClass)}
-              >
-                <InventoryItemArt
-                  imageUrl={item.imageUrl}
-                  accent={item.accent}
-                  className="h-11 w-14 shrink-0"
-                  onClick={() => onPreview(item)}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-medium text-foreground">{item.name}</p>
-                  <SkinRarityBadge
-                    rarity={item.rarity}
-                    accent={item.accent}
-                    className="mt-1"
-                  />
-                </div>
-                <div className="flex shrink-0 flex-col gap-1">
-                  {weaponSupportsStickers(item.weaponId) && (
+          <ul className="max-h-[min(70vh,560px)] space-y-3 overflow-y-auto p-3">
+            {sideItems.map((item) => {
+              const supportsStickers = weaponSupportsStickers(item.weaponId);
+              const isUnequipping = unequippingId === item.catalogSkinId;
+
+              return (
+                <li
+                  key={`${item.team}-${item.catalogSkinId}`}
+                  className={cn(
+                    "rounded-xl border border-border/50 p-3 shadow-sm",
+                    surfaceSubtleClass,
+                  )}
+                >
+                  <div className="flex gap-3">
+                    <InventoryItemArt
+                      imageUrl={item.imageUrl}
+                      accent={item.accent}
+                      className="h-16 w-[4.5rem] shrink-0"
+                      onClick={() => onPreview(item)}
+                    />
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <button
+                        type="button"
+                        onClick={() => onPreview(item)}
+                        className="line-clamp-2 text-left text-sm font-semibold leading-snug text-foreground hover:text-primary"
+                      >
+                        {item.name}
+                      </button>
+                      <SkinRarityBadge rarity={item.rarity} accent={item.accent} />
+                    </div>
+                  </div>
+
+                  <LoadoutStickerRow stickers={item.stickers} label={t("stickersShort")} />
+
+                  <div
+                    className={cn(
+                      "mt-3 flex flex-wrap gap-2 border-t border-border/50 pt-3",
+                      supportsStickers ? "justify-between" : "justify-end",
+                    )}
+                  >
+                    {supportsStickers && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="min-w-0 flex-1 normal-case tracking-normal"
+                        onClick={() => onStickers(item)}
+                      >
+                        <Sticker className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{t("stickersShort")}</span>
+                      </Button>
+                    )}
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="px-2 text-[10px]"
-                      onClick={() => onStickers(item)}
+                      className={cn(
+                        "normal-case tracking-normal text-muted hover:text-foreground",
+                        supportsStickers ? "shrink-0" : "w-full justify-center",
+                      )}
+                      disabled={isUnequipping ? true : undefined}
+                      confirm={confirmPresets.unequipSkin(item.name)}
+                      onClick={() => onUnequip(item)}
                     >
-                      <Sticker className="mr-1 h-3 w-3" />
-                      {t("stickersShort")}
+                      {isUnequipping ? "…" : t("unequip")}
                     </Button>
-                  )}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="px-2 text-[10px]"
-                    disabled={unequippingId === item.catalogSkinId ? true : undefined}
-                    confirm={confirmPresets.unequipSkin(item.name)}
-                    onClick={() => onUnequip(item)}
-                  >
-                    {unequippingId === item.catalogSkinId ? "…" : t("unequip")}
-                  </Button>
-                </div>
-              </li>
-            ))}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
 
         {loadout.steamLinked && (
-          <p className="border-t border-border/60 px-4 py-2 text-[10px] leading-relaxed text-muted">
+          <p className="border-t border-border/60 px-4 py-2.5 text-[10px] leading-relaxed text-muted">
             {loadout.steamId2
               ? t("loadoutSteamId2", { steamId: loadout.steamId2 })
               : t("loadoutSteamId", { steamId: loadout.steamId ?? "" })}
@@ -264,9 +350,8 @@ export function InventorySection() {
   const [resultTotal, setResultTotal] = useState(0);
   const [catalogTotal, setCatalogTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [bootstrapped, setBootstrapped] = useState(false);
   const [loadError, setLoadError] = useState(false);
-  const [equipError, setEquipError] = useState<string | null>(null);
-  const [syncNotice, setSyncNotice] = useState<string | null>(null);
   const [equippingId, setEquippingId] = useState<string | null>(null);
   const [unequippingId, setUnequippingId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -298,8 +383,6 @@ export function InventorySection() {
   }, [loadoutTeam]);
 
   const pushLoadoutToServer = useCallback(async () => {
-    setSyncNotice(null);
-    setEquipError(null);
     try {
       const response = await fetch("/api/inventory/push-loadout", {
         method: "POST",
@@ -314,10 +397,10 @@ export function InventorySection() {
         gameSync?: { ok: boolean; error?: string; applyMode?: "staged" | "immediate" };
       } | null;
       if (!response.ok) {
-        throw new Error(payload?.error ?? "Sync failed.");
+        throw new Error(payload?.error ?? t("syncLoadoutFailed"));
       }
       if (payload?.gameSync?.ok) {
-        setSyncNotice(
+        toast.success(
           payload.gameSync.applyMode === "immediate"
             ? t("gameSyncImmediate")
             : t("gameSyncStaged"),
@@ -326,7 +409,7 @@ export function InventorySection() {
         throw new Error(payload.gameSync.error);
       }
     } catch (err) {
-      setEquipError(err instanceof Error ? err.message : "Falha ao sincronizar loadout.");
+      toast.error(err instanceof Error ? err.message : t("syncLoadoutFailed"));
     }
   }, [t]);
 
@@ -385,7 +468,10 @@ export function InventorySection() {
     } catch {
       if (reqId === reqIdRef.current) setLoadError(true);
     } finally {
-      if (reqId === reqIdRef.current) setLoading(false);
+      if (reqId === reqIdRef.current) {
+        setLoading(false);
+        setBootstrapped(true);
+      }
     }
   }, [filter, page, search, weaponFilter, loadoutTeam]);
 
@@ -423,16 +509,14 @@ export function InventorySection() {
 
   const handleEquip = async (item: CatalogSkin) => {
     if (!item.owned) return;
-    setEquipError(null);
-    setSyncNotice(null);
     setEquippingId(item.id);
     try {
       const payload = await postJson("/api/inventory/equip", {
         catalogSkinId: item.id,
         team: loadoutTeam,
-      });
+      }, t("gameSyncPartial"));
       if (payload?.gameSync?.ok) {
-        setSyncNotice(
+        toast.success(
           payload.gameSync.applyMode === "immediate"
             ? t("gameSyncImmediate")
             : t("gameSyncStaged"),
@@ -444,24 +528,21 @@ export function InventorySection() {
         prev?.id === item.id ? { ...prev, equipped: true } : prev,
       );
     } catch (err) {
-      setSyncNotice(null);
-      setEquipError(err instanceof Error ? err.message : "Falha ao equipar skin.");
+      toast.error(err instanceof Error ? err.message : t("equipFailed"));
     } finally {
       setEquippingId(null);
     }
   };
 
   const handleUnequip = async (catalogSkinId: string, weaponId: string) => {
-    setEquipError(null);
-    setSyncNotice(null);
     setUnequippingId(catalogSkinId);
     try {
       const payload = await postJson("/api/inventory/unequip", {
         catalogSkinId,
         team: loadoutTeam,
-      });
+      }, t("gameSyncPartial"));
       if (payload?.gameSync?.ok) {
-        setSyncNotice(
+        toast.success(
           payload.gameSync.applyMode === "immediate"
             ? t("gameSyncImmediate")
             : t("gameSyncStaged"),
@@ -473,42 +554,32 @@ export function InventorySection() {
         prev?.id === catalogSkinId ? { ...prev, equipped: false } : prev,
       );
     } catch (err) {
-      setSyncNotice(null);
-      setEquipError(err instanceof Error ? err.message : "Falha ao desequipar skin.");
+      toast.error(err instanceof Error ? err.message : t("unequipFailed"));
     } finally {
       setUnequippingId(null);
     }
   };
 
   const openCatalogPreview = (item: CatalogSkin) => {
-    setPreviewSkin({
-      id: item.id,
-      name: item.name,
-      imageUrl: item.imageUrl,
-      accent: item.accent,
-      category: categoryLabels[item.category],
-      rarity: item.rarity,
-      weaponName: item.weaponName,
-      paintkitName: item.paintkitName,
-      equipped: item.equipped,
-      owned: item.owned,
-    });
+    setPreviewSkin(
+      catalogSkinToPreview({
+        ...item,
+        category: categoryLabels[item.category],
+      }),
+    );
   };
 
   const openLoadoutPreview = (item: LoadoutItem) => {
-    setPreviewSkin({
-      id: item.catalogSkinId,
-      name: item.name,
-      imageUrl: item.imageUrl,
-      accent: item.accent,
-      rarity: item.rarity,
-      equipped: true,
-      owned: true,
-    });
+    setPreviewSkin(loadoutItemToPreview(item));
   };
 
-  const showEmptyCatalog = !loading && !loadError && catalogTotal === 0;
-  const showNoResults = !loading && !loadError && catalogTotal > 0 && items.length === 0;
+  const showEmptyCatalog = bootstrapped && !loading && !loadError && catalogTotal === 0;
+  const showNoResults = bootstrapped && !loading && !loadError && catalogTotal > 0 && items.length === 0;
+  const catalogGridLoading = loading && items.length === 0;
+
+  if (!bootstrapped) {
+    return <InventoryPageSkeleton />;
+  }
 
   return (
     <section>
@@ -607,30 +678,22 @@ export function InventorySection() {
           </div>
 
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
-            <span>{t("catalogCount", { count: resultTotal, page, totalPages })}</span>
-            {catalogTotal > 0 && (
+            {catalogGridLoading ? (
+              <Skeleton className="h-4 w-56" />
+            ) : (
+              <span>{t("catalogCount", { count: resultTotal, page, totalPages })}</span>
+            )}
+            {!catalogGridLoading && catalogTotal > 0 && (
               <span className="text-xs text-muted/70">
                 {t("itemsCount", { count: catalogTotal })}
               </span>
             )}
           </div>
 
-          {syncNotice && (
-            <div className="mb-4 rounded-card border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
-              <p className="text-sm text-emerald-800 dark:text-emerald-200">{syncNotice}</p>
-            </div>
-          )}
-          {equipError && (
-            <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/5 p-3">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
-              <p className="text-sm text-red-700 dark:text-red-300">{equipError}</p>
-            </div>
-          )}
-
-          {loading && items.length === 0 ? (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {catalogGridLoading ? (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-56 animate-pulse rounded-card bg-[color-mix(in_srgb,var(--foreground)_8%,transparent)] dark:bg-white/5" />
+                <SkeletonCard key={i} className="h-56" />
               ))}
             </div>
           ) : loadError ? (
@@ -662,8 +725,20 @@ export function InventorySection() {
               {items.map((item) => (
                 <article
                   key={item.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    if ((e.target as HTMLElement).closest("button")) return;
+                    openCatalogPreview(item);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      openCatalogPreview(item);
+                    }
+                  }}
                   className={cn(
-                    "relative flex flex-col overflow-hidden rounded-card glass",
+                    "relative flex flex-col overflow-hidden rounded-card glass cursor-pointer transition-shadow hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
                     item.equipped && "ring-1 ring-emerald-400/35",
                   )}
                 >
@@ -673,7 +748,6 @@ export function InventorySection() {
                       imageUrl={item.imageUrl}
                       accent={item.accent}
                       className="h-28 w-full"
-                      onClick={() => openCatalogPreview(item)}
                       priority={false}
                     />
                     <h3 className="mt-2 line-clamp-2 text-sm font-bold text-foreground">
@@ -702,11 +776,14 @@ export function InventorySection() {
                           ? confirmPresets.unequipSkin(item.name)
                           : confirmPresets.equipSkin(item.name)
                       }
-                      onClick={() =>
-                        item.equipped
-                          ? handleUnequip(item.id, item.weaponId)
-                          : handleEquip(item)
-                      }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (item.equipped) {
+                          handleUnequip(item.id, item.weaponId);
+                        } else {
+                          handleEquip(item);
+                        }
+                      }}
                     >
                       {item.equipped
                         ? unequippingId === item.id
@@ -796,6 +873,7 @@ export function InventorySection() {
         weaponName={stickerTarget?.name ?? ""}
         team={loadoutTeam}
         onClose={() => setStickerTarget(null)}
+        onSaved={() => void fetchLoadout()}
       />
     </section>
   );
@@ -803,29 +881,47 @@ export function InventorySection() {
 
 export function InventoryPreview() {
   const t = useTranslations("inventory");
+  const { user, loading: userLoading } = useUser();
   const [loadout, setLoadout] = useState<LoadoutResponse | null>(null);
+  const { previewSkin, openPreview, closePreview, isPreviewOpen } = useSkinPreview();
 
   useEffect(() => {
+    if (!user) {
+      setLoadout(null);
+      return;
+    }
     fetch("/api/inventory/loadout", { credentials: "same-origin" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => setLoadout(data))
       .catch(() => setLoadout(null));
-  }, []);
+  }, [user?.id]);
 
   const equipped = loadout?.items ?? [];
+
+  if (userLoading || !user) {
+    return null;
+  }
 
   if (equipped.length === 0) {
     return <p className="text-sm text-muted">{t("noneEquipped")}</p>;
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {equipped.slice(0, 6).map((item) => (
-        <div key={`${item.team}-${item.catalogSkinId}`} className="rounded-xl glass p-3">
-          <InventoryItemArt imageUrl={item.imageUrl} accent={item.accent} className="h-12" />
-          <p className="mt-2 truncate text-sm font-semibold text-foreground">{item.name}</p>
-        </div>
-      ))}
-    </div>
+    <>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {equipped.slice(0, 6).map((item) => (
+          <button
+            key={`${item.team}-${item.catalogSkinId}`}
+            type="button"
+            onClick={() => openPreview(loadoutItemToPreview(item))}
+            className="rounded-xl glass p-3 text-left transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            <InventoryItemArt imageUrl={item.imageUrl} accent={item.accent} className="h-12" />
+            <p className="mt-2 truncate text-sm font-semibold text-foreground">{item.name}</p>
+          </button>
+        ))}
+      </div>
+      <SkinPreviewModal open={isPreviewOpen} skin={previewSkin} onClose={closePreview} />
+    </>
   );
 }

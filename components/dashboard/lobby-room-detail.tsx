@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Loader2,
   LogOut,
   Play,
   Settings,
@@ -13,6 +12,8 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
+import { LobbyPageSkeleton } from "@/components/loading/page-skeletons";
+import { Spinner } from "@/components/ui/spinner";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { AvatarImage } from "@/components/ui/avatar-image";
@@ -26,6 +27,7 @@ import {
 } from "@/components/providers/realtime-provider";
 import type { LobbyRoomEnriched } from "@/lib/lobby";
 import { LOBBY_WEAPON_OPTIONS, type LobbyRoomSettings } from "@/lib/lobby/schemas";
+import { toast } from "@/lib/toast";
 
 const WEAPON_LABEL_KEYS: Record<(typeof LOBBY_WEAPON_OPTIONS)[number], string> = {
   all: "weaponAll",
@@ -52,7 +54,6 @@ export function LobbyRoomDetail({ roomId }: { roomId: string }) {
   const [room, setRoom] = useState<LobbyRoomEnriched | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editMap, setEditMap] = useState("");
@@ -94,10 +95,9 @@ export function LobbyRoomDetail({ roomId }: { roomId: string }) {
   }, [loadRoom, realtimeConnected, editing]);
 
   async function handleLeave() {
-    setActionError(null);
     const result = await secureApi(`/api/lobby/rooms/${roomId}/leave`, { method: "POST" });
     if (!result.ok) {
-      setActionError(result.error);
+      toast.error(result.error);
       return;
     }
     router.push("/dashboard/lobby");
@@ -105,10 +105,9 @@ export function LobbyRoomDetail({ roomId }: { roomId: string }) {
   }
 
   async function handleClose() {
-    setActionError(null);
     const result = await secureApi(`/api/lobby/rooms/${roomId}`, { method: "DELETE" });
     if (!result.ok) {
-      setActionError(result.error);
+      toast.error(result.error);
       return;
     }
     router.push("/dashboard/lobby");
@@ -117,14 +116,13 @@ export function LobbyRoomDetail({ roomId }: { roomId: string }) {
 
   async function handleSave() {
     setSaving(true);
-    setActionError(null);
     const result = await secureApi<{ room: LobbyRoomEnriched }>(`/api/lobby/rooms/${roomId}`, {
       method: "PATCH",
       json: { name: editName, map: editMap },
     });
     setSaving(false);
     if (!result.ok) {
-      setActionError(result.error);
+      toast.error(result.error);
       return;
     }
     setRoom(result.data.room);
@@ -133,26 +131,20 @@ export function LobbyRoomDetail({ roomId }: { roomId: string }) {
 
   async function handleStartMatch() {
     setStartingMatch(true);
-    setActionError(null);
     const result = await secureApi<{ ok: boolean; message?: string; error?: string }>(
       `/api/lobby/rooms/${roomId}/start-match`,
       { method: "POST", json: { fillBots: true } },
     );
     setStartingMatch(false);
     if (!result.ok) {
-      setActionError(result.error);
+      toast.error(result.error);
       return;
     }
-    setActionError(null);
     await loadRoom();
   }
 
   if (loading) {
-    return (
-      <div className="flex justify-center rounded-card glass p-12 text-muted">
-        <Loader2 className="h-6 w-6 animate-spin" />
-      </div>
-    );
+    return <LobbyPageSkeleton />;
   }
 
   if (error || !room) {
@@ -212,7 +204,7 @@ export function LobbyRoomDetail({ roomId }: { roomId: string }) {
                 onClick={() => void handleStartMatch()}
               >
                 {startingMatch ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Spinner size="sm" />
                 ) : (
                   <Swords className="h-4 w-4" />
                 )}
@@ -267,18 +259,12 @@ export function LobbyRoomDetail({ roomId }: { roomId: string }) {
           </p>
         )}
 
-        {actionError && (
-          <p className="mt-4 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300" role="alert">
-            {actionError}
-          </p>
-        )}
-
         {editing && isHost && (
           <div className="mt-6 space-y-4 rounded-xl border border-border p-4">
             <Input label={t("nameLabel")} value={editName} onChange={(e) => setEditName(e.target.value)} />
             <MapPicker value={editMap} onChange={setEditMap} />
             <Button variant="primary" size="sm" disabled={saving} onClick={handleSave}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : tc("save")}
+              {saving ? <Spinner size="sm" /> : tc("save")}
             </Button>
           </div>
         )}

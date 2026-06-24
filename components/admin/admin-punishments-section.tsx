@@ -119,7 +119,7 @@ export function AdminPunishmentsSection() {
               {loading ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-muted">
-                    <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                    <Loader2 className="mx-auto h-6 w-6 motion-safe-spin" />
                   </td>
                 </tr>
               ) : punishments.length === 0 ? (

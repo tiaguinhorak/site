@@ -207,7 +207,7 @@ export function AdminStickersSection() {
             onClick={importAll}
           >
             {importing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 motion-safe-spin" />
             ) : (
               <Download className="h-4 w-4" />
             )}
@@ -239,14 +239,14 @@ export function AdminStickersSection() {
             onClick={runLookup}
           >
             {previewLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 motion-safe-spin" />
             ) : (
               <Wand2 className="h-4 w-4" />
             )}
             Preview
           </Button>
           <Button type="button" disabled={saving || !preview?.found} onClick={addSticker}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            {saving ? <Loader2 className="h-4 w-4 motion-safe-spin" /> : <Plus className="h-4 w-4" />}
             Adicionar
           </Button>
         </div>
@@ -306,7 +306,7 @@ export function AdminStickersSection() {
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted" />
+            <Loader2 className="h-8 w-8 motion-safe-spin text-muted" />
           </div>
         ) : (
           <ul className="mt-4 divide-y divide-white/5">

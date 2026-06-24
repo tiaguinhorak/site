@@ -101,6 +101,7 @@ export function Button({
       className={cn(base, variants[variant], sizes[size], className)}
       disabled={disabled === true}
       onClick={(e) => {
+        e.stopPropagation();
         runWithConfirm(confirm, requestConfirm, () => onClick?.(e), e);
       }}
       {...props}

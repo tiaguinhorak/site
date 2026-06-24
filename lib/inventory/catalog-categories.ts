@@ -1,3 +1,4 @@
+import type { InventoryCategory } from "@/lib/generated/prisma/client";
 import type { InventoryCategoryKey } from "@/lib/profile";
 
 /** CSGO-API category ids (legacy sfui_* and new csgo_inventory_weapon_category_*). */
@@ -74,6 +75,33 @@ export function mapCatalogCategoryToUi(
   if (id.includes("rifle") || id.includes("heavy") || id.includes("sniper")) return "rifle";
 
   return inferCategoryFromWeaponId(weaponId);
+}
+
+const UI_CATEGORY_KEYS = new Set<InventoryCategoryKey>([
+  "knife",
+  "gloves",
+  "rifle",
+  "pistol",
+  "smg",
+  "agent",
+]);
+
+const UI_TO_DB_CATEGORY: Record<InventoryCategoryKey, InventoryCategory> = {
+  knife: "KNIFE",
+  gloves: "GLOVES",
+  rifle: "RIFLE",
+  pistol: "PISTOL",
+  smg: "SMG",
+  agent: "AGENT",
+};
+
+/** Maps catalog category (lowercase UI key or CSGO-API id) to Prisma InventoryCategory. */
+export function inventoryCategoryToDb(category: string, weaponId: string): InventoryCategory {
+  const normalized = category.toLowerCase();
+  const uiKey = UI_CATEGORY_KEYS.has(normalized as InventoryCategoryKey)
+    ? (normalized as InventoryCategoryKey)
+    : mapCatalogCategoryToUi(category, weaponId);
+  return UI_TO_DB_CATEGORY[uiKey];
 }
 
 export function rarityAccent(rarity: string): string {

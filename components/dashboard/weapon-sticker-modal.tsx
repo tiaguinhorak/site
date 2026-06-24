@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
 import { chipInactiveHoverClass, surfaceInputClass, surfaceSubtleClass } from "@/lib/ui/theme-surfaces";
 import { cn } from "@/lib/utils";
+import { toast } from "@/lib/toast";
 
 type PickerSticker = {
   id: string;
@@ -39,7 +40,6 @@ export function WeaponStickerModal({
   const [slotLabels, setSlotLabels] = useState<string[]>(Array(SLOT_COUNT).fill(""));
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
   const [pickerSearch, setPickerSearch] = useState("");
   const [pickerItems, setPickerItems] = useState<PickerSticker[]>([]);
@@ -48,24 +48,23 @@ export function WeaponStickerModal({
   const loadCurrent = useCallback(async () => {
     if (!weaponId) return;
     setLoading(true);
-    setError(null);
     try {
       const params = new URLSearchParams({ weaponId, team });
       const res = await fetch(`/api/inventory/weapon-stickers?${params}`, {
         credentials: "same-origin",
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Falha ao carregar stickers.");
+      if (!res.ok) throw new Error(data.error ?? t("stickersLoadFailed"));
       const loaded = (data.slots ?? []).slice(0, SLOT_COUNT);
       while (loaded.length < SLOT_COUNT) loaded.push(0);
       setSlots(loaded);
       setSlotLabels(Array(SLOT_COUNT).fill(""));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao carregar.");
+      toast.error(err instanceof Error ? err.message : t("stickersLoadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [weaponId, team]);
+  }, [weaponId, team, t]);
 
   useEffect(() => {
     if (open) {
@@ -130,7 +129,6 @@ export function WeaponStickerModal({
 
   async function save() {
     setSaving(true);
-    setError(null);
     try {
       const res = await fetch("/api/inventory/weapon-stickers", {
         method: "PUT",
@@ -142,17 +140,15 @@ export function WeaponStickerModal({
         body: JSON.stringify({ weaponId, team, slots }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Falha ao salvar.");
+      if (!res.ok) throw new Error(data.error ?? t("stickersSaveFailed"));
       if (data.gameSync && !data.gameSync.ok) {
-        throw new Error(
-          data.gameSync.error ??
-            "Salvo no site, mas falhou ao enviar ao servidor. Respawn no jogo.",
-        );
+        throw new Error(data.gameSync.error ?? t("stickersSavePartial"));
       }
+      toast.success(t("stickersSaved"));
       onSaved?.();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao salvar.");
+      toast.error(err instanceof Error ? err.message : t("stickersSaveFailed"));
     } finally {
       setSaving(false);
     }
@@ -165,7 +161,7 @@ export function WeaponStickerModal({
       <button
         type="button"
         className="absolute inset-0 scrim-dim"
-        aria-label="Close"
+        aria-label={t("closePreview")}
         onClick={onClose}
       />
       <div
@@ -194,7 +190,7 @@ export function WeaponStickerModal({
 
         {loading ? (
           <div className="flex justify-center py-10">
-            <Loader2 className="h-8 w-8 animate-spin text-muted" />
+            <Loader2 className="h-8 w-8 motion-safe-spin text-muted" />
           </div>
         ) : (
           <div className="mt-4 space-y-3">
@@ -254,7 +250,7 @@ export function WeaponStickerModal({
             </div>
             {pickerLoading ? (
               <div className="flex justify-center py-4">
-                <Loader2 className="h-5 w-5 animate-spin text-muted" />
+                <Loader2 className="h-5 w-5 motion-safe-spin text-muted" />
               </div>
             ) : (
               <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto">
@@ -280,10 +276,6 @@ export function WeaponStickerModal({
               </ul>
             )}
           </div>
-        )}
-
-        {error && (
-          <p className="mt-3 text-sm text-red-300">{error}</p>
         )}
 
         <p className="mt-3 text-[10px] leading-relaxed text-muted">{t("stickersHint")}</p>

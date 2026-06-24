@@ -9,8 +9,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { usePathname } from "next/navigation";
 import type { UserProfile } from "@/lib/serializers";
 import { getAvatarInitials } from "@/lib/profile";
+import { AUTH_SESSION_CHANGED_EVENT } from "@/lib/auth/auth-events";
 
 type UserContextValue = {
   user: UserProfile | null;
@@ -30,7 +32,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch("/api/auth/session", { credentials: "same-origin" });
+      const res = await fetch("/api/auth/session", {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
       const data = await res.json();
       if (data.authenticated && data.user) {
         setUserState(data.user as UserProfile);
@@ -44,8 +49,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const pathname = usePathname();
+
   useEffect(() => {
-    refresh();
+    void refresh();
+  }, [pathname, refresh]);
+
+  useEffect(() => {
+    const onAuthChange = () => void refresh();
+    window.addEventListener(AUTH_SESSION_CHANGED_EVENT, onAuthChange);
+    return () => window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, onAuthChange);
   }, [refresh]);
 
   const setUser = useCallback((next: UserProfile | null) => {

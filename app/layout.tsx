@@ -6,6 +6,8 @@ import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ConfirmProvider } from "@/components/providers/confirm-provider";
 import { BrowserNotificationListener } from "@/components/notifications/browser-notification-listener";
 import { UserProvider } from "@/components/providers/user-provider";
+import { AppToaster } from "@/components/providers/app-toaster";
+import { NavigationProgress } from "@/components/providers/navigation-progress";
 import { IntlClientProvider } from "@/components/providers/intl-client-provider";
 import { SITE_NAME, SITE_TAGLINE } from "@/lib/brand";
 import { BRAND_ASSETS } from "@/lib/brand-assets";
@@ -126,6 +128,8 @@ export default async function RootLayout({
           >
             <ConfirmProvider>
               <UserProvider>
+                <NavigationProgress />
+                <AppToaster />
                 <BrowserNotificationListener />
                 {children}
               </UserProvider>

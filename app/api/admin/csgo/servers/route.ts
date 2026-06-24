@@ -21,6 +21,7 @@ const registerSchema = z.object({
   rconPassword: z.string().min(1).max(120),
   csgoDir: z.string().min(1).max(200),
   tickrate: z.number().int().min(64).max(128).optional(),
+  pool: z.enum(["ranked", "warmup", "public"]).optional(),
 });
 
 export async function POST(request: NextRequest) {

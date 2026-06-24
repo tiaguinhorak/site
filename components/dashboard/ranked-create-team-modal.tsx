@@ -310,7 +310,7 @@ export function RankedCreateTeamModal({ open, mode, team, onClose, onSubmit }: P
                 onClick={() => void handleSubmit()}
               >
                 {saving ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 motion-safe-spin" />
                 ) : mode === "create" ? (
                   t("create")
                 ) : (

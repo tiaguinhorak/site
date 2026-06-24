@@ -34,7 +34,6 @@ export function useLiveServerStats(enabled: boolean) {
 
     try {
       const res = await fetch("/api/live-servers", {
-        cache: "no-store",
         signal: controller.signal,
       });
       if (!res.ok) return;

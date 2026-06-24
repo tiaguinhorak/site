@@ -9,20 +9,27 @@ export async function GET(request: NextRequest) {
   const user = await getSessionUser(request);
   const isAdmin = user?.isAdmin === true;
 
-  return NextResponse.json({
-    servers: servers.map((server) => ({
-      id: server.id,
-      name: server.name,
-      map: server.map,
-      mode: server.mode,
-      host: server.host,
-      port: server.port,
-      players: server.players,
-      slots: server.slots,
-      ping: server.ping,
-      online: server.online,
-      connectCommand: server.connectCommand,
-      csgoServerId: isAdmin ? server.csgoServerId : null,
-    })),
-  });
+  return NextResponse.json(
+    {
+      servers: servers.map((server) => ({
+        id: server.id,
+        name: server.name,
+        map: server.map,
+        mode: server.mode,
+        host: server.host,
+        port: server.port,
+        players: server.players,
+        slots: server.slots,
+        ping: server.ping,
+        online: server.online,
+        connectCommand: server.connectCommand,
+        csgoServerId: isAdmin ? server.csgoServerId : null,
+      })),
+    },
+    {
+      headers: {
+        "Cache-Control": "private, max-age=8, stale-while-revalidate=20",
+      },
+    },
+  );
 }

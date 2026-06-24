@@ -177,7 +177,7 @@ export function RankedRoomChat({ className }: { className?: string }) {
           className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
           aria-label={t("send")}
         >
-          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          {sending ? <Loader2 className="h-4 w-4 motion-safe-spin" /> : <Send className="h-4 w-4" />}
         </button>
       </form>
     </div>

@@ -16,6 +16,7 @@ import {
   type LobbyRoomSettings,
 } from "@/lib/lobby/schemas";
 import type { LobbyRoomEnriched } from "@/lib/lobby";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 type GameModeOption = {
@@ -45,7 +46,6 @@ export function CreateLobbyModal({ open, onClose, onCreated }: Props) {
   const [modes, setModes] = useState<GameModeOption[]>([]);
   const [loadingModes, setLoadingModes] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"geral" | "regras" | "avancado">("geral");
 
   const [gameModeId, setGameModeId] = useState("");
@@ -75,13 +75,12 @@ export function CreateLobbyModal({ open, onClose, onCreated }: Props) {
   }
 
   async function handleSubmit() {
-    setError(null);
     if (!name.trim()) {
-      setError(t("errNameRequired"));
+      toast.error(t("errNameRequired"));
       return;
     }
     if (visibility === "private" && password.length < 4) {
-      setError(t("errPasswordShort"));
+      toast.error(t("errPasswordShort"));
       return;
     }
 
@@ -102,7 +101,7 @@ export function CreateLobbyModal({ open, onClose, onCreated }: Props) {
     setSaving(false);
 
     if (!result.ok) {
-      setError(result.error);
+      toast.error(result.error);
       return;
     }
 
@@ -168,7 +167,7 @@ export function CreateLobbyModal({ open, onClose, onCreated }: Props) {
             <div className="flex-1 overflow-y-auto px-5 py-4">
               {loadingModes ? (
                 <div className="flex justify-center py-12 text-muted">
-                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <Loader2 className="h-6 w-6 motion-safe-spin" />
                 </div>
               ) : (
                 <>
@@ -382,11 +381,6 @@ export function CreateLobbyModal({ open, onClose, onCreated }: Props) {
                 </>
               )}
 
-              {error && (
-                <p className="mt-4 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300" role="alert">
-                  {error}
-                </p>
-              )}
             </div>
 
             <div className="flex justify-end gap-2 border-t border-border px-5 py-4">
@@ -400,7 +394,7 @@ export function CreateLobbyModal({ open, onClose, onCreated }: Props) {
                 disabled={saving || loadingModes}
                 onClick={handleSubmit}
               >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t("createRoom")}
+                {saving ? <Loader2 className="h-4 w-4 motion-safe-spin" /> : t("createRoom")}
               </Button>
             </div>
           </motion.div>

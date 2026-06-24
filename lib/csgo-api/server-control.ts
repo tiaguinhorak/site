@@ -32,6 +32,7 @@ export type RegisterCsgoServerInput = {
   rconPassword: string;
   csgoDir: string;
   tickrate?: number;
+  pool?: "ranked" | "warmup" | "public";
 };
 
 function sleep(ms: number) {
@@ -362,6 +363,7 @@ export async function registerCsgoServer(input: RegisterCsgoServerInput): Promis
         rconPassword: input.rconPassword,
         csgoDir: input.csgoDir,
         tickrate: input.tickrate ?? 128,
+        pool: input.pool ?? "public",
       },
     });
 

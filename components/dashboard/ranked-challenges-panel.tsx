@@ -42,7 +42,7 @@ function OpponentRow({
         disabled={busy}
         onClick={() => onChallenge(room.id)}
       >
-        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Swords className="h-3.5 w-3.5" />}
+        {busy ? <Loader2 className="h-3.5 w-3.5 motion-safe-spin" /> : <Swords className="h-3.5 w-3.5" />}
         {t("challengeBtn")}
       </Button>
     </li>
@@ -190,7 +190,7 @@ export function RankedChallengesPanel({ className }: { className?: string }) {
               >
                 <span className="truncate font-medium">{c.toLeaderNickname}</span>
                 <span className={cn("inline-flex shrink-0 items-center gap-1 text-[10px]", textWarningSoftClass)}>
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <Loader2 className="h-3 w-3 motion-safe-spin" />
                   {t("pending")}
                 </span>
               </li>

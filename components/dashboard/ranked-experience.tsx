@@ -25,7 +25,7 @@ export function RankedExperience() {
   if (userLoading || loading) {
     return (
       <div className="rounded-card glass p-8 text-center text-muted">
-        <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+        <Loader2 className="mx-auto h-6 w-6 motion-safe-spin" />
         <p className="mt-3">{t("loading")}</p>
       </div>
     );

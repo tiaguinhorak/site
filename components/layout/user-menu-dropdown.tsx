@@ -21,6 +21,7 @@ import { GlassPortal } from "@/components/ui/glass-portal";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { secureApi } from "@/lib/api/client";
+import { notifyAuthSessionChanged } from "@/lib/auth/auth-events";
 import { useUser } from "@/lib/hooks/use-user";
 import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
 import { useTheme } from "@/lib/theme";
@@ -177,6 +178,7 @@ export function UserMenuDropdown({ align = "right", className }: UserMenuDropdow
               setOpen(false);
               await secureApi("/api/auth/logout", { method: "POST" });
               setUser(null);
+              notifyAuthSessionChanged();
               router.push("/");
               router.refresh();
             }}

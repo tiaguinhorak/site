@@ -6,12 +6,12 @@ import {
   Mail,
   User,
   Lock,
-  Loader2,
   ArrowRight,
   LogIn,
   UserPlus,
   RefreshCw,
 } from "lucide-react";
+import { CenteredLoader, Spinner } from "@/components/ui/spinner";
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { CountryPicker } from "@/components/ui/country-picker";
@@ -21,7 +21,10 @@ import { HoneypotField } from "@/components/ui/honeypot-field";
 import { SteamIcon } from "@/components/ui/icons";
 import { SteamDataNotice } from "@/components/auth/steam-data-notice";
 import { secureApi } from "@/lib/api/client";
+import { notifyAuthSessionChanged } from "@/lib/auth/auth-events";
+import { useUser } from "@/lib/hooks/use-user";
 import { useConfirmPresets } from "@/lib/use-confirm-presets";
+import { toast } from "@/lib/toast";
 import { formatZodErrors, firstZodError, steamCompleteProfileSchema } from "@/lib/security/schemas";
 import { sanitizeText } from "@/lib/security/sanitize";
 import { buildPhoneValue, extractNationalDigits } from "@/lib/profile/phone";
@@ -44,6 +47,7 @@ type SteamPreview = {
 
 export function SteamCompleteProfileForm() {
   const router = useRouter();
+  const { setUser, refresh } = useUser();
   const searchParams = useSearchParams();
   const t = useTranslations("steamComplete");
   const confirmPresets = useConfirmPresets();
@@ -102,6 +106,7 @@ export function SteamCompleteProfileForm() {
       });
     } else if (error === "steam_already_linked") {
       setFormError(t("errAlreadyLinked"));
+      toast.error(t("errAlreadyLinked"));
     }
   }, [searchParams, loadProfile, t]);
 
@@ -171,12 +176,17 @@ export function SteamCompleteProfileForm() {
     setSubmitting(false);
 
     if (!result.ok) {
-      setFormError(result.error);
+      toast.error(result.error);
       if (result.fieldErrors) setFieldErrors(result.fieldErrors);
       return;
     }
 
     localStorage.removeItem(EMAIL_DRAFT_KEY);
+    if (result.data.user) {
+      setUser(result.data.user);
+    }
+    await refresh();
+    notifyAuthSessionChanged();
     router.push("/dashboard");
     router.refresh();
   }
@@ -184,16 +194,14 @@ export function SteamCompleteProfileForm() {
   async function leaveForAuth(path: "/login" | "/register") {
     await secureApi("/api/auth/logout", { method: "POST" });
     localStorage.removeItem(EMAIL_DRAFT_KEY);
+    setUser(null);
+    notifyAuthSessionChanged();
     router.push(path);
     router.refresh();
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12 text-muted">
-        <Loader2 className="h-6 w-6 animate-spin" />
-      </div>
-    );
+    return <CenteredLoader />;
   }
 
   if (!preview) {
@@ -381,7 +389,7 @@ export function SteamCompleteProfileForm() {
           disabled={submitting}
         >
           {submitting ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <Spinner size="md" />
           ) : (
             <>
               {t("finish")}

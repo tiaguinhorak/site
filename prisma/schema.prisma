@@ -348,6 +348,7 @@ model RankedMatchSession {
   partyBId    String
   status      String   @default("accepting")
   csgoMatchId String?
+  csgoServerId String?
   selectedMap String?
   serverHost  String?
   serverPort  Int?
@@ -375,6 +376,7 @@ model RankedMatchSession {
   @@index([partyBId])
   @@index([status])
   @@index([lobbyRoomId])
+  @@index([csgoServerId])
 }
 
 model RankedMatchAcceptance {

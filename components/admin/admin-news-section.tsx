@@ -403,7 +403,7 @@ export function AdminNewsSection() {
 
           <div className="flex gap-2">
             <Button type="button" className="flex-1" disabled={saving} onClick={save}>
-              {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Publicar"}
+              {saving ? <Loader2 className="h-5 w-5 motion-safe-spin" /> : "Publicar"}
             </Button>
             {editing && (
               <Button type="button" variant="outline" onClick={openCreate}>
@@ -443,7 +443,7 @@ export function AdminNewsSection() {
 
           {previewLoading && previewLocale !== "pt-BR" ? (
             <div className="flex items-center justify-center py-16 text-muted">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <Loader2 className="h-6 w-6 motion-safe-spin text-primary" />
             </div>
           ) : previewMode === "card" ? (
             <NewsPreviewCard locale={previewLocale} content={previewContent} />

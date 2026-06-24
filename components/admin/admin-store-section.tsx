@@ -203,7 +203,7 @@ export function AdminStoreSection() {
 
         <div className="flex gap-2">
           <Button type="button" className="flex-1" disabled={saving} onClick={save}>
-            {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Salvar"}
+            {saving ? <Loader2 className="h-5 w-5 motion-safe-spin" /> : "Salvar"}
           </Button>
           {editing && <Button type="button" variant="outline" onClick={openCreate}>Cancelar</Button>}
         </div>

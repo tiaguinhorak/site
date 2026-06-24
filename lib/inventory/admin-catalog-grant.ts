@@ -113,6 +113,16 @@ export async function grantCatalogSkinToUser(
   const inventoryItem = await ensureInventoryItemForCatalogSkin(catalogSkinId);
   const skinName = formatSkinName(catalog.weaponName, catalog.paintkitName);
 
+  const existingGrant = await prisma.userInventoryItem.findUnique({
+    where: {
+      userId_inventoryItemId: { userId, inventoryItemId: inventoryItem.id },
+    },
+    select: { owned: true },
+  });
+  if (existingGrant?.owned) {
+    throw new CsgoApiError("O jogador já possui esta skin.", 409);
+  }
+
   await prisma.userInventoryItem.upsert({
     where: {
       userId_inventoryItemId: { userId, inventoryItemId: inventoryItem.id },

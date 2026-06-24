@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { AdminNavbar } from "@/components/admin/admin-navbar";
+import { RouteKey } from "@/components/layout/route-key";
 
 export function AdminShell({ children }: { children: ReactNode }) {
   return (
@@ -18,8 +19,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
       <AdminNavbar />
 
-      <main className="relative mx-auto max-w-[1400px] px-4 pb-10 sm:px-6 lg:px-8">
-        {children}
+      <main className="relative mx-auto max-w-[1400px] px-4 pb-10 pt-24 sm:px-6 sm:pt-28 lg:px-8">
+        <RouteKey>{children}</RouteKey>
       </main>
     </div>
   );

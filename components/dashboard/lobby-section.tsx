@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Sparkles, Search } from "lucide-react";
+import { Sparkles, Search } from "lucide-react";
+import { LobbyPageSkeleton } from "@/components/loading/page-skeletons";
+import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -189,11 +192,7 @@ export function LobbySection() {
   }
 
   if (userLoading) {
-    return (
-      <div className="flex items-center justify-center rounded-card glass p-12 text-muted">
-        <Loader2 className="h-6 w-6 animate-spin" />
-      </div>
-    );
+    return <LobbyPageSkeleton />;
   }
 
   if (!user?.steamLinked) {
@@ -239,7 +238,7 @@ export function LobbySection() {
                 disabled={joining}
                 onClick={() => void submitJoin(joinRoomId, joinPassword)}
               >
-                {joining ? <Loader2 className="h-4 w-4 animate-spin" /> : t("enter")}
+                {joining ? <Spinner size="sm" /> : t("enter")}
               </Button>
             </div>
           </div>
@@ -341,8 +340,10 @@ export function LobbySection() {
       </div>
 
       {loadingRooms ? (
-        <div className="flex items-center justify-center rounded-card glass p-12 text-muted">
-          <Loader2 className="h-6 w-6 animate-spin" />
+        <div className="grid gap-4 sm:grid-cols-2" aria-busy="true">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-36 rounded-card" />
+          ))}
         </div>
       ) : filteredRooms.length === 0 ? (
         <div className="rounded-card glass p-10 text-center">

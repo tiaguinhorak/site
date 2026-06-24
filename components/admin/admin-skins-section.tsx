@@ -14,8 +14,13 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { InventoryItemArt } from "@/components/dashboard/inventory-item-art";
+import { SkinPreviewModal } from "@/components/skins/skin-preview-modal";
 import { secureApi } from "@/lib/api/client";
 import { confirmPresets } from "@/lib/confirm-presets";
+import { rarityAccent } from "@/lib/inventory/catalog-categories";
+import { adminCatalogItemToPreview } from "@/lib/inventory/skin-preview-mappers";
+import { useSkinPreview } from "@/lib/use-skin-preview";
 import { cn } from "@/lib/utils";
 
 type CatalogItem = {
@@ -89,6 +94,7 @@ export function AdminSkinsSection() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
+  const { previewSkin, openPreview, closePreview, isPreviewOpen } = useSkinPreview();
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -308,7 +314,7 @@ export function AdminSkinsSection() {
             onClick={runLookup}
           >
             {previewLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 motion-safe-spin" />
             ) : (
               <Wand2 className="h-4 w-4" />
             )}
@@ -319,7 +325,7 @@ export function AdminSkinsSection() {
             disabled={saving || preview?.compatibility?.csgoCompatible === false}
             onClick={addSkin}
           >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            {saving ? <Loader2 className="h-4 w-4 motion-safe-spin" /> : <Plus className="h-4 w-4" />}
             Adicionar
           </Button>
         </div>
@@ -333,7 +339,7 @@ export function AdminSkinsSection() {
             onClick={importWeapon}
           >
             {importing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 motion-safe-spin" />
             ) : (
               <Package className="h-4 w-4" />
             )}
@@ -343,17 +349,24 @@ export function AdminSkinsSection() {
 
         {preview?.api && (
           <div className="mt-4 flex gap-4 rounded-xl border border-white/10 bg-black/20 p-4">
-            {preview.api.imageUrl ? (
-              <img
-                src={preview.api.imageUrl}
-                alt={preview.api.paintkitName}
-                className="h-24 w-auto object-contain"
-              />
-            ) : (
-              <div className="flex h-24 w-24 items-center justify-center rounded-lg bg-white/5 text-xs text-muted">
-                Sem img
-              </div>
-            )}
+            <InventoryItemArt
+              imageUrl={preview.api.imageUrl}
+              accent={rarityAccent(preview.api.rarity)}
+              className="h-24 w-32 shrink-0"
+              onClick={() =>
+                openPreview(
+                  adminCatalogItemToPreview({
+                    id: preview.api!.id,
+                    weaponName: preview.api!.weaponName,
+                    paintkitName: preview.api!.paintkitName,
+                    paintkit: preview.api!.paintkit,
+                    rarity: preview.api!.rarity,
+                    category: preview.api!.category,
+                    imageUrl: preview.api!.imageUrl,
+                  }),
+                )
+              }
+            />
             <div className="min-w-0 text-sm">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="font-semibold text-foreground">
@@ -429,7 +442,7 @@ export function AdminSkinsSection() {
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted" />
+            <Loader2 className="h-8 w-8 motion-safe-spin text-muted" />
           </div>
         ) : (
           <ul className="mt-4 divide-y divide-white/5">
@@ -438,15 +451,12 @@ export function AdminSkinsSection() {
                 key={item.id}
                 className="flex flex-wrap items-center gap-3 py-3 first:pt-0"
               >
-                {item.imageUrl ? (
-                  <img
-                    src={item.imageUrl}
-                    alt=""
-                    className="h-12 w-16 object-contain"
-                  />
-                ) : (
-                  <div className="h-12 w-16 rounded bg-white/5" />
-                )}
+                <InventoryItemArt
+                  imageUrl={item.imageUrl}
+                  accent={rarityAccent(item.rarity)}
+                  className="h-12 w-16 shrink-0"
+                  onClick={() => openPreview(adminCatalogItemToPreview(item))}
+                />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="truncate text-sm font-medium text-foreground">
@@ -511,6 +521,8 @@ export function AdminSkinsSection() {
           </div>
         )}
       </div>
+
+      <SkinPreviewModal open={isPreviewOpen} skin={previewSkin} onClose={closePreview} />
     </div>
   );
 }

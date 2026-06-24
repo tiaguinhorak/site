@@ -131,7 +131,7 @@ export function AdminRankedSessionsPanel({
                       onClick={() => void cancelSession(session)}
                     >
                       {busyId === `ranked:cancel:${session.id}` ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 motion-safe-spin" />
                       ) : (
                         <XCircle className="h-4 w-4" />
                       )}
@@ -155,7 +155,7 @@ export function AdminRankedSessionsPanel({
                       onClick={() => void finishSession(session)}
                     >
                       {busyId === `ranked:finish:${session.id}` ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 motion-safe-spin" />
                       ) : (
                         <Flag className="h-4 w-4" />
                       )}

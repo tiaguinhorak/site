@@ -37,30 +37,78 @@ export type DefaultCsgoServerEnv = {
   rconPassword: string;
   csgoDir: string;
   tickrate: number;
+  pool?: "ranked" | "warmup" | "public";
 };
 
 /** Lê credenciais do servidor de jogo a partir do .env (bootstrap automático). */
-export function readDefaultCsgoServerEnv(): DefaultCsgoServerEnv | null {
-  const host = process.env.CSGO_SERVER_HOST?.trim();
-  const rconPassword = process.env.CSGO_RCON_PASSWORD?.trim();
+function readCsgoServerEnvFromPrefix(prefix: string, defaults: {
+  name: string;
+  port: string;
+  dir: string;
+  tickrate: string;
+}): DefaultCsgoServerEnv | null {
+  const host = process.env[`${prefix}_HOST`]?.trim();
+  const rconPassword = process.env[`${prefix}_RCON_PASSWORD`]?.trim();
   if (!host || !rconPassword) return null;
 
-  const port = Number(process.env.CSGO_SERVER_PORT ?? "27015");
-  const rconPort = Number(process.env.CSGO_RCON_PORT ?? process.env.CSGO_SERVER_PORT ?? "27015");
-  const tickrate = Number(process.env.CSGO_SERVER_TICKRATE ?? "128");
+  const port = Number(process.env[`${prefix}_PORT`] ?? defaults.port);
+  const rconPort = Number(
+    process.env[`${prefix}_RCON_PORT`] ?? process.env[`${prefix}_PORT`] ?? defaults.port,
+  );
+  const tickrate = Number(
+    process.env[`${prefix}_TICKRATE`] ?? process.env.CSGO_SERVER_TICKRATE ?? defaults.tickrate,
+  );
 
   if (!Number.isFinite(port) || port < 1 || port > 65535) return null;
   if (!Number.isFinite(rconPort) || rconPort < 1 || rconPort > 65535) return null;
 
+  const nameKey = `${prefix}_NAME`;
+  const dirKey = `${prefix}_DIR`;
+
   return {
-    name: process.env.CSGO_SERVER_NAME?.trim() || "Clutch #1",
+    name: process.env[nameKey]?.trim() || defaults.name,
     host,
     port,
     rconPort,
     rconPassword,
-    csgoDir: process.env.CSGO_SERVER_DIR?.trim() || "/home/csgo/server",
+    csgoDir:
+      process.env[dirKey]?.trim() ||
+      process.env.CSGO_SERVER_DIR?.trim() ||
+      defaults.dir,
     tickrate: Number.isFinite(tickrate) ? tickrate : 128,
+    pool: prefix === "CSGO_SERVER" ? "ranked" : undefined,
   };
+}
+
+export function readDefaultCsgoServerEnv(): DefaultCsgoServerEnv | null {
+  return readCsgoServerEnvFromPrefix("CSGO_SERVER", {
+    name: "Clutch #1",
+    port: "27015",
+    dir: "/home/csgo/server",
+    tickrate: "128",
+  });
+}
+
+/** Servidores adicionais (ex.: CSGO_SERVER2_* na mesma VPS, porta 27016). */
+export function readAllDefaultCsgoServerEnvs(): DefaultCsgoServerEnv[] {
+  const servers: DefaultCsgoServerEnv[] = [];
+  const primary = readDefaultCsgoServerEnv();
+  if (primary) servers.push(primary);
+
+  const secondary = readCsgoServerEnvFromPrefix("CSGO_SERVER2", {
+    name: "Clutch #2",
+    port: "27016",
+    dir: process.env.CSGO_SERVER_DIR?.trim() || "/home/csgo/server",
+    tickrate: "128",
+  });
+  if (secondary) {
+    const dup = servers.some(
+      (s) => s.host === secondary.host && s.port === secondary.port,
+    );
+    if (!dup) servers.push(secondary);
+  }
+
+  return servers;
 }
 
 export function describeMissingCsgoServerEnv(): string {

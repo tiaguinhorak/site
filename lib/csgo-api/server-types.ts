@@ -8,6 +8,8 @@ export type CsgoGameServer = {
   screenSession?: string;
   rconPort?: number;
   csgoDir?: string;
+  currentMatchId?: string;
+  pool?: "ranked" | "warmup" | "public";
 };
 
 export type CsgoMatchSummary = {

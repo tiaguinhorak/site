@@ -1,6 +1,7 @@
 "use client";
 
 import { DashboardNavbar } from "@/components/dashboard/dashboard-navbar";
+import { RouteKey } from "@/components/layout/route-key";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
@@ -18,7 +19,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       <DashboardNavbar />
 
       <main className="relative min-w-0 w-full overflow-x-clip px-4 pb-8 pt-[5.5rem] sm:px-6 sm:pt-[6rem] sm:pb-10 lg:px-8">
-        <div className="min-w-0 w-full">{children}</div>
+        <RouteKey className="min-w-0 w-full">{children}</RouteKey>
       </main>
     </div>
   );

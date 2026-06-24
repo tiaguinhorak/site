@@ -232,7 +232,7 @@ export function AdminGameModesSection() {
 
         <div className="flex gap-2">
           <Button type="button" className="flex-1" disabled={saving} onClick={saveMode}>
-            {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Salvar modo"}
+            {saving ? <Loader2 className="h-5 w-5 motion-safe-spin" /> : "Salvar modo"}
           </Button>
           {editingMode && <Button type="button" variant="outline" onClick={openCreateMode}>Cancelar</Button>}
         </div>

@@ -82,7 +82,7 @@ export function LanguageSwitcher({ variant = "menu", className }: Props) {
         ))}
         {pending && (
           <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--background)_60%,transparent)]">
-            <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden />
+            <Loader2 className="h-4 w-4 motion-safe-spin text-primary" aria-hidden />
             <span className="sr-only">{tCommon("loading")}</span>
           </div>
         )}
@@ -120,7 +120,7 @@ export function LanguageSwitcher({ variant = "menu", className }: Props) {
         ))}
         {pending && (
           <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--background)_60%,transparent)]">
-            <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden />
+            <Loader2 className="h-4 w-4 motion-safe-spin text-primary" aria-hidden />
             <span className="sr-only">{tCommon("loading")}</span>
           </div>
         )}
@@ -140,7 +140,7 @@ export function LanguageSwitcher({ variant = "menu", className }: Props) {
         )}
       >
         {pending ? (
-          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          <Loader2 className="h-4 w-4 motion-safe-spin text-primary" />
         ) : (
           <span className="text-lg leading-none" aria-hidden>{localeFlags[active]}</span>
         )}

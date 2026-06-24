@@ -3,7 +3,7 @@ import "server-only";
 import { csgoBackendFetch } from "@/lib/csgo-api/client";
 import {
   describeMissingCsgoServerEnv,
-  readDefaultCsgoServerEnv,
+  readAllDefaultCsgoServerEnvs,
 } from "@/lib/csgo-api/config";
 import { afterCsgoServerMutation } from "@/lib/csgo-api/invalidate-caches";
 import { registerCsgoServer } from "@/lib/csgo-api/server-control";
@@ -16,10 +16,6 @@ export type BootstrapCsgoServerResult = {
   registered: boolean;
 };
 
-function serverEndpoint(server: CsgoGameServer): string {
-  return `${server.host}:${server.port}`;
-}
-
 async function listCsgoServers(): Promise<CsgoGameServer[]> {
   try {
     return await csgoBackendFetch<CsgoGameServer[]>("/api/servers");
@@ -29,34 +25,47 @@ async function listCsgoServers(): Promise<CsgoGameServer[]> {
 }
 
 /**
- * Garante que exista ao menos um servidor na API CS:GO.
- * Se a lista estiver vazia e o .env tiver CSGO_SERVER_HOST + CSGO_RCON_PASSWORD, registra automaticamente.
+ * Garante que existam servidores na API CS:GO (bootstrap do .env se a lista estiver vazia).
  */
-export async function ensureDefaultCsgoServerRegistered(): Promise<BootstrapCsgoServerResult> {
+export async function ensureAllDefaultCsgoServersRegistered(): Promise<BootstrapCsgoServerResult> {
+  let existing = await listCsgoServers();
+  let registeredAny = false;
+  const envServers = readAllDefaultCsgoServerEnvs();
+
+  if (!envServers.length && existing.length === 0) {
+    return {
+      ok: false,
+      message: `Nenhum servidor na API CS:GO. ${describeMissingCsgoServerEnv()} Ou registre em Admin → Infra CS:GO.`,
+      registered: false,
+    };
+  }
+
+  for (const env of envServers) {
+    const already = existing.some(
+      (s) => s.host === env.host && s.port === env.port,
+    );
+    if (already) continue;
+
+    const result = await registerCsgoServer({
+      ...env,
+      pool: env.pool ?? "ranked",
+    });
+    if (!result.ok || !result.server) {
+      return {
+        ok: false,
+        message: result.message,
+        registered: registeredAny,
+      };
+    }
+    registeredAny = true;
+    existing = await listCsgoServers();
+  }
+
   const servers = await listCsgoServers();
-  if (servers.length > 0) {
-    return {
-      ok: true,
-      message: `Servidor ${servers[0]!.name} (${serverEndpoint(servers[0]!)}) já registrado na API.`,
-      server: servers[0],
-      registered: false,
-    };
-  }
-
-  const env = readDefaultCsgoServerEnv();
-  if (!env) {
+  if (!servers.length) {
     return {
       ok: false,
-      message: `Nenhum servidor na API CS:GO. ${describeMissingCsgoServerEnv()} Ou registre manualmente em Admin → Infra CS:GO.`,
-      registered: false,
-    };
-  }
-
-  const result = await registerCsgoServer(env);
-  if (!result.ok || !result.server) {
-    return {
-      ok: false,
-      message: result.message,
+      message: getRankedServerBlockedMessage(),
       registered: false,
     };
   }
@@ -65,10 +74,17 @@ export async function ensureDefaultCsgoServerRegistered(): Promise<BootstrapCsgo
 
   return {
     ok: true,
-    message: `Servidor ${result.server.name} registrado automaticamente (${serverEndpoint(result.server)}).`,
-    server: result.server,
-    registered: true,
+    message: registeredAny
+      ? `${servers.length} servidor(es) na API (${envServers.length} via .env).`
+      : `${servers.length} servidor(es) já registrados na API.`,
+    server: servers[0],
+    registered: registeredAny,
   };
+}
+
+/** @deprecated Use ensureAllDefaultCsgoServersRegistered */
+export async function ensureDefaultCsgoServerRegistered(): Promise<BootstrapCsgoServerResult> {
+  return ensureAllDefaultCsgoServersRegistered();
 }
 
 export function getRankedServerBlockedMessage(): string {

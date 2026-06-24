@@ -5,12 +5,14 @@ import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { LayoutGrid, Swords, Hand, Crosshair, Target, Zap, Boxes } from "lucide-react";
 import { InventoryItemArt } from "@/components/dashboard/inventory-item-art";
-import { SkinPreviewModal, type SkinPreviewData } from "@/components/skins/skin-preview-modal";
+import { SkinPreviewModal } from "@/components/skins/skin-preview-modal";
 import { SkinRarityBadge } from "@/components/skins/skin-rarity-badge";
 import { SkinRarityLegend } from "@/components/skins/skin-rarity-legend";
 import { SkinRarityLine } from "@/components/skins/skin-rarity-line";
 import type { InventoryCategoryKey } from "@/lib/profile";
 import type { PublicLoadoutSide, PublicSkinGroup } from "@/lib/inventory/get-public-player-skins";
+import { catalogSkinToPreview } from "@/lib/inventory/skin-preview-mappers";
+import { useSkinPreview } from "@/lib/use-skin-preview";
 import { cn } from "@/lib/utils";
 import {
   chipInactiveHoverClass,
@@ -51,12 +53,28 @@ function SideSkins({
   );
 
   const [active, setActive] = useState<"all" | InventoryCategoryKey>("all");
-  const [previewSkin, setPreviewSkin] = useState<SkinPreviewData | null>(null);
+  const { previewSkin, openPreview, closePreview, isPreviewOpen } = useSkinPreview();
 
   const visibleGroups =
     active === "all" ? side.groups : side.groups.filter((g) => g.category === active);
 
   const teamLabel = side.team === "T" ? t("teamT") : t("teamCT");
+
+  const previewPublicSkin = (
+    item: PublicSkinGroup["items"][number],
+    category: InventoryCategoryKey,
+  ) =>
+    catalogSkinToPreview({
+      name: item.name,
+      id: item.id,
+      imageUrl: item.imageUrl,
+      accent: item.accent,
+      category: categoryLabels[category],
+      rarity: item.rarity,
+      weaponName: item.weaponName,
+      paintkitName: item.paintkitName,
+      stattrak: item.stattrak,
+    });
 
   return (
     <div className={cn("rounded-xl border border-border p-4 sm:p-5", surfaceSubtleClass)}>
@@ -113,7 +131,16 @@ function SideSkins({
               {group.items.map((item) => (
                 <article
                   key={`${side.team}-${item.id}`}
-                  className="relative flex flex-col overflow-hidden rounded-xl glass"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openPreview(previewPublicSkin(item, group.category))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      openPreview(previewPublicSkin(item, group.category));
+                    }
+                  }}
+                  className="relative flex flex-col overflow-hidden rounded-xl glass cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 >
                   <SkinRarityLine accent={item.accent} rarity={item.rarity} />
                   <div className="relative p-3">
@@ -121,18 +148,6 @@ function SideSkins({
                       imageUrl={item.imageUrl}
                       accent={item.accent}
                       className="h-24 w-full"
-                      onClick={() =>
-                        setPreviewSkin({
-                          name: item.name,
-                          imageUrl: item.imageUrl,
-                          accent: item.accent,
-                          category: categoryLabels[group.category],
-                          rarity: item.rarity,
-                          weaponName: item.weaponName,
-                          paintkitName: item.paintkitName,
-                          stattrak: item.stattrak,
-                        })
-                      }
                     />
                     {item.stattrak && (
                       <span className="absolute left-5 top-5 rounded bg-amber-500/90 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-black">
@@ -158,11 +173,7 @@ function SideSkins({
         ))}
       </div>
 
-      <SkinPreviewModal
-        open={previewSkin !== null}
-        skin={previewSkin}
-        onClose={() => setPreviewSkin(null)}
-      />
+      <SkinPreviewModal open={isPreviewOpen} skin={previewSkin} onClose={closePreview} />
     </div>
   );
 }

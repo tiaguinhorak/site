@@ -263,7 +263,7 @@ export function AdminNotificationsSection() {
                 onClick={() => autoTranslate("en")}
               >
                 {translating === "en" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 motion-safe-spin" />
                 ) : (
                   <Languages className="h-4 w-4" />
                 )}
@@ -277,7 +277,7 @@ export function AdminNotificationsSection() {
                 onClick={() => autoTranslate("es")}
               >
                 {translating === "es" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 motion-safe-spin" />
                 ) : (
                   <Languages className="h-4 w-4" />
                 )}
@@ -291,7 +291,7 @@ export function AdminNotificationsSection() {
                 onClick={() => autoTranslate("all")}
               >
                 {translating === "all" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 motion-safe-spin" />
                 ) : (
                   <Languages className="h-4 w-4" />
                 )}
@@ -368,7 +368,7 @@ export function AdminNotificationsSection() {
           onClick={send}
         >
           {sending ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <Loader2 className="h-5 w-5 motion-safe-spin" />
           ) : (
             <>
               <Send className="h-4 w-4" />

@@ -43,7 +43,7 @@ export function AdminAuditSection() {
         </div>
         {loading ? (
           <div className="flex justify-center py-12 text-muted">
-            <Loader2 className="h-6 w-6 animate-spin" />
+            <Loader2 className="h-6 w-6 motion-safe-spin" />
           </div>
         ) : (
           <ul className="divide-y divide-border">

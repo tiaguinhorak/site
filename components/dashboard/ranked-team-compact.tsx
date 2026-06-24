@@ -77,7 +77,7 @@ function CompactSlot({
           aria-label={t("removeAria", { nickname: player.nickname })}
         >
           {kicking ? (
-            <Loader2 className="h-2.5 w-2.5 animate-spin" />
+            <Loader2 className="h-2.5 w-2.5 motion-safe-spin" />
           ) : (
             <UserMinus className="h-2.5 w-2.5" />
           )}

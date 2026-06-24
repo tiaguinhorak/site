@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
+import { CenteredLoader } from "@/components/ui/spinner";
 import { useLocale, useTranslations } from "next-intl";
 import { AvatarImage } from "@/components/ui/avatar-image";
 import { cn } from "@/lib/utils";
@@ -63,11 +65,7 @@ export function NewsArticleDetail({ slug }: Props) {
   }, [slug, locale]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24 text-muted">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <CenteredLoader className="py-24" size="xl" />;
   }
 
   if (notFound || !article) {
@@ -129,7 +127,7 @@ export function NewsArticleDetail({ slug }: Props) {
           <div className="mt-6 flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 overflow-hidden rounded-full ring-2 ring-[color-mix(in_srgb,var(--primary)_25%,transparent)]">
               <AvatarImage
-                src={article.authorAvatarUrl ?? undefined}
+                src={article.authorAvatarUrl ?? getDefaultAvatarPresetUrl()}
                 size={40}
                 className="rounded-full"
               />

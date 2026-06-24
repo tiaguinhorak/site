@@ -8,6 +8,7 @@ export type MatchConnectInfo = {
   serverPort: number | null;
   selectedMap: string | null;
   matchStatus: string;
+  csgoServerId: string | null;
 };
 
 export async function resolveMatchConnect(csgoMatchId: string): Promise<MatchConnectInfo> {
@@ -19,6 +20,7 @@ export async function resolveMatchConnect(csgoMatchId: string): Promise<MatchCon
       serverPort: null,
       selectedMap: match.selectedMap ?? null,
       matchStatus: match.status,
+      csgoServerId: null,
     };
   }
 
@@ -29,5 +31,6 @@ export async function resolveMatchConnect(csgoMatchId: string): Promise<MatchCon
     serverPort: server.port,
     selectedMap: match.selectedMap ?? null,
     matchStatus: match.status,
+    csgoServerId: match.serverId,
   };
 }

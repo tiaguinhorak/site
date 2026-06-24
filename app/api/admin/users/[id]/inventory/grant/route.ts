@@ -13,6 +13,7 @@ import {
   formatZodErrors,
   firstZodError,
 } from "@/lib/security/schemas";
+import { apiErrFromRequest } from "@/lib/i18n/api-route";
 
 export async function POST(
   request: NextRequest,
@@ -55,6 +56,7 @@ export async function POST(
     if (err instanceof CsgoApiError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
-    return NextResponse.json({ error: "Falha ao conceder skin." }, { status: 500 });
+    console.error("[admin inventory grant]", err);
+    return NextResponse.json({ error: apiErrFromRequest(request, "internal") }, { status: 500 });
   }
 }

@@ -179,7 +179,7 @@ export function RankedVoteModal({
                       />
                       <span className="relative font-display text-sm font-bold text-foreground">
                         {loading ? (
-                          <Loader2 className="h-5 w-5 animate-spin" />
+                          <Loader2 className="h-5 w-5 motion-safe-spin" />
                         ) : (
                           mapLabel(option.map)
                         )}
@@ -201,7 +201,7 @@ export function RankedVoteModal({
 
           {waitingServer && (
             <div className="mt-8 flex flex-col items-center gap-3 py-4 text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <Loader2 className="h-8 w-8 motion-safe-spin text-primary" />
               <p className="text-sm text-emerald-300">
                 {mapLabel(session.selectedMap ?? vote.selectedMap)}
               </p>

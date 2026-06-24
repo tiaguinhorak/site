@@ -105,7 +105,7 @@ export function RankedJoinPasswordModal({ open, teamName, onClose, onConfirm }: 
                 disabled={busy || password.length < 1}
                 onClick={() => void handleConfirm()}
               >
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("enter")}
+                {busy ? <Loader2 className="h-4 w-4 motion-safe-spin" /> : t("enter")}
               </Button>
             </div>
           </motion.div>

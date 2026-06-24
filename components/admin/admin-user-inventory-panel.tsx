@@ -3,12 +3,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, Package, Search, Send, Trash2 } from "lucide-react";
 import { InventoryItemArt } from "@/components/dashboard/inventory-item-art";
+import { SkinPreviewModal } from "@/components/skins/skin-preview-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { secureApi } from "@/lib/api/client";
 import { confirmPresets } from "@/lib/confirm-presets";
 import { rarityAccent } from "@/lib/inventory/catalog-categories";
+import {
+  adminCatalogItemToPreview,
+  grantedSkinToPreview,
+} from "@/lib/inventory/skin-preview-mappers";
 import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
+import { useSkinPreview } from "@/lib/use-skin-preview";
 import { cn } from "@/lib/utils";
 
 type GrantedSkin = {
@@ -53,6 +59,7 @@ export function AdminUserInventoryPanel({
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<CatalogSearchItem[]>([]);
   const [actingId, setActingId] = useState<string | null>(null);
+  const { previewSkin, openPreview, closePreview, isPreviewOpen } = useSkinPreview();
 
   const loadGranted = useCallback(async () => {
     setLoading(true);
@@ -94,6 +101,10 @@ export function AdminUserInventoryPanel({
   }
 
   async function grantSkin(catalogSkinId: string, name: string) {
+    if (granted.some((g) => g.catalogSkinId === catalogSkinId)) {
+      onError("O jogador já possui esta skin.");
+      return;
+    }
     setActingId(catalogSkinId);
     const result = await secureApi(`/api/admin/users/${userId}/inventory/grant`, {
       method: "POST",
@@ -145,7 +156,7 @@ export function AdminUserInventoryPanel({
             disabled={searching || search.trim().length < 2}
             onClick={() => void searchCatalog()}
           >
-            {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar"}
+            {searching ? <Loader2 className="h-4 w-4 motion-safe-spin" /> : "Buscar"}
           </Button>
         </div>
         {results.length > 0 && (
@@ -159,9 +170,10 @@ export function AdminUserInventoryPanel({
                   className="flex items-center gap-3 rounded-lg border border-border/60 p-2 text-sm"
                 >
                   <InventoryItemArt
-                    imageUrl={item.imageUrl}
+                    imageUrl={item.imageUrl ?? catalogSkinImageUrl(item.id)}
                     accent={accent}
                     className="h-14 w-16 shrink-0"
+                    onClick={() => openPreview(adminCatalogItemToPreview(item))}
                   />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{name}</p>
@@ -175,7 +187,7 @@ export function AdminUserInventoryPanel({
                     onClick={() => void grantSkin(item.id, name)}
                   >
                     {actingId === item.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Loader2 className="h-3.5 w-3.5 motion-safe-spin" />
                     ) : (
                       <>
                         <Send className="h-3.5 w-3.5" />
@@ -197,7 +209,7 @@ export function AdminUserInventoryPanel({
         </h3>
         {loading ? (
           <div className="flex justify-center py-8 text-muted">
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <Loader2 className="h-5 w-5 motion-safe-spin" />
           </div>
         ) : granted.length === 0 ? (
           <p className="mt-3 text-sm text-muted">Nenhuma skin enviada por admin.</p>
@@ -214,6 +226,7 @@ export function AdminUserInventoryPanel({
                   imageUrl={item.imageUrl}
                   accent={item.accent}
                   className="h-14 w-16 shrink-0"
+                  onClick={() => openPreview(grantedSkinToPreview(item))}
                 />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{item.name}</p>
@@ -234,6 +247,8 @@ export function AdminUserInventoryPanel({
           </ul>
         )}
       </div>
+
+      <SkinPreviewModal open={isPreviewOpen} skin={previewSkin} onClose={closePreview} />
     </div>
   );
 }

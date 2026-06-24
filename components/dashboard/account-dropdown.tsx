@@ -6,8 +6,6 @@ import { useRouter } from "next/navigation";
 import {
   ChevronDown,
   ChevronRight,
-  Crown,
-  Globe,
   LogOut,
   Moon,
   Settings,
@@ -20,6 +18,7 @@ import { GlassPortal } from "@/components/ui/glass-portal";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { secureApi } from "@/lib/api/client";
+import { notifyAuthSessionChanged } from "@/lib/auth/auth-events";
 import { useUser } from "@/lib/hooks/use-user";
 import { useTheme } from "@/lib/theme";
 import { AvatarImage } from "@/components/ui/avatar-image";
@@ -48,8 +47,6 @@ export function AccountDropdown({ className }: Props) {
   const links = [
     { href: "/dashboard/perfil", label: t("profile"), icon: UserRound },
     { href: "/dashboard/perfil?tab=notifications", label: t("notificationSettings"), icon: Settings },
-    { href: "/dashboard/premium", label: t("premium"), icon: Crown },
-    { href: "/", label: t("backToSite"), icon: Globe },
   ];
 
   return (
@@ -149,6 +146,7 @@ export function AccountDropdown({ className }: Props) {
               setOpen(false);
               await secureApi("/api/auth/logout", { method: "POST" });
               setUser(null);
+              notifyAuthSessionChanged();
               router.push("/login");
               router.refresh();
             }}

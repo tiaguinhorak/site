@@ -107,7 +107,7 @@ export function AdminRankedQueuePanel({ userId, nickname, onSuccess, onError }: 
   if (loading) {
     return (
       <div className="flex justify-center py-6 text-muted">
-        <Loader2 className="h-5 w-5 animate-spin" />
+        <Loader2 className="h-5 w-5 motion-safe-spin" />
       </div>
     );
   }
@@ -213,7 +213,7 @@ export function AdminRankedQueuePanel({ userId, nickname, onSuccess, onError }: 
         />
         <Button type="button" variant="outline" disabled={saving} onClick={applyRestrict}>
           {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 motion-safe-spin" />
           ) : (
             <>
               <Ban className="h-4 w-4" />
