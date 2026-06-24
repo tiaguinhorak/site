@@ -16,12 +16,6 @@ export async function cached<T>(
   loader: () => Promise<T>,
 ): Promise<T> {
   const now = Date.now();
-  const ttlSeconds = Math.ceil(ttlMs / 1000);
-
-  const redisHit = await redisGetJson<T>(`cache:${key}`);
-  if (redisHit !== null) {
-    return redisHit;
-  }
 
   const hit = cache.get(key);
   if (hit && hit.expiresAt > now) {
@@ -33,16 +27,24 @@ export async function cached<T>(
     return pending as Promise<T>;
   }
 
-  const promise = loader()
-    .then(async (value) => {
-      cache.set(key, { value, expiresAt: Date.now() + ttlMs });
-      await redisSetJson(`cache:${key}`, value, ttlSeconds);
-      inflight.delete(key);
-      return value;
-    })
+  const promise = (async () => {
+    const redisHit = await redisGetJson<T>(`cache:${key}`);
+    if (redisHit !== null) {
+      cache.set(key, { value: redisHit, expiresAt: Date.now() + ttlMs });
+      return redisHit;
+    }
+
+    const value = await loader();
+    cache.set(key, { value, expiresAt: Date.now() + ttlMs });
+    const ttlSeconds = Math.ceil(ttlMs / 1000);
+    await redisSetJson(`cache:${key}`, value, ttlSeconds);
+    return value;
+  })()
     .catch((error) => {
-      inflight.delete(key);
       throw error;
+    })
+    .finally(() => {
+      inflight.delete(key);
     });
 
   inflight.set(key, promise);
@@ -58,9 +60,6 @@ export function invalidateCache(keyPrefix?: string) {
     if (key.startsWith(keyPrefix)) cache.delete(key);
   }
 }
-
-let lastRunAt = 0;
-let running: Promise<void> | null = null;
 
 const throttleState = new Map<string, { lastRunAt: number; running: Promise<void> | null }>();
 

@@ -7,8 +7,6 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   LayoutDashboard,
   Gamepad2,
-  UserRound,
-  Bell,
   Newspaper,
   ShoppingBag,
   ShieldCheck,
@@ -23,6 +21,7 @@ import {
   X,
   ChevronDown,
   MoreHorizontal,
+  Medal,
   type LucideIcon,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -35,8 +34,6 @@ import { cn } from "@/lib/utils";
 const iconMap: Record<string, LucideIcon> = {
   LayoutDashboard,
   Gamepad2,
-  UserRound,
-  Bell,
   Newspaper,
   ShoppingBag,
   ShieldCheck,
@@ -48,6 +45,7 @@ const iconMap: Record<string, LucideIcon> = {
   Users,
   Zap,
   MoreHorizontal,
+  Medal,
 };
 
 type NavLinkItem = {
@@ -69,49 +67,41 @@ const OVERVIEW: NavLinkItem = {
   i18nKey: "overview",
 };
 
-const NAV_GROUPS: NavGroup[] = [
-  {
-    id: "play",
-    i18nKey: "play",
-    icon: "Gamepad2",
-    items: [
-      { href: "/dashboard/lobby", icon: "Users", i18nKey: "lobby" },
-      { href: "/dashboard/warmup", icon: "Zap", i18nKey: "warmup" },
-      { href: "/dashboard/ranked", icon: "Trophy", i18nKey: "ranked" },
-    ],
-  },
-  {
-    id: "account",
-    i18nKey: "account",
-    icon: "UserRound",
-    items: [
-      { href: "/dashboard/perfil", icon: "UserRound", i18nKey: "profile" },
-      { href: "/dashboard/notificacoes", icon: "Bell", i18nKey: "notifications" },
-    ],
-  },
-  {
-    id: "commerce",
-    i18nKey: "commerce",
-    icon: "ShoppingBag",
-    items: [
-      { href: "/dashboard/loja", icon: "ShoppingBag", i18nKey: "store" },
-      { href: "/dashboard/inventario", icon: "Package", i18nKey: "inventory" },
-    ],
-  },
-  {
-    id: "more",
-    i18nKey: "more",
-    icon: "MoreHorizontal",
-    items: [
-      { href: "/dashboard/anticheat", icon: "ShieldCheck", i18nKey: "anticheat" },
-      { href: "/dashboard/suporte", icon: "Headphones", i18nKey: "support" },
-    ],
-  },
-];
+const PLAY_GROUP: NavGroup = {
+  id: "play",
+  i18nKey: "play",
+  icon: "Gamepad2",
+  items: [
+    { href: "/dashboard/lobby", icon: "Users", i18nKey: "lobby" },
+    { href: "/dashboard/warmup", icon: "Zap", i18nKey: "warmup" },
+    { href: "/dashboard/ranked", icon: "Trophy", i18nKey: "ranked" },
+  ],
+};
+
+const COMMERCE_GROUP: NavGroup = {
+  id: "commerce",
+  i18nKey: "commerce",
+  icon: "ShoppingBag",
+  items: [
+    { href: "/dashboard/loja", icon: "ShoppingBag", i18nKey: "store" },
+    { href: "/dashboard/inventario", icon: "Package", i18nKey: "inventory" },
+  ],
+};
+
+const MORE_GROUP: NavGroup = {
+  id: "more",
+  i18nKey: "more",
+  icon: "MoreHorizontal",
+  items: [
+    { href: "/dashboard/anticheat", icon: "ShieldCheck", i18nKey: "anticheat" },
+    { href: "/dashboard/suporte", icon: "Headphones", i18nKey: "support" },
+  ],
+};
 
 const STANDALONE_NAV: NavLinkItem[] = [
   { href: "/dashboard/noticias", icon: "Newspaper", i18nKey: "news" },
   { href: "/dashboard/premium", icon: "Crown", i18nKey: "premium" },
+  { href: "/dashboard/ranking", icon: "Medal", i18nKey: "ranking" },
 ];
 
 const ADMIN_LINK: NavLinkItem = {
@@ -222,7 +212,7 @@ function NavDropdown({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.97 }}
             transition={{ duration: 0.15 }}
-            className="absolute left-0 top-[calc(100%+6px)] z-[70] min-w-[12.5rem] overflow-hidden rounded-xl border border-border glass-menu p-1 shadow-2xl"
+            className="glass-nav-dropdown absolute left-0 top-[calc(100%+6px)] z-[80] min-w-[12.5rem] overflow-hidden rounded-xl p-1 shadow-2xl"
           >
             {group.items.map((item) => {
               const ItemIcon = iconMap[item.icon] ?? LayoutDashboard;
@@ -317,13 +307,10 @@ export function DashboardNavbar() {
   const tNav = useTranslations("nav");
 
   const moreGroup: NavGroup = user?.isAdmin
-    ? {
-        ...NAV_GROUPS[3],
-        items: [...NAV_GROUPS[3].items, ADMIN_LINK],
-      }
-    : NAV_GROUPS[3];
+    ? { ...MORE_GROUP, items: [...MORE_GROUP.items, ADMIN_LINK] }
+    : MORE_GROUP;
 
-  const groups = [NAV_GROUPS[0], NAV_GROUPS[1], NAV_GROUPS[2], moreGroup];
+  const dropdownGroups = [PLAY_GROUP, COMMERCE_GROUP, moreGroup];
 
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
@@ -351,7 +338,6 @@ export function DashboardNavbar() {
         >
           <Logo className="shrink-0" />
 
-          {/* Desktop: grouped dropdowns */}
           <div className="hidden min-w-0 flex-1 items-center justify-center gap-0.5 md:flex">
             <Link
               href={OVERVIEW.href}
@@ -366,7 +352,7 @@ export function DashboardNavbar() {
               <span className="hidden lg:inline">{tNav(OVERVIEW.i18nKey)}</span>
             </Link>
 
-            {groups.map((group) => (
+            {dropdownGroups.slice(0, 2).map((group) => (
               <NavDropdown
                 key={group.id}
                 group={group}
@@ -383,9 +369,19 @@ export function DashboardNavbar() {
             {STANDALONE_NAV.map((item) => (
               <NavDirectLink key={item.href} item={item} pathname={pathname} tNav={tNav} />
             ))}
+
+            <NavDropdown
+              group={moreGroup}
+              pathname={pathname}
+              tNav={tNav}
+              isOpen={openDropdown === moreGroup.id}
+              onToggle={() =>
+                setOpenDropdown((prev) => (prev === moreGroup.id ? null : moreGroup.id))
+              }
+              onClose={() => setOpenDropdown(null)}
+            />
           </div>
 
-          {/* Actions — always right-aligned on mobile */}
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
             <AccountDropdown />
             <NotificationsDropdown />
@@ -402,7 +398,6 @@ export function DashboardNavbar() {
           </div>
         </nav>
 
-        {/* Mobile menu */}
         <AnimatePresence>
           {mobileOpen && (
             <>
@@ -422,7 +417,7 @@ export function DashboardNavbar() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
                 transition={{ duration: 0.25 }}
-                className="glass-menu relative z-[51] mx-auto mt-3 max-h-[min(85vh,calc(100dvh-5.5rem))] max-w-[1400px] overflow-y-auto rounded-2xl p-3 md:hidden"
+                className="glass-nav-dropdown relative z-[51] mx-auto mt-3 max-h-[min(85vh,calc(100dvh-5.5rem))] max-w-[1400px] overflow-y-auto rounded-2xl p-3 md:hidden"
               >
                 <Link
                   href={OVERVIEW.href}
@@ -437,6 +432,19 @@ export function DashboardNavbar() {
                   <OverviewIcon className="h-4.5 w-4.5 shrink-0 text-primary" />
                   {tNav(OVERVIEW.i18nKey)}
                 </Link>
+
+                <div className="mt-1 space-y-0.5">
+                  {dropdownGroups.slice(0, 2).map((group) => (
+                    <MobileNavSection
+                      key={group.id}
+                      group={group}
+                      pathname={pathname}
+                      tNav={tNav}
+                      onNavigate={() => setMobileOpen(false)}
+                      defaultOpen={group.id === "play"}
+                    />
+                  ))}
+                </div>
 
                 <div className="mt-1 space-y-0.5">
                   {STANDALONE_NAV.map((item) => {
@@ -462,16 +470,12 @@ export function DashboardNavbar() {
                 </div>
 
                 <div className="mt-1 space-y-0.5">
-                  {groups.map((group) => (
-                    <MobileNavSection
-                      key={group.id}
-                      group={group}
-                      pathname={pathname}
-                      tNav={tNav}
-                      onNavigate={() => setMobileOpen(false)}
-                      defaultOpen={group.id === "play"}
-                    />
-                  ))}
+                  <MobileNavSection
+                    group={moreGroup}
+                    pathname={pathname}
+                    tNav={tNav}
+                    onNavigate={() => setMobileOpen(false)}
+                  />
                 </div>
               </motion.div>
             </>

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
+import { fetchLeaderboardTop } from "@/lib/leaderboard/queries";
 import { syncCsgoPublicServers } from "@/lib/csgo-api/sync-public-servers";
 import { queryCsgoServersLive } from "@/lib/csgo-api/query-live-server";
 import { formatPriceCents } from "@/lib/serializers";
@@ -150,41 +151,12 @@ export async function getLiveSyncedServers() {
 export async function getLeaderboard() {
   return unstable_cache(
     async () => {
-      const users = await prisma.user.findMany({
-        where: {
-          OR: [
-            { competitivePoints: { gt: 0 } },
-            { rankedWins: { gt: 0 } },
-            { rankedLosses: { gt: 0 } },
-          ],
-        },
-        orderBy: [{ competitivePoints: "desc" }, { rankedWins: "desc" }],
-        take: 50,
-        select: {
-          nickname: true,
-          kd: true,
-          competitivePoints: true,
-        },
-      });
-
-      if (users.length > 0) {
-        return users.map((user, index) => ({
-          rank: index + 1,
-          name: user.nickname,
-          kd: user.kd,
-          points: user.competitivePoints,
-        }));
-      }
-
-      const seed = await prisma.leaderboardEntry.findMany({
-        orderBy: { rank: "asc" },
-        take: 50,
-      });
-      return seed.map((entry) => ({
-        rank: entry.rank,
-        name: entry.name,
-        kd: entry.kd,
-        points: entry.points,
+      const players = await fetchLeaderboardTop(50);
+      return players.map((p) => ({
+        rank: p.rank,
+        name: p.nickname,
+        kd: p.kd,
+        points: p.points,
       }));
     },
     ["site-leaderboard"],

@@ -301,19 +301,6 @@ async function main() {
     ],
   });
 
-  await prisma.leaderboardEntry.createMany({
-    data: [
-      { rank: 1, name: "HENRY", kd: 1.7, points: 99999 },
-      { rank: 2, name: "Zk1", kd: 1.41, points: 90758 },
-      { rank: 3, name: "voidz", kd: 1.87, points: 88702 },
-      { rank: 4, name: "agropesca", kd: 1.9, points: 77381 },
-      { rank: 5, name: "m1d", kd: 1.13, points: 71498 },
-      { rank: 6, name: "SUPRA_MATZU", kd: 1.36, points: 68963 },
-      { rank: 7, name: "RUMPLE", kd: 1.56, points: 66925 },
-      { rank: 8, name: "Suomonev", kd: 1.36, points: 59004 },
-    ],
-  });
-
   await prisma.marketingFeature.createMany({
     data: [
       { index: "01", title: "Servidores de treino", description: "Retakes, Deathmatch e mapas focados.", iconKey: "Server", sortOrder: 0 },

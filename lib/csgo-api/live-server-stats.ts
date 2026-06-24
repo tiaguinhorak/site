@@ -1,12 +1,13 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { csgoBackendFetch } from "@/lib/csgo-api/client";
 import { cached } from "@/lib/csgo-api/request-cache";
 import { queryCsgoServersLive } from "@/lib/csgo-api/query-live-server";
 import { syncCsgoPublicServers } from "@/lib/csgo-api/sync-public-servers";
 import type { LiveServerQueryResult } from "@/lib/csgo-api/query-live-server";
 import { formatConnectCommand } from "@/lib/servers/connect";
+
+export type LiveServerPool = "ranked" | "warmup" | "public";
 
 export type LiveServerStatPayload = {
   id: string;
@@ -21,7 +22,12 @@ export type LiveServerStatPayload = {
   online: boolean;
   connectCommand: string;
   csgoServerId: string | null;
-  pool: "ranked" | "warmup" | "public";
+  pool: LiveServerPool;
+};
+
+type FetchLiveServerStatsOptions = {
+  forceSync?: boolean;
+  pool?: "ranked" | "warmup";
 };
 
 function toPayload(
@@ -32,10 +38,13 @@ function toPayload(
     host: string;
     port: number;
     csgoServerId: string | null;
+    pool: string;
   },
   live: LiveServerQueryResult,
-  pool: "ranked" | "warmup" | "public",
 ): LiveServerStatPayload {
+  const pool: LiveServerPool =
+    row.pool === "ranked" || row.pool === "warmup" ? row.pool : "public";
+
   return {
     id: row.id,
     name: row.name,
@@ -53,66 +62,71 @@ function toPayload(
   };
 }
 
-async function listCsgoApiServersForPool(): Promise<Map<string, "ranked" | "warmup" | "public">> {
-  try {
-    const servers = await csgoBackendFetch<
-      Array<{ id: string; pool?: "ranked" | "warmup" | "public" }>
-    >("/api/servers");
-    const map = new Map<string, "ranked" | "warmup" | "public">();
-    for (const server of servers) {
-      map.set(server.id, server.pool ?? "public");
-    }
-    return map;
-  } catch {
-    return new Map();
-  }
+function offlineLive(host: string, port: number): LiveServerQueryResult {
+  return {
+    host,
+    port,
+    online: false,
+    hostname: null,
+    map: "Offline",
+    mapRaw: null,
+    players: 0,
+    slots: 0,
+    bots: 0,
+    ping: 0,
+  };
 }
 
-export async function fetchLiveServerStats(options?: { forceSync?: boolean }): Promise<LiveServerStatPayload[]> {
+function poolWhere(pool?: "ranked" | "warmup") {
+  const base = {
+    isLiveSynced: true,
+    host: { not: null } as const,
+    port: { not: null } as const,
+  };
+
+  if (pool === "warmup") {
+    return { ...base, pool: "warmup" };
+  }
+
+  if (pool === "ranked") {
+    return { ...base, pool: { not: "warmup" } };
+  }
+
+  return base;
+}
+
+export async function fetchLiveServerStats(
+  options?: FetchLiveServerStatsOptions,
+): Promise<LiveServerStatPayload[]> {
   if (options?.forceSync) {
     const { syncCsgoPublicServersForce } = await import("@/lib/csgo-api/sync-public-servers");
     await syncCsgoPublicServersForce();
   } else {
-    await syncCsgoPublicServers();
+    // Não bloqueia a resposta — sync pesado roda em background (~1x/45s).
+    void syncCsgoPublicServers().catch(() => {});
   }
 
-  return cached("live-server-stats", 10_000, async () => {
+  const cacheKey = options?.pool ? `live-server-stats:${options.pool}` : "live-server-stats";
+
+  return cached(cacheKey, 12_000, async () => {
     const rows = await prisma.publicServer.findMany({
-      where: {
-        isLiveSynced: true,
-        host: { not: null },
-        port: { not: null },
-      },
+      where: poolWhere(options?.pool),
       orderBy: { sortOrder: "asc" },
     });
 
-    const targets = rows
-      .filter((row): row is typeof row & { host: string; port: number } => row.host != null && row.port != null)
-      .map((row) => ({ host: row.host, port: row.port }));
+    const withHost = rows.filter(
+      (row): row is typeof row & { host: string; port: number } =>
+        row.host != null && row.port != null,
+    );
 
+    if (withHost.length === 0) return [];
+
+    const targets = withHost.map((row) => ({ host: row.host, port: row.port }));
     const liveByKey = await queryCsgoServersLive(targets);
-    const poolByCsgoId = await listCsgoApiServersForPool();
 
-    return rows
-      .filter((row): row is typeof row & { host: string; port: number } => row.host != null && row.port != null)
-      .map((row) => {
-        const live = liveByKey.get(`${row.host}:${row.port}`) ?? {
-          host: row.host,
-          port: row.port,
-          online: false,
-          hostname: null,
-          map: "Offline",
-          mapRaw: null,
-          players: 0,
-          slots: 0,
-          bots: 0,
-          ping: 0,
-        };
-        const pool =
-          row.csgoServerId != null
-            ? (poolByCsgoId.get(row.csgoServerId) ?? "public")
-            : "public";
-        return toPayload(row, live, pool);
-      });
+    return withHost.map((row) => {
+      const live = liveByKey.get(`${row.host}:${row.port}`) ?? offlineLive(row.host, row.port);
+      return toPayload(row, live);
+    });
   });
 }

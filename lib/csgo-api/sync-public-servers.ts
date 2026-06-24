@@ -48,6 +48,7 @@ async function syncCsgoPublicServersNow(): Promise<void> {
   );
 
   const seenIds = new Set<string>();
+  const upserts: Promise<unknown>[] = [];
 
   for (const [index, server] of servers.entries()) {
     const live = liveByKey.get(`${server.host}:${server.port}`) ?? {
@@ -88,34 +89,40 @@ async function syncCsgoPublicServersNow(): Promise<void> {
     }
     const map = reachable ? (live.mapRaw ?? live.map) : "offline";
 
-    await prisma.publicServer.upsert({
-      where: { csgoServerId: server.id },
-      create: {
-        csgoServerId: server.id,
-        name: server.name,
-        host: server.host,
-        port: server.port,
-        map,
-        mode,
-        players: live.players,
-        slots: reachable ? live.slots : 10,
-        ping: live.ping,
-        sortOrder: LIVE_SYNC_SORT_BASE + index,
-        isLiveSynced: true,
-      },
-      update: {
-        name: server.name,
-        host: server.host,
-        port: server.port,
-        map,
-        mode,
-        players: live.players,
-        slots: reachable ? live.slots : 10,
-        ping: live.ping,
-        isLiveSynced: true,
-      },
-    });
+    upserts.push(
+      prisma.publicServer.upsert({
+        where: { csgoServerId: server.id },
+        create: {
+          csgoServerId: server.id,
+          name: server.name,
+          host: server.host,
+          port: server.port,
+          map,
+          mode,
+          players: live.players,
+          slots: reachable ? live.slots : 10,
+          ping: live.ping,
+          sortOrder: LIVE_SYNC_SORT_BASE + index,
+          isLiveSynced: true,
+          pool,
+        },
+        update: {
+          name: server.name,
+          host: server.host,
+          port: server.port,
+          map,
+          mode,
+          players: live.players,
+          slots: reachable ? live.slots : 10,
+          ping: live.ping,
+          isLiveSynced: true,
+          pool,
+        },
+      }),
+    );
   }
+
+  await Promise.all(upserts);
 
   if (seenIds.size === 0 && servers.length === 0) {
     return;
@@ -143,5 +150,6 @@ export async function syncCsgoPublicServers(): Promise<void> {
 export async function syncCsgoPublicServersForce(): Promise<void> {
   const { invalidateCache } = await import("@/lib/csgo-api/request-cache");
   invalidateCache("csgo:");
+  invalidateCache("live-server-stats");
   await syncCsgoPublicServersNow();
 }

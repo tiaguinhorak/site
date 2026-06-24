@@ -36,8 +36,8 @@ export const marketingPages = [
     label: "Ranking",
     title: "Os melhores da temporada",
     description:
-      "Ranking global com ELO, K/D e estatísticas detalhadas. Season 8 em andamento.",
-    eyebrow: "Season 8",
+      "Ranking global com ELO, K/D e estatísticas. Season 1 — apenas partidas rankeadas.",
+    eyebrow: "Season 1",
   },
   {
     href: "/premium",
@@ -99,6 +99,14 @@ export const dashboardNav = [
         i18nKey: "ranked",
       },
     ],
+  },
+  {
+    label: "Ranking",
+    href: "/dashboard/ranking",
+    icon: "Medal",
+    title: "Ranking global",
+    description: "Leaderboard Season 1 — só partidas rankeadas contam.",
+    i18nKey: "ranking",
   },
   {
     label: "Perfil",

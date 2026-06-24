@@ -3,17 +3,19 @@ import type { NextRequest } from "next/server";
 import { getSessionUser } from "@/lib/auth/session-user";
 import { fetchLiveServerStats } from "@/lib/csgo-api/live-server-stats";
 
+function parsePoolFilter(value: string | null): "ranked" | "warmup" | undefined {
+  if (value === "warmup" || value === "ranked") return value;
+  return undefined;
+}
+
 export async function GET(request: NextRequest) {
-  const poolFilter = request.nextUrl.searchParams.get("pool");
-  let servers = await fetchLiveServerStats();
+  const poolFilter = parsePoolFilter(request.nextUrl.searchParams.get("pool"));
 
-  if (poolFilter === "warmup") {
-    servers = servers.filter((server) => server.pool === "warmup");
-  } else if (poolFilter === "ranked") {
-    servers = servers.filter((server) => server.pool !== "warmup");
-  }
+  const [servers, user] = await Promise.all([
+    fetchLiveServerStats({ pool: poolFilter }),
+    getSessionUser(request),
+  ]);
 
-  const user = await getSessionUser(request);
   const isAdmin = user?.isAdmin === true;
 
   return NextResponse.json(

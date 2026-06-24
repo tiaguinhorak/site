@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { PublicProfilePage } from "@/components/profile/public-profile-page";
+import { RankedMatchHistory } from "@/components/profile/ranked-match-history";
 import { PublicProfileSkins } from "@/components/profile/public-profile-skins";
 import { prisma } from "@/lib/prisma";
 import { serializePublicPlayer } from "@/lib/profile/serialize-public";
@@ -36,6 +37,7 @@ export default async function PlayerProfilePage({ params }: PageProps) {
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 pb-24 pt-28 sm:px-6 sm:pt-32">
       <PublicProfilePage initialPlayer={player} />
+      <RankedMatchHistory nickname={player.nickname} />
       <PublicProfileSkins sides={sides} />
     </div>
   );

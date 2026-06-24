@@ -17,6 +17,12 @@ export type PublicPlayerProfile = {
   matches: number;
   winRate: number;
   hoursPlayed: number;
+  competitivePoints: number;
+  rankedWins: number;
+  rankedLosses: number;
+  rankedKills: number;
+  rankedDeaths: number;
+  rankedAssists: number;
   steamPersonaName: string | null;
   steamProfileUrl: string | null;
   anticheatInstalled: boolean;
@@ -53,6 +59,12 @@ export function userProfileToPublic(user: UserProfile): PublicPlayerProfile {
     matches: user.matches,
     winRate: user.winRate,
     hoursPlayed: user.hoursPlayed,
+    competitivePoints: user.competitivePoints,
+    rankedWins: user.rankedWins,
+    rankedLosses: user.rankedLosses,
+    rankedKills: user.rankedKills,
+    rankedDeaths: user.rankedDeaths,
+    rankedAssists: user.rankedAssists,
     steamPersonaName: user.steamPersonaName,
     steamProfileUrl: user.steamProfileUrl,
     anticheatInstalled: user.anticheatInstalled,
@@ -77,6 +89,12 @@ export function serializePublicPlayer(user: User): PublicPlayerProfile {
     matches: user.matches,
     winRate: user.winRate,
     hoursPlayed: user.hoursPlayed,
+    competitivePoints: user.competitivePoints,
+    rankedWins: user.rankedWins,
+    rankedLosses: user.rankedLosses,
+    rankedKills: user.rankedKills,
+    rankedDeaths: user.rankedDeaths,
+    rankedAssists: user.rankedAssists,
     steamPersonaName: user.steamPersonaName,
     steamProfileUrl: user.steamProfileUrl,
     anticheatInstalled: user.anticheatInstalled,

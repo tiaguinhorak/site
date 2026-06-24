@@ -86,6 +86,7 @@ model User {
   rankedLosses          Int       @default(0)
   rankedKills           Int       @default(0)
   rankedDeaths          Int       @default(0)
+  rankedAssists         Int       @default(0)
   competitivePoints     Int       @default(0)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -562,8 +563,10 @@ model PublicServer {
   host         String?
   port         Int?
   isLiveSynced Boolean @default(false)
+  pool         String  @default("public")
 
   @@index([isLiveSynced])
+  @@index([isLiveSynced, pool])
 }
 
 model LeaderboardEntry {

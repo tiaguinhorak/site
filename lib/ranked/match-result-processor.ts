@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import { afterCsgoMatchMutation } from "@/lib/csgo-api/invalidate-caches";
+import { syncLeaderboardRanks } from "@/lib/leaderboard/sync-ranks";
 import { abandonRankedSessionInternal } from "@/lib/ranked/reconcile-stale-sessions";
 import { notifySessionParticipants, notifyRankedRooms } from "@/lib/realtime/notify";
 import { triggerQueueMatchmaking } from "@/lib/ranked/queue-service";
@@ -150,6 +151,7 @@ export async function processMatchResultFromGame(input: MatchResultInput): Promi
           rankedLosses: true,
           rankedKills: true,
           rankedDeaths: true,
+          rankedAssists: true,
           matches: true,
           elo: true,
           kd: true,
@@ -161,6 +163,7 @@ export async function processMatchResultFromGame(input: MatchResultInput): Promi
       const rankedLosses = current.rankedLosses + (won ? 0 : 1);
       const rankedKills = current.rankedKills + player.kills;
       const rankedDeaths = current.rankedDeaths + player.deaths;
+      const rankedAssists = current.rankedAssists + player.assists;
       const matches = current.matches + 1;
       const kd =
         rankedDeaths > 0
@@ -179,6 +182,7 @@ export async function processMatchResultFromGame(input: MatchResultInput): Promi
           rankedLosses,
           rankedKills,
           rankedDeaths,
+          rankedAssists,
           matches,
           kd,
           winRate,
@@ -188,6 +192,8 @@ export async function processMatchResultFromGame(input: MatchResultInput): Promi
       });
     }
   });
+
+  await syncLeaderboardRanks();
 
   if (session.status === "starting" || session.status === "live") {
     await abandonRankedSessionInternal(session.id, "finish");

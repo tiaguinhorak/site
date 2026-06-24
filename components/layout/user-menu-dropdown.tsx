@@ -14,6 +14,7 @@ import {
   ChevronDown,
   Moon,
   Sun,
+  Medal,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,7 @@ export function UserMenuDropdown({ align = "right", className }: UserMenuDropdow
     { href: "/dashboard/perfil", label: t("myProfile"), icon: UserRound },
     { href: "/dashboard/lobby", label: tNav("lobby"), icon: Users },
     { href: "/dashboard/ranked", label: t("ranked"), icon: Trophy },
+    { href: "/dashboard/ranking", label: tNav("ranking"), icon: Medal },
     { href: "/dashboard/premium", label: t("subscription"), icon: Crown },
     { href: "/dashboard/perfil?tab=notifications", label: tAccount("notificationSettings"), icon: Settings },
   ];

@@ -194,6 +194,16 @@ button{
     box-shadow: var(--glass-inset), var(--glass-shadow-strong);
   }
 
+  /* Nav dropdowns — stronger blur so page content does not bleed through */
+  .glass-nav-dropdown {
+    isolation: isolate;
+    background-color: rgb(var(--glass-bg) / 0.94);
+    -webkit-backdrop-filter: blur(96px) saturate(220%);
+    backdrop-filter: blur(96px) saturate(220%);
+    border: 1px solid color-mix(in srgb, var(--primary) 38%, var(--border));
+    box-shadow: var(--glass-inset), var(--glass-shadow-strong);
+  }
+
   .glass-modal {
     isolation: isolate;
     background-color: rgb(var(--glass-bg) / var(--glass-modal-opacity));
@@ -240,6 +250,11 @@ button{
 
   .dark .glass-menu {
     border: 1px solid color-mix(in srgb, var(--primary) 32%, transparent);
+  }
+
+  .dark .glass-nav-dropdown {
+    background-color: rgb(var(--glass-bg) / 0.88);
+    border: 1px solid color-mix(in srgb, var(--primary) 36%, transparent);
   }
 
   .dark .glass-modal {

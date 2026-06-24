@@ -5,6 +5,7 @@ import { cached } from "@/lib/csgo-api/request-cache";
 import { formatMapLabel } from "@/lib/servers/maps";
 
 const LIVE_QUERY_TTL_MS = 12_000;
+const A2S_SOCKET_TIMEOUT_MS = 1800;
 
 export type LiveServerQueryResult = {
   host: string;
@@ -44,7 +45,7 @@ async function queryCsgoServerLiveUncached(
       host,
       port,
       maxAttempts: 1,
-      socketTimeout: 3000,
+      socketTimeout: A2S_SOCKET_TIMEOUT_MS,
     });
 
     const mapRaw = result.map ?? null;

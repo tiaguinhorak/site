@@ -23,6 +23,12 @@ export type UserProfile = {
   matches: number;
   winRate: number;
   hoursPlayed: number;
+  competitivePoints: number;
+  rankedWins: number;
+  rankedLosses: number;
+  rankedKills: number;
+  rankedDeaths: number;
+  rankedAssists: number;
   anticheatInstalled: boolean;
   steamLinked: boolean;
   steamId: string | null;
@@ -84,6 +90,12 @@ export function serializeUser(user: User): UserProfile {
     matches: user.matches,
     winRate: user.winRate,
     hoursPlayed: user.hoursPlayed,
+    competitivePoints: user.competitivePoints,
+    rankedWins: user.rankedWins,
+    rankedLosses: user.rankedLosses,
+    rankedKills: user.rankedKills,
+    rankedDeaths: user.rankedDeaths,
+    rankedAssists: user.rankedAssists,
     anticheatInstalled: user.anticheatInstalled,
     steamLinked: Boolean(user.steamId),
     steamId: user.steamId,

@@ -38,6 +38,7 @@ export function DashboardOverview() {
     { href: "/dashboard/lobby", label: t("quick.lobbyLabel"), description: t("quick.lobbyDesc") },
     { href: "/dashboard/warmup", label: t("quick.warmupLabel"), description: t("quick.warmupDesc") },
     { href: "/dashboard/ranked", label: t("quick.rankedLabel"), description: t("quick.rankedDesc") },
+    { href: "/dashboard/ranking", label: t("quick.rankingLabel"), description: t("quick.rankingDesc") },
     { href: "/dashboard/inventario", label: t("quick.inventoryLabel"), description: t("quick.inventoryDesc") },
     { href: "/dashboard/loja", label: t("quick.storeLabel"), description: t("quick.storeDesc") },
     { href: "/dashboard/anticheat", label: t("quick.anticheatLabel"), description: t("quick.anticheatDesc") },

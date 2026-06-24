@@ -2,18 +2,22 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 import { SeasonInfo } from "@/components/marketing/season-info";
-import { Leaderboard } from "@/components/sections/leaderboard";
+import { RankingBoard } from "@/components/ranking/ranking-board";
 import { CallToAction } from "@/components/sections/cta";
-import { getLeaderboard } from "@/lib/queries";
+import { fetchLeaderboardPage } from "@/lib/leaderboard/queries";
 
 export const metadata: Metadata = {
   title: "Ranking — clutchclube",
-  description: "Ranking global Season 8 com ELO, K/D e estatísticas detalhadas.",
+  description: "Ranking global Season 1 — ELO, K/D e estatísticas. Apenas partidas rankeadas.",
 };
 
 export default async function RankingPage() {
   const t = await getTranslations("marketing");
-  const leaderboard = await getLeaderboard();
+  const initialData = await fetchLeaderboardPage({
+    page: 1,
+    limit: 25,
+    sort: "points",
+  });
 
   return (
     <>
@@ -28,15 +32,7 @@ export default async function RankingPage() {
       >
         <SeasonInfo />
         <div className="mt-10">
-          <Leaderboard
-            embedded
-            leaderboard={leaderboard.map((p) => ({
-              rank: p.rank,
-              name: p.name,
-              kd: p.kd,
-              points: p.points,
-            }))}
-          />
+          <RankingBoard initialData={initialData} variant="marketing" />
         </div>
       </MarketingPageShell>
       <CallToAction />

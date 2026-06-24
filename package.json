@@ -17,7 +17,8 @@
     "db:seed": "prisma db seed",
     "db:setup": "prisma migrate deploy && prisma db seed",
     "db:studio": "prisma studio",
-    "sync:skins": "npx tsx scripts/sync-csgo-catalog.ts"
+    "sync:skins": "npx tsx scripts/sync-csgo-catalog.ts",
+    "sync:leaderboard": "npx tsx scripts/sync-leaderboard-ranks.ts"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

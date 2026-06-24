@@ -5,7 +5,6 @@ import { motion } from "motion/react";
 import {
   Trophy,
   Target,
-  Clock,
   ShieldCheck,
   Crown,
   ExternalLink,
@@ -124,7 +123,11 @@ export function PublicProfileView({ player }: { player: PublicPlayerProfile }) {
             { label: t("kd"), value: player.kd.toFixed(2), icon: Target },
             { label: t("matches"), value: player.matches, icon: Medal },
             { label: t("winRate"), value: `${player.winRate}%`, icon: TrendingUp },
-            { label: t("hoursPlayed"), value: player.hoursPlayed, icon: Clock },
+            {
+              label: t("record"),
+              value: `${player.rankedWins}W / ${player.rankedLosses}L`,
+              icon: Trophy,
+            },
           ].map((stat) => {
             const Icon = stat.icon;
             return (
@@ -144,11 +147,11 @@ export function PublicProfileView({ player }: { player: PublicPlayerProfile }) {
           })}
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
           <div className="rounded-xl glass p-5">
             <p className="text-xs uppercase tracking-wider text-muted">{t("globalPosition")}</p>
             <p className="mt-2 font-display text-4xl font-bold text-gradient">
-              #{player.rank}
+              {player.rank > 0 ? `#${player.rank}` : "—"}
             </p>
             <p className="mt-1 text-sm text-muted">{t("currentSeason")}</p>
           </div>
@@ -157,7 +160,16 @@ export function PublicProfileView({ player }: { player: PublicPlayerProfile }) {
             <p className="mt-2 font-display text-4xl font-bold text-foreground">
               {player.elo}
             </p>
-            <p className="mt-1 text-sm text-muted">{t("competitiveScore")}</p>
+            <p className="mt-1 text-sm text-muted">{t("eloLabel")}</p>
+          </div>
+          <div className="rounded-xl glass p-5">
+            <p className="text-xs uppercase tracking-wider text-muted">{t("competitiveScore")}</p>
+            <p className="mt-2 font-display text-4xl font-bold text-gradient">
+              {player.competitivePoints.toLocaleString("pt-BR")}
+            </p>
+            <p className="mt-1 text-sm text-muted">
+              {player.rankedKills}K / {player.rankedDeaths}D / {player.rankedAssists}A
+            </p>
           </div>
         </div>
       </motion.div>
