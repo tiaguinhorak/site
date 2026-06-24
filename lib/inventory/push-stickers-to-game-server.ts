@@ -7,8 +7,8 @@ import {
 } from "@/lib/csgo-api/config";
 import { getSkinsSyncKey } from "@/lib/env/skins-sync";
 
-const PRIMARY_TIMEOUT_MS = 5000;
-const SECONDARY_TIMEOUT_MS = 2000;
+const PRIMARY_TIMEOUT_MS = 8000;
+const SECONDARY_TIMEOUT_MS = 8000;
 
 async function pushStickersToTarget(
   baseUrl: string,
