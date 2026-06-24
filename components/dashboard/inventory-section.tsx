@@ -129,6 +129,28 @@ function mergeWorkspaceFromSources(
   };
 }
 
+function applyLoadoutToCatalogItems(
+  items: CatalogSkin[],
+  loadoutItems: EquippedLoadoutEntry[],
+): CatalogSkin[] {
+  const weaponT = new Map<string, string>();
+  const weaponCT = new Map<string, string>();
+  for (const entry of loadoutItems) {
+    if (entry.equippedT) weaponT.set(entry.weaponId, entry.catalogSkinId);
+    if (entry.equippedCT) weaponCT.set(entry.weaponId, entry.catalogSkinId);
+  }
+  return items.map((item) => {
+    const equippedT = weaponT.get(item.weaponId) === item.id;
+    const equippedCT = weaponCT.get(item.weaponId) === item.id;
+    return {
+      ...item,
+      equippedT,
+      equippedCT,
+      equipped: equippedT || equippedCT,
+    };
+  });
+}
+
 const CATEGORY_ICON: Record<"all" | InventoryCategoryKey, typeof LayoutGrid> = {
   all: LayoutGrid,
   knife: Swords,
@@ -238,9 +260,13 @@ export function InventorySection() {
       const response = await fetch("/api/inventory/loadout", {
         credentials: "same-origin",
       });
-      if (!response.ok) return;
+      if (!response.ok) return null;
       const data = (await response.json()) as LoadoutResponse;
       setLoadout(data);
+      setItems((prev) =>
+        prev.length > 0 ? applyLoadoutToCatalogItems(prev, data.items) : prev,
+      );
+      return data;
     } finally {
       if (!options?.silent) setRefreshing(false);
     }
@@ -287,6 +313,9 @@ export function InventorySection() {
       if (response.ok) {
         const data = (await response.json()) as LoadoutResponse;
         setLoadout(data);
+        setItems((prev) =>
+          prev.length > 0 ? applyLoadoutToCatalogItems(prev, data.items) : prev,
+        );
       }
     } finally {
       setRefreshing(false);
@@ -418,7 +447,6 @@ export function InventorySection() {
         );
       }
       await fetchLoadout({ silent: true });
-      await fetchSkins();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("equipFailed"));
     } finally {
@@ -448,7 +476,6 @@ export function InventorySection() {
         );
       }
       await fetchLoadout({ silent: true });
-      await fetchSkins();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("unequipFailed"));
     } finally {
@@ -736,7 +763,6 @@ export function InventorySection() {
         }}
         onSaved={() => {
           void fetchLoadout({ silent: true });
-          void fetchSkins();
         }}
       />
     </section>

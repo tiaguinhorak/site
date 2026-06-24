@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
 import { toast } from "@/lib/toast";
@@ -37,6 +37,8 @@ export function useWeaponStickerState(
   const [pickerSearch, setPickerSearch] = useState("");
   const [pickerItems, setPickerItems] = useState<PickerSticker[]>([]);
   const [pickerLoading, setPickerLoading] = useState(false);
+  const loadedResourceKeyRef = useRef("");
+  const lastPickerQueryRef = useRef("");
 
   const applySlotDetails = useCallback((details: SlotDetail[]) => {
     const labels = Array(STICKER_SLOT_COUNT).fill("");
@@ -76,19 +78,32 @@ export function useWeaponStickerState(
     }
   }, [weaponId, team, enabled, t, applySlotDetails]);
 
+  const resourceKey = `${weaponId}:${team}`;
+
   useEffect(() => {
-    if (!enabled) return;
-    loadCurrent();
-    setActiveSlot(null);
-    setPickerSearch("");
-    setPickerItems([]);
-  }, [loadCurrent, enabled]);
+    if (!enabled) {
+      loadedResourceKeyRef.current = "";
+      return;
+    }
+    const resourceChanged = loadedResourceKeyRef.current !== resourceKey;
+    loadedResourceKeyRef.current = resourceKey;
+    if (resourceChanged) {
+      setActiveSlot(null);
+      setPickerSearch("");
+      setPickerItems([]);
+      lastPickerQueryRef.current = "";
+    }
+    void loadCurrent();
+  }, [enabled, resourceKey, loadCurrent]);
 
   const loadPicker = useCallback(async (search: string) => {
+    const query = search.trim();
+    if (lastPickerQueryRef.current === query) return;
+    lastPickerQueryRef.current = query;
     setPickerLoading(true);
     try {
       const params = new URLSearchParams({ picker: "1", limit: "48" });
-      if (search.trim()) params.set("search", search.trim());
+      if (query) params.set("search", query);
       const res = await fetch(`/api/inventory/weapon-stickers?${params}`, {
         credentials: "same-origin",
       });
@@ -131,6 +146,7 @@ export function useWeaponStickerState(
       return next;
     });
     setPickerSearch("");
+    lastPickerQueryRef.current = "";
   }
 
   function clearSlot(index: number) {

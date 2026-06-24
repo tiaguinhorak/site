@@ -9,7 +9,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { usePathname } from "next/navigation";
 import type { UserProfile } from "@/lib/serializers";
 import { getAvatarInitials } from "@/lib/profile";
 import { AUTH_SESSION_CHANGED_EVENT } from "@/lib/auth/auth-events";
@@ -49,11 +48,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const pathname = usePathname();
-
   useEffect(() => {
     void refresh();
-  }, [pathname, refresh]);
+  }, [refresh]);
 
   useEffect(() => {
     const onAuthChange = () => void refresh();

@@ -132,11 +132,17 @@ export function SkinWorkspace({
     setTab(resolveInitialTab(initialTab));
     const side = defaultPendingSide(skin, equipT, equipCT);
     setPendingSide(side);
-    if (skin.equippedCT) setStickerTeam("CT");
-    else if (skin.equippedT) setStickerTeam("T");
-    else if (equipT && !equipCT) setStickerTeam("T");
-    else if (equipCT && !equipT) setStickerTeam("CT");
-    else setStickerTeam("CT");
+    const nextStickerTeam: LoadoutTeam =
+      skin.equippedCT
+        ? "CT"
+        : skin.equippedT
+          ? "T"
+          : equipT && !equipCT
+            ? "T"
+            : equipCT && !equipT
+              ? "CT"
+              : "CT";
+    setStickerTeam((prev) => (prev === nextStickerTeam ? prev : nextStickerTeam));
 
     if (singleOnly && hasStickers && resolveInitialTab(initialTab) === "settings") {
       setTab("stickers");

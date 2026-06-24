@@ -135,6 +135,7 @@ function NavDirectLink({
   return (
     <Link
       href={item.href}
+      prefetch={false}
       className={cn(
         "flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors whitespace-nowrap",
         active
@@ -222,6 +223,7 @@ function NavDropdown({
                   key={item.href}
                   role="menuitem"
                   href={item.href}
+                  prefetch={false}
                   onClick={onClose}
                   className={cn(
                     "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
@@ -280,6 +282,7 @@ function MobileNavSection({
             <li key={item.href}>
               <Link
                 href={item.href}
+                prefetch={false}
                 onClick={onNavigate}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors",
@@ -341,6 +344,7 @@ export function DashboardNavbar() {
           <div className="hidden min-w-0 flex-1 items-center justify-center gap-0.5 md:flex">
             <Link
               href={OVERVIEW.href}
+              prefetch={false}
               className={cn(
                 "flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors whitespace-nowrap",
                 overviewActive
@@ -421,6 +425,7 @@ export function DashboardNavbar() {
               >
                 <Link
                   href={OVERVIEW.href}
+                  prefetch={false}
                   onClick={() => setMobileOpen(false)}
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium transition-colors",
@@ -454,6 +459,7 @@ export function DashboardNavbar() {
                       <Link
                         key={item.href}
                         href={item.href}
+                        prefetch={false}
                         onClick={() => setMobileOpen(false)}
                         className={cn(
                           "flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium transition-colors",

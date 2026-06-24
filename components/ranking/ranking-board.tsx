@@ -377,6 +377,7 @@ function PodiumCard({
         <div className="min-w-0">
           <Link
             href={profileHref}
+            prefetch={false}
             className="font-display text-xl font-bold text-foreground transition-colors hover:text-primary"
           >
             {player.nickname}
@@ -432,6 +433,7 @@ function LeaderboardRow({
           <div className="min-w-0">
             <Link
               href={profileHref}
+              prefetch={false}
               className="truncate font-display text-sm font-semibold text-foreground hover:text-primary"
             >
               {player.nickname}

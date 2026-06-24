@@ -124,7 +124,7 @@ export function Leaderboard({
                 </div>
                 <div>
                   <h3 className="font-display text-3xl font-bold text-foreground">
-                    <Link href={`/player/${top.name}`} className="hover:text-primary transition-colors">
+                    <Link href={`/player/${top.name}`} prefetch={false} className="hover:text-primary transition-colors">
                       {top.name}
                     </Link>
                   </h3>
@@ -180,6 +180,7 @@ export function Leaderboard({
                   </div>
                   <Link
                     href={`/player/${player.name}`}
+                    prefetch={false}
                     className="flex-1 font-display text-sm font-semibold text-foreground hover:text-primary transition-colors"
                   >
                     {player.name}
