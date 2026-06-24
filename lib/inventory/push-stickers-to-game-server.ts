@@ -15,7 +15,7 @@ async function pushStickersToTarget(
   payload: Awaited<ReturnType<typeof getPlayerStickersForSync>>,
   syncKey: string,
   timeoutMs: number,
-): Promise<{ baseUrl: string; ok: boolean; error?: string }> {
+): Promise<{ baseUrl: string; ok: boolean; error?: string; dbPath?: string }> {
   const url = `${baseUrl}/api/csgo/stickers/player-sync`;
 
   try {
@@ -31,7 +31,10 @@ async function pushStickersToTarget(
       signal: AbortSignal.timeout(timeoutMs),
     });
 
-    if (res.ok) return { baseUrl, ok: true };
+    if (res.ok) {
+      const data = (await res.json()) as { dbPath?: string };
+      return { baseUrl, ok: true, dbPath: data.dbPath };
+    }
 
     const text = await res.text().catch(() => "");
     return {
@@ -48,7 +51,7 @@ async function pushStickersToTarget(
 /** Primary ranked API awaited; warmup/extras run in background (no equip UI delay). */
 export async function pushPlayerStickersToGameServer(
   steamId64: string,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; dbPath?: string }> {
   const syncKey = getSkinsSyncKey();
   if (!syncKey) {
     return { ok: false, error: "CSGO_SKINS_SYNC_KEY not configured" };
@@ -94,5 +97,5 @@ export async function pushPlayerStickersToGameServer(
     return { ok: false, error: primary.error };
   }
 
-  return { ok: true };
+  return { ok: true, dbPath: primary.dbPath };
 }

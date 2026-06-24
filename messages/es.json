@@ -903,6 +903,7 @@
     "gameSyncPartial": "Loadout guardado en la plataforma.",
     "stickersLoadFailed": "No se pudieron cargar los stickers.",
     "stickersSaveFailed": "No se pudieron guardar los stickers.",
+    "stickersGameSyncFailed": "Stickers guardados en el sitio, pero falló la sincronización con el servidor CS.",
     "stickersSaved": "Stickers guardados.",
     "stickersSavePartial": "Guardado en la plataforma, pero falló al enviar al servidor. Respawn en el juego.",
     "loadoutSidebarTitle": "Equipadas",

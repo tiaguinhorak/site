@@ -21,16 +21,57 @@ type SlotDetail = {
   imageUrl: string | null;
 };
 
+type TeamStickerCache = {
+  slots: number[];
+  slotLabels: string[];
+  slotImageUrls: string[];
+};
+
+function emptyTeamCache(): TeamStickerCache {
+  return {
+    slots: Array(STICKER_SLOT_COUNT).fill(0),
+    slotLabels: Array(STICKER_SLOT_COUNT).fill(""),
+    slotImageUrls: Array(STICKER_SLOT_COUNT).fill(""),
+  };
+}
+
+function teamCacheFromResponse(
+  slots: number[],
+  slotDetails: SlotDetail[] | undefined,
+): TeamStickerCache {
+  const normalized = slots.slice(0, STICKER_SLOT_COUNT);
+  while (normalized.length < STICKER_SLOT_COUNT) normalized.push(0);
+
+  const labels = Array(STICKER_SLOT_COUNT).fill("");
+  const images = Array(STICKER_SLOT_COUNT).fill("");
+  if (Array.isArray(slotDetails)) {
+    for (const detail of slotDetails) {
+      if (detail.slot < 0 || detail.slot >= STICKER_SLOT_COUNT) continue;
+      labels[detail.slot] = detail.name;
+      images[detail.slot] = detail.imageUrl ?? "";
+    }
+  }
+
+  return { slots: normalized, slotLabels: labels, slotImageUrls: images };
+}
+
+type UseWeaponStickerStateOptions = {
+  mirrorEditsToBoth?: boolean;
+};
+
 export function useWeaponStickerState(
   weaponId: string,
-  team: LoadoutTeam,
+  viewTeam: LoadoutTeam,
   enabled: boolean,
   pickerActive = false,
+  options?: UseWeaponStickerStateOptions,
 ) {
+  const mirrorEditsToBoth = options?.mirrorEditsToBoth ?? false;
   const t = useTranslations("inventory");
-  const [slots, setSlots] = useState<number[]>(Array(STICKER_SLOT_COUNT).fill(0));
-  const [slotLabels, setSlotLabels] = useState<string[]>(Array(STICKER_SLOT_COUNT).fill(""));
-  const [slotImageUrls, setSlotImageUrls] = useState<string[]>(Array(STICKER_SLOT_COUNT).fill(""));
+  const [byTeam, setByTeam] = useState<Record<LoadoutTeam, TeamStickerCache>>({
+    T: emptyTeamCache(),
+    CT: emptyTeamCache(),
+  });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
@@ -40,60 +81,81 @@ export function useWeaponStickerState(
   const [pickerPage, setPickerPage] = useState(1);
   const [pickerTotalPages, setPickerTotalPages] = useState(1);
   const [pickerTotal, setPickerTotal] = useState(0);
-  const loadedResourceKeyRef = useRef("");
+  const loadedWeaponIdRef = useRef("");
   const lastPickerKeyRef = useRef("");
 
-  const applySlotDetails = useCallback((details: SlotDetail[]) => {
-    const labels = Array(STICKER_SLOT_COUNT).fill("");
-    const images = Array(STICKER_SLOT_COUNT).fill("");
-    for (const detail of details) {
-      if (detail.slot < 0 || detail.slot >= STICKER_SLOT_COUNT) continue;
-      labels[detail.slot] = detail.name;
-      images[detail.slot] = detail.imageUrl ?? "";
-    }
-    setSlotLabels(labels);
-    setSlotImageUrls(images);
-  }, []);
+  const display = byTeam[viewTeam];
+  const slots = display.slots;
+  const slotLabels = display.slotLabels;
+  const slotImageUrls = display.slotImageUrls;
 
-  const loadCurrent = useCallback(async () => {
+  const applyEditToTeams = useCallback(
+    (updater: (prev: TeamStickerCache) => TeamStickerCache) => {
+      setByTeam((prev) => {
+        const nextT = updater(prev.T);
+        if (mirrorEditsToBoth) {
+          return { T: nextT, CT: { ...nextT } };
+        }
+        return {
+          ...prev,
+          [viewTeam]: updater(prev[viewTeam]),
+        };
+      });
+    },
+    [mirrorEditsToBoth, viewTeam],
+  );
+
+  const loadAllTeams = useCallback(async () => {
     if (!weaponId || !enabled) return;
     setLoading(true);
     try {
-      const params = new URLSearchParams({ weaponId, team });
-      const res = await fetch(`/api/inventory/weapon-stickers?${params}`, {
-        credentials: "same-origin",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? t("stickersLoadFailed"));
-      const loaded = (data.slots ?? []).slice(0, STICKER_SLOT_COUNT);
-      while (loaded.length < STICKER_SLOT_COUNT) loaded.push(0);
-      setSlots(loaded);
-      if (Array.isArray(data.slotDetails)) {
-        applySlotDetails(data.slotDetails as SlotDetail[]);
-      } else {
-        setSlotLabels(Array(STICKER_SLOT_COUNT).fill(""));
-        setSlotImageUrls(Array(STICKER_SLOT_COUNT).fill(""));
+      const teams: LoadoutTeam[] = ["T", "CT"];
+      const results = await Promise.all(
+        teams.map(async (team) => {
+          const params = new URLSearchParams({ weaponId, team });
+          const res = await fetch(`/api/inventory/weapon-stickers?${params}`, {
+            credentials: "same-origin",
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.error ?? t("stickersLoadFailed"));
+          }
+          return {
+            team,
+            cache: teamCacheFromResponse(
+              (data.slots ?? []) as number[],
+              data.slotDetails as SlotDetail[] | undefined,
+            ),
+          };
+        }),
+      );
+
+      const next: Record<LoadoutTeam, TeamStickerCache> = {
+        T: emptyTeamCache(),
+        CT: emptyTeamCache(),
+      };
+      for (const { team, cache } of results) {
+        next[team] = cache;
       }
+      setByTeam(next);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("stickersLoadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [weaponId, team, enabled, t, applySlotDetails]);
-
-  const resourceKey = `${weaponId}:${team}`;
+  }, [weaponId, enabled, t]);
 
   useEffect(() => {
     if (!enabled) {
-      loadedResourceKeyRef.current = "";
+      loadedWeaponIdRef.current = "";
       return;
     }
-    const resourceChanged = loadedResourceKeyRef.current !== resourceKey;
-    loadedResourceKeyRef.current = resourceKey;
-    if (resourceChanged) {
-      setSlots(Array(STICKER_SLOT_COUNT).fill(0));
-      setSlotLabels(Array(STICKER_SLOT_COUNT).fill(""));
-      setSlotImageUrls(Array(STICKER_SLOT_COUNT).fill(""));
+
+    const weaponChanged = loadedWeaponIdRef.current !== weaponId;
+    loadedWeaponIdRef.current = weaponId;
+
+    if (weaponChanged) {
+      setByTeam({ T: emptyTeamCache(), CT: emptyTeamCache() });
       setActiveSlot(null);
       setPickerSearch("");
       setPickerItems([]);
@@ -102,8 +164,9 @@ export function useWeaponStickerState(
       setPickerTotal(0);
       lastPickerKeyRef.current = "";
     }
-    void loadCurrent();
-  }, [enabled, resourceKey, loadCurrent]);
+
+    void loadAllTeams();
+  }, [enabled, weaponId, loadAllTeams]);
 
   const loadPicker = useCallback(async (search: string, force = false, page = 1) => {
     const query = search.trim();
@@ -152,49 +215,51 @@ export function useWeaponStickerState(
   ) {
     const target = slotIndex ?? activeSlot;
     if (target === null) return;
-    setSlots((prev) => {
-      const next = [...prev];
-      next[target] = defIndex;
-      return next;
+
+    applyEditToTeams((prev) => {
+      const nextSlots = [...prev.slots];
+      const nextLabels = [...prev.slotLabels];
+      const nextImages = [...prev.slotImageUrls];
+      nextSlots[target] = defIndex;
+      nextLabels[target] = name;
+      nextImages[target] = imageUrl ?? "";
+      return {
+        slots: nextSlots,
+        slotLabels: nextLabels,
+        slotImageUrls: nextImages,
+      };
     });
-    setSlotLabels((prev) => {
-      const next = [...prev];
-      next[target] = name;
-      return next;
-    });
-    setSlotImageUrls((prev) => {
-      const next = [...prev];
-      next[target] = imageUrl ?? "";
-      return next;
-    });
+
     setPickerSearch("");
     lastPickerKeyRef.current = "";
   }
 
   function clearSlot(index: number) {
-    setSlots((prev) => {
-      const next = [...prev];
-      next[index] = 0;
-      return next;
+    applyEditToTeams((prev) => {
+      const nextSlots = [...prev.slots];
+      const nextLabels = [...prev.slotLabels];
+      const nextImages = [...prev.slotImageUrls];
+      nextSlots[index] = 0;
+      nextLabels[index] = "";
+      nextImages[index] = "";
+      return {
+        slots: nextSlots,
+        slotLabels: nextLabels,
+        slotImageUrls: nextImages,
+      };
     });
-    setSlotLabels((prev) => {
-      const next = [...prev];
-      next[index] = "";
-      return next;
-    });
-    setSlotImageUrls((prev) => {
-      const next = [...prev];
-      next[index] = "";
-      return next;
-    });
+  }
+
+  function getTeamSlots(team: LoadoutTeam): number[] {
+    return byTeam[team].slots;
   }
 
   async function saveWithTeam(
     teamOverride?: LoadoutTeam,
     slotsOverride?: number[],
   ): Promise<boolean> {
-    const teamToSave = teamOverride ?? team;
-    const slotsToSave = slotsOverride ?? slots;
+    const teamToSave = teamOverride ?? viewTeam;
+    const slotsToSave = slotsOverride ?? byTeam[teamToSave].slots;
     setSaving(true);
     try {
       const res = await fetch("/api/inventory/weapon-stickers", {
@@ -208,6 +273,10 @@ export function useWeaponStickerState(
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? t("stickersSaveFailed"));
+      if (data.gameSync && !data.gameSync.ok) {
+        toast.error(data.gameSync.error ?? t("stickersGameSyncFailed"));
+        return false;
+      }
       return true;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("stickersSaveFailed"));
@@ -238,6 +307,7 @@ export function useWeaponStickerState(
     clearSlot,
     save,
     saveWithTeam,
+    getTeamSlots,
     pickerSearch,
     setPickerSearch,
     pickerItems,

@@ -112,9 +112,10 @@ export function SkinWorkspace({
   const t = useTranslations("inventory");
   const [tab, setTab] = useState<WorkspaceTab>("settings");
   const [pendingSide, setPendingSide] = useState<EquipSide>("CT");
-  const [stickerTeam, setStickerTeam] = useState<LoadoutTeam>("CT");
   const [stickerScope, setStickerScope] = useState<StickerEditScope>("CT");
   const [savingAll, setSavingAll] = useState(false);
+
+  const stickerViewTeam: LoadoutTeam = stickerScope === "CT" ? "CT" : "T";
 
   const canEquipT = skin ? weaponAllowedOnTeam(skin.weaponId, "T") : false;
   const canEquipCT = skin ? weaponAllowedOnTeam(skin.weaponId, "CT") : false;
@@ -128,9 +129,10 @@ export function SkinWorkspace({
 
   const stickerState = useWeaponStickerState(
     skin?.weaponId ?? "",
-    stickerTeam,
+    stickerViewTeam,
     stickerHookEnabled,
     pickerActive,
+    { mirrorEditsToBoth: stickerScope === "both" },
   );
 
   useEffect(() => {
@@ -143,7 +145,7 @@ export function SkinWorkspace({
     setTab(resolveInitialTab(initialTab));
     const side = defaultPendingSide(skin, equipT, equipCT);
     setPendingSide(side);
-    const nextStickerTeam: LoadoutTeam =
+    const nextScope: StickerEditScope =
       initialStickerTeam ??
       (skin.equippedCT
         ? "CT"
@@ -154,21 +156,7 @@ export function SkinWorkspace({
             : equipCT && !equipT
               ? "CT"
               : "CT");
-    setStickerTeam((prev) => (prev === nextStickerTeam ? prev : nextStickerTeam));
-    setStickerScope((prev) => {
-      const scope: StickerEditScope =
-        initialStickerTeam ??
-        (skin.equippedCT
-          ? "CT"
-          : skin.equippedT
-            ? "T"
-            : equipT && !equipCT
-              ? "T"
-              : equipCT && !equipT
-                ? "CT"
-                : "CT");
-      return prev === scope ? prev : scope;
-    });
+    setStickerScope((prev) => (prev === nextScope ? prev : nextScope));
 
     if (singleOnly && hasStickers && stickersEnabled && resolveInitialTab(initialTab) === "settings") {
       setTab("stickers");
@@ -224,8 +212,8 @@ export function SkinWorkspace({
         stickersEnabled && skin!.owned && (anyEquipped || willEquip);
 
       if (shouldSaveStickers) {
-        const slotsToSave = stickerState.slots;
         if (stickerScope === "both" && canBoth) {
+          const slotsToSave = stickerState.getTeamSlots("T");
           const okT = await stickerState.saveWithTeam("T", slotsToSave);
           if (!okT) return;
           const okCT = await stickerState.saveWithTeam("CT", slotsToSave);
@@ -239,7 +227,10 @@ export function SkinWorkspace({
                 : canEquipT
                   ? "T"
                   : "CT";
-          const ok = await stickerState.saveWithTeam(teamToSave, slotsToSave);
+          const ok = await stickerState.saveWithTeam(
+            teamToSave,
+            stickerState.getTeamSlots(teamToSave),
+          );
           if (!ok) return;
         }
       }
@@ -580,10 +571,7 @@ export function SkinWorkspace({
                         {canEquipT && (
                           <button
                             type="button"
-                            onClick={() => {
-                              setStickerScope("T");
-                              setStickerTeam("T");
-                            }}
+                            onClick={() => setStickerScope("T")}
                             className={teamPillClass("T", stickerScope === "T")}
                           >
                             TR
@@ -592,10 +580,7 @@ export function SkinWorkspace({
                         {canEquipCT && (
                           <button
                             type="button"
-                            onClick={() => {
-                              setStickerScope("CT");
-                              setStickerTeam("CT");
-                            }}
+                            onClick={() => setStickerScope("CT")}
                             className={teamPillClass("CT", stickerScope === "CT")}
                           >
                             CT
@@ -603,10 +588,7 @@ export function SkinWorkspace({
                         )}
                         <button
                           type="button"
-                          onClick={() => {
-                            setStickerScope("both");
-                            setStickerTeam("T");
-                          }}
+                          onClick={() => setStickerScope("both")}
                           className={cn(
                             "rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
                             stickerScope === "both"
