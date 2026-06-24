@@ -2,19 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, Loader2, Lock, Search, Settings2, Sticker } from "lucide-react";
+import { motion } from "motion/react";
+import { Loader2, Search, SlidersHorizontal, Sticker, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RemoteImage } from "@/components/ui/remote-image";
 import { SkinRarityBadge } from "@/components/skins/skin-rarity-badge";
 import { SkinRarityLine } from "@/components/skins/skin-rarity-line";
+import { TeamEquipBadge } from "@/components/inventory/team-equip-badge";
 import {
   STICKER_SLOT_COUNT,
   useWeaponStickerState,
 } from "@/components/inventory/use-weapon-sticker-state";
 import type { EquipSide } from "@/lib/inventory/loadout-team";
-import {
-  weaponAllowedOnTeam,
-} from "@/lib/inventory/loadout-team";
+import { weaponAllowedOnTeam } from "@/lib/inventory/loadout-team";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
 import { weaponSupportsStickers } from "@/lib/inventory/weapon-stickers";
 import { cn } from "@/lib/utils";
@@ -57,16 +57,6 @@ type SkinWorkspaceProps = {
 function resolveInitialTab(tab?: WorkspaceTab | "preview"): WorkspaceTab {
   if (tab === "stickers") return "stickers";
   return "settings";
-}
-
-function sideLabelForSkin(
-  skin: SkinWorkspaceData,
-  t: ReturnType<typeof useTranslations<"inventory">>,
-): string {
-  if (skin.equippedT && skin.equippedCT) return t("teamBoth");
-  if (skin.equippedT) return t("teamT");
-  if (skin.equippedCT) return t("teamCT");
-  return t("workspaceSideNone");
 }
 
 function defaultPendingSide(
@@ -167,12 +157,11 @@ export function SkinWorkspace({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  const sideDisplay = useMemo(() => {
-    if (!skin) return "";
+  const pendingSideLabel = useMemo(() => {
     if (pendingSide === "both" && canBoth) return t("teamBoth");
     if (pendingSide === "T") return t("teamT");
     return t("teamCT");
-  }, [skin, pendingSide, canBoth, t]);
+  }, [pendingSide, canBoth, t]);
 
   if (!open || !skin) return null;
 
@@ -219,33 +208,71 @@ export function SkinWorkspace({
   const busy = savingAll || actionLoading || stickerState.saving;
 
   return (
-    <div className="fixed inset-0 z-140 flex flex-col bg-background">
-      <header className="flex shrink-0 items-center gap-3 border-b border-border/50 px-4 py-3 sm:px-6">
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-lg p-2 text-muted transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_8%,transparent)] hover:text-foreground"
-          aria-label={t("closePreview")}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <h1 className="font-display text-lg font-bold text-foreground">{t("workspaceTitle")}</h1>
-      </header>
+    <div className="fixed inset-0 z-140 flex items-center justify-center p-3 sm:p-6">
+      <button
+        type="button"
+        className="scrim-dim absolute inset-0"
+        aria-label={t("closePreview")}
+        onClick={onClose}
+      />
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
-        {/* Left — preview & summary */}
-        <aside className="flex shrink-0 flex-col border-b border-border/50 p-4 sm:p-6 lg:w-[42%] lg:border-b-0 lg:border-r">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-            {t("workspacePreviewLabel")}
-          </p>
+      <motion.div
+        role="dialog"
+        aria-modal
+        aria-labelledby="skin-workspace-title"
+        initial={{ opacity: 0, scale: 0.97, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="relative z-10 flex h-[min(92vh,900px)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl glass-modal shadow-2xl"
+      >
+        {/* Header */}
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border/40 px-4 py-4 sm:px-6">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">
+              {t("workspaceBrandLabel")}
+            </p>
+            <h2
+              id="skin-workspace-title"
+              className="mt-1 font-display text-lg font-bold leading-tight text-foreground sm:text-xl"
+            >
+              {skin.name}
+            </h2>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <SkinRarityBadge rarity={skin.rarity} accent={skin.accent} size="md" />
+              {skin.category && (
+                <span className="text-[10px] uppercase tracking-wider text-muted">
+                  {skin.category}
+                </span>
+              )}
+              <TeamEquipBadge equippedT={skin.equippedT} equippedCT={skin.equippedCT} />
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-xl p-2 text-muted transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_8%,transparent)] hover:text-foreground"
+            aria-label={t("closePreview")}
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
-          <div className="relative mt-3 overflow-hidden rounded-xl border border-border/50">
+        {/* Hero preview */}
+        <div className="relative shrink-0 px-4 pt-4 sm:px-6">
+          <div
+            className={cn(
+              "pointer-events-none absolute inset-x-6 top-6 h-40 rounded-full opacity-40 blur-3xl",
+              "bg-linear-to-r",
+              skin.accent,
+            )}
+            aria-hidden
+          />
+          <div className="relative overflow-hidden rounded-xl border border-border/50 glass">
             <SkinRarityLine accent={skin.accent} rarity={skin.rarity} />
             <div
               className={cn(
-                "relative aspect-[4/3] bg-black/40",
+                "relative aspect-[16/10] bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)]",
                 !skin.imageUrl && "bg-linear-to-br",
-                skin.accent,
+                !skin.imageUrl && skin.accent,
               )}
             >
               {skin.imageUrl ? (
@@ -253,29 +280,16 @@ export function SkinWorkspace({
                   src={skin.imageUrl}
                   alt=""
                   fill
-                  sizes="(max-width: 1024px) 100vw, 42vw"
+                  sizes="(max-width: 768px) 100vw, 672px"
                   priority
-                  className="object-contain p-6 sm:p-8"
+                  className="object-contain p-6 sm:p-10"
                 />
               ) : null}
             </div>
             <SkinRarityLine accent={skin.accent} rarity={skin.rarity} position="bottom" />
-          </div>
 
-          <h2 className="mt-4 text-lg font-bold text-foreground">{skin.name}</h2>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <SkinRarityBadge rarity={skin.rarity} accent={skin.accent} size="md" />
-            {skin.category && (
-              <span className="text-xs uppercase tracking-wider text-muted">{skin.category}</span>
-            )}
-          </div>
-
-          {supportsStickers && (
-            <div className="mt-5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-                {t("stickersConfigLabel")}
-              </p>
-              <div className="mt-2 flex gap-2">
+            {supportsStickers && (
+              <div className="flex items-center justify-center gap-1.5 border-t border-border/40 bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)] px-3 py-2.5">
                 {Array.from({ length: STICKER_SLOT_COUNT }).map((_, index) => {
                   const filled = stickerState.slots[index] > 0;
                   const active = stickerState.activeSlot === index && tab === "stickers";
@@ -285,148 +299,121 @@ export function SkinWorkspace({
                       type="button"
                       onClick={() => openSlot(index)}
                       className={cn(
-                        "flex h-14 w-14 flex-col items-center justify-center rounded-xl border text-xs transition-colors",
+                        "flex h-10 w-10 items-center justify-center rounded-lg border transition-all",
                         surfaceSubtleClass,
-                        active && "ring-2 ring-primary/50",
-                        filled && "border-primary/30",
+                        active && "ring-2 ring-primary/60 scale-105",
+                        filled && "border-primary/40",
+                        !filled && "opacity-70 hover:opacity-100",
                       )}
+                      aria-label={t("stickersSlotPicker", { slot: index + 1 })}
                     >
-                      <span className="text-[10px] font-bold text-muted">{index + 1}</span>
                       {filled && stickerState.slotImageUrls[index] ? (
                         <img
                           src={stickerState.slotImageUrls[index]}
-                          alt={stickerState.slotLabels[index] || ""}
-                          className="h-8 w-8 object-contain"
+                          alt=""
+                          className="h-7 w-7 object-contain"
                         />
-                      ) : filled && stickerState.slotLabels[index] ? (
-                        <span className="mt-0.5 line-clamp-2 px-1 text-[8px] leading-tight text-foreground">
-                          {stickerState.slotLabels[index]}
-                        </span>
-                      ) : null}
+                      ) : (
+                        <span className="text-[10px] font-bold text-muted">{index + 1}</span>
+                      )}
                     </button>
                   );
                 })}
               </div>
-            </div>
-          )}
-
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className={cn("rounded-xl p-3", surfaceSubtleClass)}>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
-                {t("workspaceSide")}
-              </p>
-              <p className="mt-1 text-sm font-medium text-foreground">
-                {anyEquipped ? sideLabelForSkin(skin, t) : sideDisplay}
-              </p>
-            </div>
-            <div className={cn("rounded-xl p-3", surfaceSubtleClass)}>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
-                {t("rarityLegendTitle")}
-              </p>
-              <p className="mt-1 text-sm font-medium text-foreground line-clamp-2">{skin.rarity}</p>
-            </div>
+            )}
           </div>
 
-          <Button
-            type="button"
-            variant="primary"
-            className="mt-6 w-full uppercase tracking-wide"
-            disabled={busy || (!skin.owned && !anyEquipped) ? true : undefined}
-            onClick={handleSave}
-          >
-            {busy ? t("workspaceSaving") : t("workspaceSave")}
-          </Button>
-        </aside>
+          {skin.paintkitName && skin.weaponName && (
+            <p className="mt-2 text-center text-xs text-muted">
+              {skin.weaponName} · {skin.paintkitName}
+            </p>
+          )}
+        </div>
 
-        {/* Right — tabs */}
-        <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="flex shrink-0 gap-2 border-b border-border/50 px-4 py-3 sm:px-6">
+        {/* Segment tabs */}
+        <div className="shrink-0 px-4 pt-4 sm:px-6">
+          <div className="flex rounded-xl border border-border/40 p-1 glass">
             <button
               type="button"
               onClick={() => setTab("settings")}
               className={cn(
-                "inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors",
+                "flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all",
                 tab === "settings"
-                  ? "border border-primary/40 bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] text-foreground"
-                  : cn("text-muted", chipInactiveHoverClass),
+                  ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground shadow-sm"
+                  : "text-muted hover:text-foreground",
               )}
             >
-              <Settings2 className="h-4 w-4" />
-              {t("workspaceSettingsTab")}
+              <SlidersHorizontal className="h-4 w-4" />
+              {t("workspaceEquipTab")}
             </button>
             {supportsStickers && (
               <button
                 type="button"
                 onClick={() => setTab("stickers")}
                 className={cn(
-                  "inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors",
+                  "flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all",
                   tab === "stickers"
-                    ? "border border-primary/40 bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] text-foreground"
-                    : cn("text-muted", chipInactiveHoverClass),
+                    ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground shadow-sm"
+                    : "text-muted hover:text-foreground",
                 )}
               >
                 <Sticker className="h-4 w-4" />
                 {t("workspaceTabStickers")}
               </button>
             )}
-            <button
-              type="button"
-              disabled
-              className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-muted/40"
-            >
-              <Lock className="h-4 w-4" />
-              {t("workspaceKeychainsTab")}
-            </button>
           </div>
+        </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-            {tab === "settings" ? (
-              <div className="mx-auto max-w-lg">
-                {!skin.owned ? (
-                  <p className="text-sm text-muted">{t("equipUnavailable")}</p>
-                ) : canBoth ? (
-                  <>
-                    <p className="text-sm text-muted">{t("equipSideHint")}</p>
-                    <div className="mt-4 flex flex-col gap-2">
-                      {canEquipCT && (
-                        <button
-                          type="button"
-                          onClick={() => setPendingSide("CT")}
-                          className={cn(
-                            "rounded-xl px-4 py-3 text-sm font-semibold transition-all",
-                            teamPillClass("CT", pendingSide === "CT"),
-                          )}
-                        >
-                          {t("teamCT")}
-                        </button>
-                      )}
-                      {canEquipT && (
-                        <button
-                          type="button"
-                          onClick={() => setPendingSide("T")}
-                          className={cn(
-                            "rounded-xl px-4 py-3 text-sm font-semibold transition-all",
-                            teamPillClass("T", pendingSide === "T"),
-                          )}
-                        >
-                          {t("teamT")}
-                        </button>
-                      )}
+        {/* Tab content */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+          {tab === "settings" ? (
+            <div className="space-y-4">
+              {!skin.owned ? (
+                <p className="text-sm text-muted">{t("equipUnavailable")}</p>
+              ) : canBoth ? (
+                <>
+                  <p className="text-sm text-muted">{t("equipSideHint")}</p>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {canEquipCT && (
                       <button
                         type="button"
-                        onClick={() => setPendingSide("both")}
+                        onClick={() => setPendingSide("CT")}
                         className={cn(
-                          "rounded-xl px-4 py-3 text-sm font-semibold transition-all",
-                          pendingSide === "both"
-                            ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground"
-                            : chipInactiveHoverClass,
+                          "rounded-xl px-3 py-3 text-sm font-semibold transition-all",
+                          teamPillClass("CT", pendingSide === "CT"),
                         )}
                       >
-                        {t("teamBoth")}
+                        CT
                       </button>
-                    </div>
-                  </>
-                ) : (
+                    )}
+                    {canEquipT && (
+                      <button
+                        type="button"
+                        onClick={() => setPendingSide("T")}
+                        className={cn(
+                          "rounded-xl px-3 py-3 text-sm font-semibold transition-all",
+                          teamPillClass("T", pendingSide === "T"),
+                        )}
+                      >
+                        TR
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setPendingSide("both")}
+                      className={cn(
+                        "rounded-xl px-3 py-3 text-sm font-semibold transition-all",
+                        pendingSide === "both"
+                          ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground"
+                          : chipInactiveHoverClass,
+                      )}
+                    >
+                      {t("teamBothShort")}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className={cn("rounded-xl p-4", surfaceSubtleClass)}>
                   <p className="text-sm text-muted">
                     {anyEquipped
                       ? canEquipT
@@ -434,141 +421,159 @@ export function SkinWorkspace({
                         : t("equipSideHintCT")
                       : t("workspaceEquipHint")}
                   </p>
-                )}
-
-                {anyEquipped && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="mt-6 w-full"
-                    disabled={busy ? true : undefined}
-                    onClick={async () => {
-                      const side: EquipSide =
-                        skin.equippedT && skin.equippedCT
-                          ? "both"
-                          : skin.equippedT
-                            ? "T"
-                            : "CT";
-                      await onUnequip(side);
-                    }}
-                  >
-                    {busy ? t("unequipping") : t("unequip")}
-                  </Button>
-                )}
-
-                {supportsStickers && skin.owned && canBoth && (
-                  <div className="mt-6 border-t border-border/50 pt-4">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-                      {t("stickersTitle")}
+                  {!anyEquipped && (
+                    <p className="mt-2 text-xs font-medium text-primary">
+                      {pendingSideLabel}
                     </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {canEquipCT && (
-                        <button
-                          type="button"
-                          onClick={() => setStickerTeam("CT")}
-                          className={teamPillClass("CT", stickerTeam === "CT")}
-                        >
-                          {t("teamCT")}
-                        </button>
+                  )}
+                </div>
+              )}
+
+              {supportsStickers && skin.owned && canBoth && (
+                <div className={cn("rounded-xl p-4", surfaceSubtleClass)}>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+                    {t("stickersTeamLabel")}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {canEquipCT && (
+                      <button
+                        type="button"
+                        onClick={() => setStickerTeam("CT")}
+                        className={teamPillClass("CT", stickerTeam === "CT")}
+                      >
+                        CT
+                      </button>
+                    )}
+                    {canEquipT && (
+                      <button
+                        type="button"
+                        onClick={() => setStickerTeam("T")}
+                        className={teamPillClass("T", stickerTeam === "T")}
+                      >
+                        TR
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {anyEquipped && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  disabled={busy ? true : undefined}
+                  onClick={async () => {
+                    const side: EquipSide =
+                      skin.equippedT && skin.equippedCT
+                        ? "both"
+                        : skin.equippedT
+                          ? "T"
+                          : "CT";
+                    await onUnequip(side);
+                  }}
+                >
+                  {busy ? t("unequipping") : t("unequip")}
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div>
+              {!skin.owned ? (
+                <p className="text-sm text-muted">{t("equipUnavailable")}</p>
+              ) : stickerState.loading ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="h-8 w-8 motion-safe-spin text-muted" />
+                </div>
+              ) : (
+                <>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                    <input
+                      className={cn(
+                        "w-full rounded-xl py-2.5 pl-10 pr-4 text-sm",
+                        surfaceInputClass,
                       )}
-                      {canEquipT && (
+                      placeholder={t("stickersSearchPlaceholder")}
+                      value={stickerState.pickerSearch}
+                      onChange={(e) => stickerState.setPickerSearch(e.target.value)}
+                    />
+                  </div>
+
+                  {stickerState.activeSlot !== null && (
+                    <p className="mt-3 text-xs font-medium text-primary">
+                      {t("stickersSlotPicker", { slot: stickerState.activeSlot + 1 })}
+                    </p>
+                  )}
+
+                  {stickerState.pickerLoading ? (
+                    <div className="flex justify-center py-10">
+                      <Loader2 className="h-6 w-6 motion-safe-spin text-muted" />
+                    </div>
+                  ) : (
+                    <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                      {stickerState.pickerItems.map((item) => (
                         <button
+                          key={item.id}
                           type="button"
-                          onClick={() => setStickerTeam("T")}
-                          className={teamPillClass("T", stickerTeam === "T")}
+                          onClick={() =>
+                            stickerState.selectSticker(
+                              item.defIndex,
+                              item.name,
+                              stickerState.activeSlot ?? 0,
+                              item.imageUrl,
+                            )
+                          }
+                          className={cn(
+                            "flex flex-col items-center rounded-xl border border-border/30 p-2 transition-colors",
+                            surfaceSubtleClass,
+                            chipInactiveHoverClass,
+                          )}
                         >
-                          {t("teamT")}
+                          {item.imageUrl ? (
+                            <img
+                              src={item.imageUrl}
+                              alt=""
+                              className="h-12 w-12 object-contain"
+                            />
+                          ) : (
+                            <div className="h-12 w-12 rounded-lg bg-white/5" />
+                          )}
+                          <span className="mt-1.5 line-clamp-2 text-center text-[10px] leading-tight text-foreground">
+                            {item.name}
+                          </span>
                         </button>
+                      ))}
+                      {stickerState.pickerItems.length === 0 && (
+                        <p className="col-span-full py-8 text-center text-sm text-muted">
+                          {t("stickersNoResults")}
+                        </p>
                       )}
                     </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="mx-auto max-w-3xl">
-                {!skin.owned ? (
-                  <p className="text-sm text-muted">{t("equipUnavailable")}</p>
-                ) : stickerState.loading ? (
-                  <div className="flex justify-center py-16">
-                    <Loader2 className="h-8 w-8 motion-safe-spin text-muted" />
-                  </div>
-                ) : (
-                  <>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-                      <input
-                        className={cn(
-                          "w-full rounded-xl py-2.5 pl-10 pr-4 text-sm",
-                          surfaceInputClass,
-                        )}
-                        placeholder={t("stickersSearchPlaceholder")}
-                        value={stickerState.pickerSearch}
-                        onChange={(e) => stickerState.setPickerSearch(e.target.value)}
-                      />
-                    </div>
+                  )}
 
-                    {stickerState.activeSlot !== null && (
-                      <p className="mt-3 text-xs font-medium text-primary">
-                        {t("stickersSlotPicker", { slot: stickerState.activeSlot + 1 })}
-                      </p>
-                    )}
+                  <p className="mt-4 text-[10px] leading-relaxed text-muted">
+                    {t("stickersHint")}
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+        </div>
 
-                    {stickerState.pickerLoading ? (
-                      <div className="flex justify-center py-12">
-                        <Loader2 className="h-6 w-6 motion-safe-spin text-muted" />
-                      </div>
-                    ) : (
-                      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                        {stickerState.pickerItems.map((item) => (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() =>
-                              stickerState.selectSticker(
-                                item.defIndex,
-                                item.name,
-                                stickerState.activeSlot ?? 0,
-                                item.imageUrl,
-                              )
-                            }
-                            className={cn(
-                              "flex flex-col items-center rounded-xl border border-border/40 p-3 transition-colors",
-                              surfaceSubtleClass,
-                              chipInactiveHoverClass,
-                            )}
-                          >
-                            {item.imageUrl ? (
-                              <img
-                                src={item.imageUrl}
-                                alt=""
-                                className="h-16 w-16 object-contain"
-                              />
-                            ) : (
-                              <div className="h-16 w-16 rounded-lg bg-white/5" />
-                            )}
-                            <span className="mt-2 line-clamp-2 text-center text-xs text-foreground">
-                              {item.name}
-                            </span>
-                          </button>
-                        ))}
-                        {stickerState.pickerItems.length === 0 && (
-                          <p className="col-span-full py-8 text-center text-sm text-muted">
-                            {t("stickersNoResults")}
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    <p className="mt-4 text-[10px] leading-relaxed text-muted">
-                      {t("stickersHint")}
-                    </p>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </main>
-      </div>
+        {/* Footer */}
+        <div className="shrink-0 border-t border-border/40 px-4 py-4 sm:px-6">
+          <Button
+            type="button"
+            variant="primary"
+            className="w-full font-display text-sm uppercase tracking-wider"
+            disabled={busy || (!skin.owned && !anyEquipped) ? true : undefined}
+            onClick={handleSave}
+          >
+            {busy ? t("workspaceSaving") : t("workspaceSaveLoadout")}
+          </Button>
+        </div>
+      </motion.div>
     </div>
   );
 }
