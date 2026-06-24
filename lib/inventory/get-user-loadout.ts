@@ -11,6 +11,7 @@ import {
 } from "@/lib/inventory/loadout-team";
 import type { InventoryCategoryKey } from "@/lib/profile";
 import { lookupStickerFromApi } from "@/lib/inventory/csgo-api-sticker-index";
+import { normalizeStickerImageUrl } from "@/lib/inventory/sticker-image-url";
 
 export type LoadoutSticker = {
   slot: number;
@@ -117,7 +118,7 @@ export async function getUserServerLoadout(userId: string, team?: LoadoutTeam) {
         slot,
         defIndex,
         name: catalog?.name ?? api?.name ?? `Sticker ${defIndex}`,
-        imageUrl: catalog?.imageUrl ?? api?.imageUrl ?? null,
+        imageUrl: normalizeStickerImageUrl(catalog?.imageUrl ?? api?.imageUrl ?? null),
       });
     });
 

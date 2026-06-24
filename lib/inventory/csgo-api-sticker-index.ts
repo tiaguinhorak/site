@@ -1,5 +1,7 @@
 import "server-only";
 
+import { normalizeStickerImageUrl } from "@/lib/inventory/sticker-image-url";
+
 export const CSGO_API_STICKERS_URL =
   "https://raw.githubusercontent.com/ByMykel/CSGO-API/main/public/api/en/stickers.json";
 
@@ -56,7 +58,7 @@ export function apiStickerToCatalogRow(sticker: CsgoApiSticker): StickerCatalogR
     id: sticker.id,
     defIndex,
     name: sticker.name,
-    imageUrl: sticker.image ?? null,
+    imageUrl: normalizeStickerImageUrl(sticker.image ?? null),
     rarity: rarityLabel(sticker.rarity),
     stickerType: sticker.type ?? null,
     effect: sticker.effect ?? null,

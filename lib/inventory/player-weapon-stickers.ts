@@ -9,6 +9,7 @@ import {
   lookupStickerFromApi,
   type StickerCatalogRowFromApi,
 } from "@/lib/inventory/csgo-api-sticker-index";
+import { normalizeStickerImageUrl } from "@/lib/inventory/sticker-image-url";
 import {
   clampStickerSlotsToPlan,
   getInventoryPlanLimits,
@@ -92,7 +93,7 @@ export async function getPlayerWeaponStickers(
       slot,
       defIndex,
       name: catalog?.name ?? api?.name ?? `Sticker ${defIndex}`,
-      imageUrl: catalog?.imageUrl ?? api?.imageUrl ?? null,
+      imageUrl: normalizeStickerImageUrl(catalog?.imageUrl ?? api?.imageUrl ?? null),
     };
   });
 

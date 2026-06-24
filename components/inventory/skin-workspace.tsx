@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { RemoteImage } from "@/components/ui/remote-image";
 import { SkinRarityBadge } from "@/components/skins/skin-rarity-badge";
 import { SkinRarityLine } from "@/components/skins/skin-rarity-line";
+import { StickerImage } from "@/components/inventory/sticker-image";
 import { TeamEquipBadge } from "@/components/inventory/team-equip-badge";
 import {
   STICKER_SLOT_COUNT,
@@ -387,7 +388,7 @@ export function SkinWorkspace({
                             {slotLocked ? (
                               <Lock className="h-4 w-4 text-muted" aria-hidden />
                             ) : filled && slotImage ? (
-                              <img
+                              <StickerImage
                                 src={slotImage}
                                 alt=""
                                 className="h-8 w-8 object-contain"
@@ -684,9 +685,10 @@ export function SkinWorkspace({
                             aria-pressed={isSelected}
                           >
                             {item.imageUrl ? (
-                              <img
+                              <StickerImage
+                                key={item.id}
                                 src={item.imageUrl}
-                                alt=""
+                                alt={item.name}
                                 className="h-12 w-12 object-contain"
                               />
                             ) : (

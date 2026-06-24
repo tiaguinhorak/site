@@ -1,6 +1,7 @@
 "use client";
 
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
+import { StickerImage } from "@/components/inventory/sticker-image";
 import { cn } from "@/lib/utils";
 
 type StickerSlot = {
@@ -52,23 +53,16 @@ export function LoadoutStickerStrip({
         {filled.length === 0 ? (
           <span className="text-[9px] text-muted/50">—</span>
         ) : (
-          filled.map((s) =>
-            s.imageUrl ? (
-              <img
-                key={s.slot}
-                src={s.imageUrl}
-                alt={s.name}
-                className="h-5 w-5 object-contain"
-              />
-            ) : (
-              <span
-                key={s.slot}
-                className="flex h-5 w-5 items-center justify-center rounded bg-white/10 text-[8px] text-muted"
-              >
-                {s.slot + 1}
-              </span>
-            ),
-          )
+          filled.map((s) => (
+            <StickerImage
+              key={s.slot}
+              src={s.imageUrl}
+              alt={s.name}
+              className="h-5 w-5 object-contain"
+              fallbackClassName="h-5 w-5"
+              fallbackLabel={String(s.slot + 1)}
+            />
+          ))
         )}
       </span>
     </button>

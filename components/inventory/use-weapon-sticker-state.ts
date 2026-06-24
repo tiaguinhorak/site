@@ -91,6 +91,9 @@ export function useWeaponStickerState(
     const resourceChanged = loadedResourceKeyRef.current !== resourceKey;
     loadedResourceKeyRef.current = resourceKey;
     if (resourceChanged) {
+      setSlots(Array(STICKER_SLOT_COUNT).fill(0));
+      setSlotLabels(Array(STICKER_SLOT_COUNT).fill(""));
+      setSlotImageUrls(Array(STICKER_SLOT_COUNT).fill(""));
       setActiveSlot(null);
       setPickerSearch("");
       setPickerItems([]);

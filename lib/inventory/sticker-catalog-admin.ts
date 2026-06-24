@@ -7,6 +7,10 @@ import {
   listAllStickersFromApi,
   type StickerCatalogRowFromApi,
 } from "@/lib/inventory/csgo-api-sticker-index";
+import {
+  normalizeStickerImageUrl,
+  stickerHasDisplayImage,
+} from "@/lib/inventory/sticker-image-url";
 
 export type StickerCatalogAdminRow = {
   id: string;
@@ -27,7 +31,7 @@ function serializeRow(row: CsgoStickerCatalog): StickerCatalogAdminRow {
     id: row.id,
     defIndex: row.defIndex,
     name: row.name,
-    imageUrl: row.imageUrl,
+    imageUrl: normalizeStickerImageUrl(row.imageUrl),
     rarity: row.rarity,
     stickerType: row.stickerType,
     effect: row.effect,
@@ -51,7 +55,7 @@ export async function lookupStickerCatalogPreview(defIndex: number) {
 }
 
 function stickerHasImage(imageUrl: string | null | undefined): boolean {
-  return Boolean(imageUrl?.trim());
+  return stickerHasDisplayImage(imageUrl);
 }
 
 async function upsertStickerRow(
@@ -67,7 +71,7 @@ async function upsertStickerRow(
     where: { defIndex: input.defIndex },
   });
 
-  const imageUrl = apiRow?.imageUrl ?? existing?.imageUrl ?? null;
+  const imageUrl = normalizeStickerImageUrl(apiRow?.imageUrl ?? existing?.imageUrl ?? null);
   const canEnable = stickerHasImage(imageUrl);
 
   const data = {
