@@ -7,12 +7,14 @@ import {
 } from "@/lib/csgo-api/config";
 import { getSkinsSyncKey } from "@/lib/env/skins-sync";
 
-const FETCH_TIMEOUT_MS = 8000;
+const PRIMARY_TIMEOUT_MS = 5000;
+const SECONDARY_TIMEOUT_MS = 2000;
 
 async function pushStickersToTarget(
   baseUrl: string,
   payload: Awaited<ReturnType<typeof getPlayerStickersForSync>>,
   syncKey: string,
+  timeoutMs: number,
 ): Promise<{ baseUrl: string; ok: boolean; error?: string }> {
   const url = `${baseUrl}/api/csgo/stickers/player-sync`;
 
@@ -26,7 +28,7 @@ async function pushStickersToTarget(
       },
       body: JSON.stringify(payload),
       cache: "no-store",
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
 
     if (res.ok) return { baseUrl, ok: true };
@@ -43,6 +45,7 @@ async function pushStickersToTarget(
   }
 }
 
+/** Primary ranked API awaited; warmup/extras run in background (no equip UI delay). */
 export async function pushPlayerStickersToGameServer(
   steamId64: string,
 ): Promise<{ ok: boolean; error?: string }> {
@@ -61,28 +64,35 @@ export async function pushPlayerStickersToGameServer(
     return { ok: false, error: "CSGO_API_URL not configured" };
   }
 
-  const results = await Promise.all(
-    targets.map((baseUrl) => pushStickersToTarget(baseUrl, payload, syncKey)),
+  const [primaryUrl, ...secondaryUrls] = targets;
+  const primary = await pushStickersToTarget(
+    primaryUrl,
+    payload,
+    syncKey,
+    PRIMARY_TIMEOUT_MS,
   );
 
-  const primary = results[0];
-  const failed = results.filter((r) => !r.ok);
-
-  for (const r of failed) {
-    console.warn(
-      `[Clutch] sticker push failed for ${r.baseUrl}: ${r.error ?? "unknown"}`,
-    );
+  if (secondaryUrls.length > 0) {
+    void (async () => {
+      for (const baseUrl of secondaryUrls) {
+        const result = await pushStickersToTarget(
+          baseUrl,
+          payload,
+          syncKey,
+          SECONDARY_TIMEOUT_MS,
+        );
+        if (!result.ok) {
+          console.warn(
+            `[Clutch] background sticker push failed for ${result.baseUrl}: ${result.error ?? "unknown"}`,
+          );
+        }
+      }
+    })();
   }
 
-  if (!primary?.ok) {
-    return { ok: false, error: primary?.error ?? failed.map((r) => r.error).join("; ") };
+  if (!primary.ok) {
+    return { ok: false, error: primary.error };
   }
 
-  return {
-    ok: true,
-    error:
-      failed.length > 0
-        ? `Partial: ${failed.map((r) => r.baseUrl).join(", ")} failed`
-        : undefined,
-  };
+  return { ok: true };
 }

@@ -9,9 +9,15 @@ import {
 } from "@/lib/csgo-api/config";
 import { getSkinsSyncKey } from "@/lib/env/skins-sync";
 
-const MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 300;
-const FETCH_TIMEOUT_MS = 8000;
+
+type PushTargetOptions = {
+  maxAttempts: number;
+  timeoutMs: number;
+};
+
+const PRIMARY_PUSH_OPTIONS: PushTargetOptions = { maxAttempts: 2, timeoutMs: 6000 };
+const SECONDARY_PUSH_OPTIONS: PushTargetOptions = { maxAttempts: 1, timeoutMs: 2000 };
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -33,10 +39,11 @@ async function pushLoadoutToTarget(
   baseUrl: string,
   body: Record<string, unknown>,
   syncKey: string,
+  options: PushTargetOptions,
 ): Promise<TargetPushResult> {
   const url = `${baseUrl}/api/csgo/skins/player-sync`;
 
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 1; attempt <= options.maxAttempts; attempt++) {
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -47,7 +54,7 @@ async function pushLoadoutToTarget(
         },
         body: JSON.stringify(body),
         cache: "no-store",
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        signal: AbortSignal.timeout(options.timeoutMs),
       });
 
       if (res.ok) {
@@ -67,7 +74,7 @@ async function pushLoadoutToTarget(
       const text = await res.text().catch(() => "");
       const error = `Player sync HTTP ${res.status}: ${text.slice(0, 200)}`;
 
-      if (attempt < MAX_ATTEMPTS && res.status >= 500) {
+      if (attempt < options.maxAttempts && res.status >= 500) {
         await sleep(RETRY_DELAY_MS * attempt);
         continue;
       }
@@ -76,11 +83,7 @@ async function pushLoadoutToTarget(
       return { baseUrl, ok: false, error };
     } catch (err) {
       const message = err instanceof Error ? err.message : "player sync failed";
-      if (attempt < MAX_ATTEMPTS) {
-        await sleep(RETRY_DELAY_MS * attempt);
-        continue;
-      }
-      console.error(`[Clutch] pushPlayerLoadoutToGameServer (${baseUrl}):`, message);
+      console.warn(`[Clutch] pushPlayerLoadoutToGameServer (${baseUrl}):`, message);
       return { baseUrl, ok: false, error: message };
     }
   }
@@ -88,9 +91,33 @@ async function pushLoadoutToTarget(
   return { baseUrl, ok: false, error: "player sync failed after retries" };
 }
 
+function pushSecondaryLoadoutsInBackground(
+  targets: string[],
+  body: Record<string, unknown>,
+  syncKey: string,
+): void {
+  if (targets.length === 0) return;
+
+  void (async () => {
+    for (const baseUrl of targets) {
+      const result = await pushLoadoutToTarget(
+        baseUrl,
+        body,
+        syncKey,
+        SECONDARY_PUSH_OPTIONS,
+      );
+      if (!result.ok) {
+        console.warn(
+          `[Clutch] background loadout push failed for ${result.baseUrl}: ${result.error ?? "unknown"}`,
+        );
+      }
+    }
+  })();
+}
+
 /**
- * Syncs one player's equipped loadout to every configured CS VPS (ranked + warmup)
- * and triggers sm_clutch_loadout_pending / applyskins on each — no clutch_skins.txt file.
+ * Syncs equipped loadout to ranked (awaited) + warmup/extras (background).
+ * Equip UI only waits for CSGO_API_URL — warmup LAN failures do not block the panel.
  */
 export async function pushPlayerLoadoutToGameServer(
   steamId64: string,
@@ -119,26 +146,18 @@ export async function pushPlayerLoadoutToGameServer(
     clearGloveTeam: options?.clearGloveTeam,
   };
 
-  const results = await Promise.all(
-    targets.map((baseUrl) => pushLoadoutToTarget(baseUrl, body, syncKey)),
+  const [primaryUrl, ...secondaryUrls] = targets;
+  const primary = await pushLoadoutToTarget(
+    primaryUrl,
+    body,
+    syncKey,
+    PRIMARY_PUSH_OPTIONS,
   );
 
-  const primary = results[0];
-  const failed = results.filter((r) => !r.ok);
+  pushSecondaryLoadoutsInBackground(secondaryUrls, body, syncKey);
 
-  if (failed.length > 0) {
-    for (const r of failed) {
-      console.warn(
-        `[Clutch] loadout push failed for ${r.baseUrl}: ${r.error ?? "unknown"}`,
-      );
-    }
-  }
-
-  if (!primary?.ok) {
-    return {
-      ok: false,
-      error: primary?.error ?? failed.map((r) => r.error).join("; "),
-    };
+  if (!primary.ok) {
+    return { ok: false, error: primary.error };
   }
 
   const stickerResult = await pushPlayerStickersToGameServer(steamId64);
@@ -149,10 +168,7 @@ export async function pushPlayerLoadoutToGameServer(
   return {
     ok: true,
     applyMode: primary.applyMode,
-    error:
-      failed.length > 0
-        ? `Partial: ${failed.map((r) => r.baseUrl).join(", ")} failed`
-        : undefined,
+    error: stickerResult.error,
   };
 }
 
