@@ -18,6 +18,7 @@ import {
   Shield,
   Trophy,
   Users,
+  Zap,
   Menu,
   X,
   ChevronDown,
@@ -45,6 +46,7 @@ const iconMap: Record<string, LucideIcon> = {
   Shield,
   Trophy,
   Users,
+  Zap,
   MoreHorizontal,
 };
 
@@ -74,6 +76,7 @@ const NAV_GROUPS: NavGroup[] = [
     icon: "Gamepad2",
     items: [
       { href: "/dashboard/lobby", icon: "Users", i18nKey: "lobby" },
+      { href: "/dashboard/warmup", icon: "Zap", i18nKey: "warmup" },
       { href: "/dashboard/ranked", icon: "Trophy", i18nKey: "ranked" },
     ],
   },

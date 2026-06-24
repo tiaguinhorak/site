@@ -1022,6 +1022,9 @@
     "lobbyTitle": "Lobby",
     "lobbyDesc": "Entra en salas abiertas gestionadas por el sistema o arma tu equipo en clasificatoria.",
     "lobbyBadge": "Salas · Casual",
+    "warmupTitle": "Warmup",
+    "warmupDesc": "Deathmatch, Surf, Retake, KZ y otros modos en servidores públicos.",
+    "warmupBadge": "Público · Modos",
     "rankedTitle": "Clasificatoria",
     "rankedDesc": "Partidas competitivas 5v5 con ELO. Suscripción Premium requerida.",
     "rankedBadge": "5v5 · Competitivo"
@@ -1047,6 +1050,8 @@
     "quick": {
       "lobbyLabel": "Lobby",
       "lobbyDesc": "Entrar o crear salas",
+      "warmupLabel": "Warmup",
+      "warmupDesc": "DM, Surf, Retake y más",
       "rankedLabel": "Modo clasificatorio",
       "rankedDesc": "Cola 5v5 con ELO",
       "inventoryLabel": "Inventario completo",

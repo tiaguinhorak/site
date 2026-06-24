@@ -1022,6 +1022,9 @@
     "lobbyTitle": "Lobby",
     "lobbyDesc": "Join open rooms managed by the system or build your team in ranked.",
     "lobbyBadge": "Rooms · Casual",
+    "warmupTitle": "Warmup",
+    "warmupDesc": "Deathmatch, Surf, Retake, KZ and other public server modes.",
+    "warmupBadge": "Public · Modes",
     "rankedTitle": "Ranked",
     "rankedDesc": "Competitive 5v5 matches with ELO. Premium subscription required.",
     "rankedBadge": "5v5 · Competitive"
@@ -1047,6 +1050,8 @@
     "quick": {
       "lobbyLabel": "Lobby",
       "lobbyDesc": "Join or create rooms",
+      "warmupLabel": "Warmup",
+      "warmupDesc": "DM, Surf, Retake and more",
       "rankedLabel": "Ranked mode",
       "rankedDesc": "5v5 ELO queue",
       "inventoryLabel": "Full inventory",

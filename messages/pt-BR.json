@@ -1022,6 +1022,9 @@
     "lobbyTitle": "Lobby",
     "lobbyDesc": "Entre em salas abertas gerenciadas pelo sistema ou monte seu time na rankeada.",
     "lobbyBadge": "Salas · Casual",
+    "warmupTitle": "Warmup",
+    "warmupDesc": "Deathmatch, Surf, Retake, KZ e outros modos públicos nos servidores.",
+    "warmupBadge": "Público · Modos",
     "rankedTitle": "Rankeado",
     "rankedDesc": "Partidas competitivas 5x5 com ELO. Assinatura Premium necessária.",
     "rankedBadge": "5x5 · Competitivo"
@@ -1047,6 +1050,8 @@
     "quick": {
       "lobbyLabel": "Lobby",
       "lobbyDesc": "Entrar ou criar salas",
+      "warmupLabel": "Warmup",
+      "warmupDesc": "DM, Surf, Retake e mais",
       "rankedLabel": "Modo rankeado",
       "rankedDesc": "Fila 5x5 com ELO",
       "inventoryLabel": "Inventário completo",

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
-import { ClipboardList, Play, Trophy } from "lucide-react";
+import { ClipboardList, Play, Trophy, Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +26,18 @@ export function PlayModePicker({ className }: PlayModePickerProps) {
       badge: t("lobbyBadge"),
     },
     {
+      id: "warmup",
+      href: "/dashboard/warmup",
+      title: t("warmupTitle"),
+      accent: "from-orange-400 to-amber-600",
+      border: "border-orange-400/40 hover:border-orange-400/70",
+      glow: "group-hover:shadow-[0_0_40px_-8px_rgb(251_146_60/0.45)]",
+      titleClass: "text-orange-400",
+      icon: Zap,
+      description: t("warmupDesc"),
+      badge: t("warmupBadge"),
+    },
+    {
       id: "ranked",
       href: "/dashboard/ranked",
       title: t("rankedTitle"),
@@ -47,7 +59,7 @@ export function PlayModePicker({ className }: PlayModePickerProps) {
         </h2>
       </div>
 
-      <div className="grid w-full min-w-0 grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
+      <div className="grid w-full min-w-0 grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
         {modes.map((mode, i) => {
           const Icon = mode.icon;
           return (
