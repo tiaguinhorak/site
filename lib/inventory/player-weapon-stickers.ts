@@ -9,6 +9,10 @@ import {
   lookupStickerFromApi,
   type StickerCatalogRowFromApi,
 } from "@/lib/inventory/csgo-api-sticker-index";
+import {
+  clampStickerSlotsToPlan,
+  getInventoryPlanLimits,
+} from "@/lib/inventory/plan-inventory-access";
 
 export type WeaponStickerSlots = {
   slots: number[];
@@ -96,13 +100,21 @@ export async function getPlayerWeaponStickers(
 }
 
 export async function savePlayerWeaponStickers(
+  userId: string,
   steamId: string,
   weaponId: string,
   team: LoadoutTeam,
   slots: number[],
 ) {
+  const limits = await getInventoryPlanLimits(userId);
+  if (!limits.canUseStickers) {
+    throw new Error("Stickers disponíveis nos planos Premium e Elite.");
+  }
+
   const normalizedWeaponId = normalizeWeaponId(weaponId);
-  const { slots: normalized, wears } = normalizeSlots(slots);
+  const { slots: normalized, wears } = normalizeSlots(
+    clampStickerSlotsToPlan(slots, limits.maxStickerSlots),
+  );
 
   // Only allow enabled catalog stickers (0 = empty slot).
   for (const defIndex of normalized) {
@@ -153,6 +165,7 @@ export async function savePlayerWeaponStickers(
 
 export type StickerSyncEntry = {
   weaponIndex: number;
+  team: "T" | "CT";
   slots: number[];
   wears: number[];
 };
@@ -181,6 +194,7 @@ export async function getAllPlayerStickersForSync(): Promise<
 
       entries.push({
         weaponIndex,
+        team: row.team as LoadoutTeam,
         slots: [row.slot0, row.slot1, row.slot2, row.slot3, row.slot4],
         wears: [row.wear0, row.wear1, row.wear2, row.wear3, row.wear4],
       });
@@ -213,6 +227,7 @@ export async function getPlayerStickersForSync(steamId64: string): Promise<{
 
     entries.push({
       weaponIndex,
+      team: row.team as LoadoutTeam,
       slots,
       wears: [row.wear0, row.wear1, row.wear2, row.wear3, row.wear4],
     });

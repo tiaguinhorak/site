@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { after } from "next/server";
 import { requireAdmin } from "@/lib/auth/admin";
 import { logAdminAction } from "@/lib/admin/audit";
 import { adminStickerCatalogCreateSchema } from "@/lib/admin/schemas";
@@ -17,6 +18,12 @@ import {
   listStickerCatalogAdmin,
   upsertStickerByDefIndex,
 } from "@/lib/inventory/sticker-catalog-admin";
+import {
+  createCatalogImportJob,
+  completeCatalogImportJob,
+  failCatalogImportJob,
+} from "@/lib/admin/catalog-import-jobs";
+import { notifyCatalogImportResult } from "@/lib/admin/catalog-import-notifications";
 
 export async function GET(request: NextRequest) {
   const { error } = await requireAdmin(request);
@@ -56,19 +63,33 @@ export async function POST(request: NextRequest) {
   const action = typeof data?.action === "string" ? data.action : "create";
 
   if (action === "import-all") {
-    try {
-      const result = await importAllStickersFromApi({ enabled: true });
-      await logAdminAction({
-        adminId: admin!.id,
-        action: "STICKER_CATALOG_IMPORT_ALL",
-        targetType: "sticker_catalog",
-        summary: `Importou ${result.imported} stickers da CSGO-API`,
-      });
-      return NextResponse.json({ ok: true, ...result });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Falha ao importar.";
-      return NextResponse.json({ error: message }, { status: 400 });
-    }
+    const job = createCatalogImportJob(admin!.id, "stickers");
+    const adminId = admin!.id;
+
+    after(async () => {
+      try {
+        const result = await importAllStickersFromApi({ enabled: true });
+        completeCatalogImportJob(job.id, { imported: result.imported });
+        await logAdminAction({
+          adminId,
+          action: "STICKER_CATALOG_IMPORT_ALL",
+          targetType: "sticker_catalog",
+          summary: `Importou ${result.imported} stickers da CSGO-API`,
+        });
+        await notifyCatalogImportResult(
+          adminId,
+          "stickers",
+          true,
+          `Importados ${result.imported} stickers da CSGO-API.`,
+        );
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Falha ao importar.";
+        failCatalogImportJob(job.id, message);
+        await notifyCatalogImportResult(adminId, "stickers", false, message);
+      }
+    });
+
+    return NextResponse.json({ ok: true, jobId: job.id, status: "running" });
   }
 
   const parsed = adminStickerCatalogCreateSchema.safeParse(data);

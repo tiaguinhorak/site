@@ -22,6 +22,7 @@ import { rarityAccent } from "@/lib/inventory/catalog-categories";
 import { adminCatalogItemToPreview } from "@/lib/inventory/skin-preview-mappers";
 import { useSkinPreview } from "@/lib/use-skin-preview";
 import { cn } from "@/lib/utils";
+import { useCatalogImportJob } from "@/components/admin/use-catalog-import-job";
 
 type CatalogItem = {
   id: string;
@@ -93,9 +94,9 @@ export function AdminSkinsSection() {
   const [preview, setPreview] = useState<LookupPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [importing, setImporting] = useState(false);
   const { previewSkin, openPreview, closePreview, isPreviewOpen } = useSkinPreview();
   const [error, setError] = useState<string | null>(null);
+  const { importing, startImport } = useCatalogImportJob(() => void load());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -190,34 +191,17 @@ export function AdminSkinsSection() {
 
   async function importWeapon() {
     if (!formWeaponId) return;
-    setImporting(true);
     setError(null);
-    try {
-      const result = await secureApi<{ imported: number; skippedCs2?: number }>("/api/admin/catalog-skins", {
-        method: "POST",
-        json: {
-          action: "import-weapon",
-          weaponId: formWeaponId,
-          enabled: true,
-        },
-      });
-      if (!result.ok) {
-        setError(result.error);
-        return;
-      }
-      setPreview(null);
-      await load();
-      alert(
-        `Importadas ${result.data.imported} skins de ${formWeaponId}.` +
-          (result.data.skippedCs2
-            ? ` ${result.data.skippedCs2} skins CS2 ignoradas.`
-            : ""),
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao importar.");
-    } finally {
-      setImporting(false);
+    const result = await startImport("/api/admin/catalog-skins", {
+      action: "import-weapon",
+      weaponId: formWeaponId,
+      enabled: true,
+    });
+    if (!result.ok) {
+      setError(result.error ?? "Falha ao importar.");
+      return;
     }
+    setPreview(null);
   }
 
   async function toggleEnabled(item: CatalogItem) {

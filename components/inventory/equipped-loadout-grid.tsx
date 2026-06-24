@@ -32,7 +32,7 @@ type EquippedLoadoutGridProps = {
   items: EquippedLoadoutEntry[];
   refreshing: boolean;
   onRefresh: () => void;
-  onOpen: (item: EquippedLoadoutEntry, tab?: "settings" | "stickers") => void;
+  onOpen: (item: EquippedLoadoutEntry, tab?: "settings" | "stickers", stickerTeam?: "T" | "CT") => void;
 };
 
 export function EquippedLoadoutGrid({
@@ -101,7 +101,7 @@ export function EquippedLoadoutGrid({
                         stickers={item.stickersT}
                         team="T"
                         label="TR"
-                        onClick={() => onOpen(item, "stickers")}
+                        onClick={() => onOpen(item, "stickers", "T")}
                       />
                     )}
                     {item.equippedCT && (
@@ -109,7 +109,7 @@ export function EquippedLoadoutGrid({
                         stickers={item.stickersCT}
                         team="CT"
                         label="CT"
-                        onClick={() => onOpen(item, "stickers")}
+                        onClick={() => onOpen(item, "stickers", "CT")}
                       />
                     )}
                   </div>

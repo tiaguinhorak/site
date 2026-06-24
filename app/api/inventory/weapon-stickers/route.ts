@@ -9,6 +9,7 @@ import {
 } from "@/lib/inventory/player-weapon-stickers";
 import { listEnabledStickersForPicker } from "@/lib/inventory/sticker-catalog-admin";
 import { pushPlayerStickersToGameServer } from "@/lib/inventory/push-stickers-to-game-server";
+import { getInventoryPlanLimits } from "@/lib/inventory/plan-inventory-access";
 import { getSessionUserId } from "@/lib/auth/session-user";
 import {
   applyApiGuards,
@@ -70,8 +71,18 @@ export async function GET(request: NextRequest) {
 
   try {
     const steamId = await requireUserSteamId(userId);
+    const limits = await getInventoryPlanLimits(userId);
     const stickers = await getPlayerWeaponStickers(steamId, weaponId, team);
-    return NextResponse.json({ weaponId, team, ...stickers });
+    return NextResponse.json({
+      weaponId,
+      team,
+      ...stickers,
+      limits: {
+        maxStickerSlots: limits.maxStickerSlots,
+        canUseStickers: limits.canUseStickers,
+        plan: limits.plan,
+      },
+    });
   } catch (err) {
     if (err instanceof CsgoApiError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
@@ -109,6 +120,7 @@ export async function PUT(request: NextRequest) {
   try {
     const steamId = await requireUserSteamId(userId);
     const result = await savePlayerWeaponStickers(
+      userId,
       steamId,
       parsed.data.weaponId,
       parsed.data.team,

@@ -26,6 +26,7 @@ import {
 import { SkinRarityBadge } from "@/components/skins/skin-rarity-badge";
 import {
   type EquipSide,
+  type LoadoutTeam,
   weaponSupportsBothTeams,
 } from "@/lib/inventory/loadout-team";
 import type { RarityKey } from "@/lib/inventory/rarity-tiers";
@@ -42,6 +43,10 @@ import {
 import { loadoutItemToPreview } from "@/lib/inventory/skin-preview-mappers";
 import { useSkinPreview } from "@/lib/use-skin-preview";
 import { useUser } from "@/lib/hooks/use-user";
+import {
+  canUseStickersForPlan,
+  maxStickerSlotsForPlan,
+} from "@/lib/inventory/plan-inventory-client";
 import { toast } from "@/lib/toast";
 import { InventoryPageSkeleton } from "@/components/loading/page-skeletons";
 import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
@@ -192,6 +197,15 @@ async function postJson(
 
 export function InventorySection() {
   const t = useTranslations("inventory");
+  const { user } = useUser();
+  const maxStickerSlots = maxStickerSlotsForPlan(
+    user?.plan ?? "free",
+    user?.isAdmin ?? false,
+  );
+  const canUseStickers = canUseStickersForPlan(
+    user?.plan ?? "free",
+    user?.isAdmin ?? false,
+  );
 
   const categoryLabels: Record<InventoryCategoryKey, string> = useMemo(
     () => ({
@@ -241,6 +255,7 @@ export function InventorySection() {
   const [workspace, setWorkspace] = useState<{
     skin: SkinWorkspaceData;
     tab: "settings" | "stickers";
+    stickerTeam?: LoadoutTeam;
   } | null>(null);
   const [availableRarityTiers, setAvailableRarityTiers] = useState<RarityKey[]>([]);
   const [mounted, setMounted] = useState(false);
@@ -486,18 +501,21 @@ export function InventorySection() {
   const openCatalogWorkspace = (
     item: CatalogSkin,
     tab: "settings" | "stickers" = "settings",
+    stickerTeam?: LoadoutTeam,
   ) => {
     setWorkspace({
       skin: catalogToWorkspace(item, categoryLabels[item.category]),
       tab,
+      stickerTeam,
     });
   };
 
   const openLoadoutWorkspace = (
     item: EquippedLoadoutEntry,
     tab: "settings" | "stickers" = "settings",
+    stickerTeam?: LoadoutTeam,
   ) => {
-    setWorkspace({ skin: loadoutToWorkspace(item), tab });
+    setWorkspace({ skin: loadoutToWorkspace(item), tab, stickerTeam });
   };
 
   const workspaceCatalogItem =
@@ -702,6 +720,7 @@ export function InventorySection() {
                     rarity={item.rarity}
                     equippedT={item.equippedT}
                     equippedCT={item.equippedCT}
+                    locked={!item.owned}
                     onClick={() => openCatalogWorkspace(item)}
                     className={cn(anyEquipped && "ring-1 ring-emerald-400/35")}
                   >
@@ -747,6 +766,9 @@ export function InventorySection() {
         open={workspace !== null}
         skin={workspace?.skin ?? null}
         initialTab={workspace?.tab}
+        initialStickerTeam={workspace?.stickerTeam}
+        maxStickerSlots={maxStickerSlots}
+        canUseStickers={canUseStickers}
         actionLoading={
           workspace?.skin.catalogSkinId
             ? equippingId === workspace.skin.catalogSkinId ||

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { secureApi } from "@/lib/api/client";
 import { confirmPresets } from "@/lib/confirm-presets";
 import { cn } from "@/lib/utils";
+import { useCatalogImportJob } from "@/components/admin/use-catalog-import-job";
 
 type StickerItem = {
   id: string;
@@ -54,8 +55,8 @@ export function AdminStickersSection() {
   const [preview, setPreview] = useState<LookupPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { importing, startImport } = useCatalogImportJob(() => void load());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -137,23 +138,10 @@ export function AdminStickersSection() {
   }
 
   async function importAll() {
-    setImporting(true);
     setError(null);
-    try {
-      const result = await secureApi<{ imported: number }>("/api/admin/sticker-catalog", {
-        method: "POST",
-        json: { action: "import-all" },
-      });
-      if (!result.ok) {
-        setError(result.error);
-        return;
-      }
-      await load();
-      alert(`Importados ${result.data.imported} stickers da CSGO-API.`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao importar.");
-    } finally {
-      setImporting(false);
+    const result = await startImport("/api/admin/sticker-catalog", { action: "import-all" });
+    if (!result.ok) {
+      setError(result.error ?? "Falha ao importar.");
     }
   }
 

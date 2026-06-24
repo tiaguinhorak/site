@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { after } from "next/server";
 import { requireAdmin } from "@/lib/auth/admin";
 import { logAdminAction } from "@/lib/admin/audit";
 import {
@@ -21,6 +22,12 @@ import {
   upsertCatalogSkinFromPaintkit,
 } from "@/lib/inventory/catalog-admin";
 import { listApiWeaponOptions } from "@/lib/inventory/csgo-api-index";
+import {
+  createCatalogImportJob,
+  completeCatalogImportJob,
+  failCatalogImportJob,
+} from "@/lib/admin/catalog-import-jobs";
+import { notifyCatalogImportResult } from "@/lib/admin/catalog-import-notifications";
 
 export async function GET(request: NextRequest) {
   const { error } = await requireAdmin(request);
@@ -76,17 +83,40 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      const result = await importWeaponSkinsFromApi(parsed.data.weaponId, {
-        enabled: parsed.data.enabled,
+      const weaponId = parsed.data.weaponId;
+      const enabled = parsed.data.enabled;
+      const job = createCatalogImportJob(admin!.id, "skins");
+      const adminId = admin!.id;
+
+      after(async () => {
+        try {
+          const result = await importWeaponSkinsFromApi(weaponId, { enabled });
+          completeCatalogImportJob(job.id, {
+            imported: result.imported,
+            skippedCs2: result.skippedCs2,
+            weaponId,
+          });
+          await logAdminAction({
+            adminId,
+            action: "CATALOG_SKIN_IMPORT_WEAPON",
+            targetType: "catalog_skin",
+            targetId: weaponId,
+            summary: `Importou ${result.imported} skins de ${weaponId} (${result.skippedCs2} CS2 ignoradas)`,
+          });
+          await notifyCatalogImportResult(
+            adminId,
+            "skins",
+            true,
+            `Importadas ${result.imported} skins de ${weaponId}.${result.skippedCs2 ? ` ${result.skippedCs2} skins CS2 ignoradas.` : ""}`,
+          );
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Falha ao importar.";
+          failCatalogImportJob(job.id, message);
+          await notifyCatalogImportResult(adminId, "skins", false, message);
+        }
       });
-      await logAdminAction({
-        adminId: admin!.id,
-        action: "CATALOG_SKIN_IMPORT_WEAPON",
-        targetType: "catalog_skin",
-        targetId: parsed.data.weaponId,
-        summary: `Importou ${result.imported} skins de ${parsed.data.weaponId} (${result.skippedCs2} CS2 ignoradas)`,
-      });
-      return NextResponse.json({ ok: true, ...result });
+
+      return NextResponse.json({ ok: true, jobId: job.id, status: "running" });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Falha ao importar.";
       return NextResponse.json({ error: message }, { status: 400 });

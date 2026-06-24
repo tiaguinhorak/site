@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { motion } from "motion/react";
-import { Loader2, Search, SlidersHorizontal, Sticker, X } from "lucide-react";
+import { Loader2, Lock, Search, SlidersHorizontal, Sticker, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RemoteImage } from "@/components/ui/remote-image";
 import { SkinRarityBadge } from "@/components/skins/skin-rarity-badge";
@@ -24,6 +24,7 @@ import {
   surfaceSubtleClass,
   teamPillClass,
 } from "@/lib/ui/theme-surfaces";
+import { isStickerSlotLocked } from "@/lib/inventory/plan-inventory-client";
 import { toast } from "@/lib/toast";
 
 export type SkinWorkspaceData = {
@@ -47,6 +48,9 @@ type SkinWorkspaceProps = {
   open: boolean;
   skin: SkinWorkspaceData | null;
   initialTab?: WorkspaceTab | "preview";
+  initialStickerTeam?: LoadoutTeam;
+  maxStickerSlots?: number;
+  canUseStickers?: boolean;
   actionLoading?: boolean;
   onClose: () => void;
   onEquip: (side: EquipSide) => Promise<void> | void;
@@ -94,6 +98,9 @@ export function SkinWorkspace({
   open,
   skin,
   initialTab = "settings",
+  initialStickerTeam,
+  maxStickerSlots = 5,
+  canUseStickers = true,
   actionLoading,
   onClose,
   onEquip,
@@ -110,9 +117,10 @@ export function SkinWorkspace({
   const canEquipCT = skin ? weaponAllowedOnTeam(skin.weaponId, "CT") : false;
   const canBoth = canEquipT && canEquipCT;
   const supportsStickers = skin ? weaponSupportsStickers(skin.weaponId) : false;
+  const stickersEnabled = supportsStickers && canUseStickers;
   const anyEquipped = skin ? skin.equippedT || skin.equippedCT : false;
 
-  const stickerHookEnabled = open && Boolean(skin) && supportsStickers;
+  const stickerHookEnabled = open && Boolean(skin) && stickersEnabled;
   const pickerActive = open && tab === "stickers";
 
   const stickerState = useWeaponStickerState(
@@ -128,12 +136,13 @@ export function SkinWorkspace({
     const equipCT = weaponAllowedOnTeam(skin.weaponId, "CT");
     const both = equipT && equipCT;
     const singleOnly = !both && (equipT || equipCT);
-    const hasStickers = weaponSupportsStickers(skin.weaponId);
+    const hasStickers = weaponSupportsStickers(skin.weaponId) && stickersEnabled;
     setTab(resolveInitialTab(initialTab));
     const side = defaultPendingSide(skin, equipT, equipCT);
     setPendingSide(side);
     const nextStickerTeam: LoadoutTeam =
-      skin.equippedCT
+      initialStickerTeam ??
+      (skin.equippedCT
         ? "CT"
         : skin.equippedT
           ? "T"
@@ -141,13 +150,22 @@ export function SkinWorkspace({
             ? "T"
             : equipCT && !equipT
               ? "CT"
-              : "CT";
+              : "CT");
     setStickerTeam((prev) => (prev === nextStickerTeam ? prev : nextStickerTeam));
 
-    if (singleOnly && hasStickers && resolveInitialTab(initialTab) === "settings") {
+    if (singleOnly && hasStickers && stickersEnabled && resolveInitialTab(initialTab) === "settings") {
       setTab("stickers");
     }
-  }, [open, initialTab, skin?.catalogSkinId, skin?.equippedCT, skin?.equippedT, skin?.weaponId]);
+  }, [
+    open,
+    initialTab,
+    initialStickerTeam,
+    skin?.catalogSkinId,
+    skin?.equippedCT,
+    skin?.equippedT,
+    skin?.weaponId,
+    stickersEnabled,
+  ]);
 
   useEffect(() => {
     if (!open || !skin) return;
@@ -193,7 +211,7 @@ export function SkinWorkspace({
             : "CT";
 
       const shouldSaveStickers =
-        supportsStickers && skin!.owned && (anyEquipped || willEquip);
+        stickersEnabled && skin!.owned && (anyEquipped || willEquip);
 
       if (shouldSaveStickers) {
         const ok = await stickerState.saveWithTeam(stickerTeamForSave);
@@ -209,7 +227,7 @@ export function SkinWorkspace({
   }
 
   function openSlot(slotIndex: number) {
-    if (!supportsStickers) return;
+    if (!stickersEnabled || isStickerSlotLocked(slotIndex, maxStickerSlots)) return;
     setTab("stickers");
     stickerState.setActiveSlot(slotIndex);
     stickerState.setPickerSearch("");
@@ -320,24 +338,30 @@ export function SkinWorkspace({
                       const active = activeSlotIndex === index;
                       const slotLabel = stickerState.slotLabels[index];
                       const slotImage = stickerState.slotImageUrls[index];
+                      const slotLocked =
+                        !canUseStickers || isStickerSlotLocked(index, maxStickerSlots);
                       return (
                         <div key={index} className="relative">
                           <button
                             type="button"
                             onClick={() => openSlot(index)}
+                            disabled={slotLocked}
                             className={cn(
                               "flex h-11 w-11 items-center justify-center rounded-lg border-2 transition-all",
                               surfaceSubtleClass,
-                              active
+                              slotLocked && "cursor-not-allowed opacity-45",
+                              active && !slotLocked
                                 ? "border-primary ring-2 ring-primary/45 shadow-[0_0_14px_color-mix(in_srgb,var(--primary)_40%,transparent)] scale-105"
-                                : filled
+                                : filled && !slotLocked
                                   ? "border-primary/50"
                                   : "border-border/40 opacity-75 hover:opacity-100",
                             )}
                             aria-label={t("stickersSlotPicker", { slot: index + 1 })}
                             aria-pressed={active}
                           >
-                            {filled && slotImage ? (
+                            {slotLocked ? (
+                              <Lock className="h-4 w-4 text-muted" aria-hidden />
+                            ) : filled && slotImage ? (
                               <img
                                 src={slotImage}
                                 alt=""
@@ -351,7 +375,7 @@ export function SkinWorkspace({
                               <span className="text-[10px] font-bold text-muted">{index + 1}</span>
                             )}
                           </button>
-                          {filled && (
+                          {filled && !slotLocked && (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -421,7 +445,10 @@ export function SkinWorkspace({
           {tab === "settings" ? (
             <div className="space-y-4">
               {!skin.owned ? (
-                <p className="text-sm text-muted">{t("equipUnavailable")}</p>
+                <div className={cn("rounded-xl p-4 text-center", surfaceSubtleClass)}>
+                  <Lock className="mx-auto h-6 w-6 text-muted" aria-hidden />
+                  <p className="mt-2 text-sm text-muted">{t("equipUnavailable")}</p>
+                </div>
               ) : canBoth ? (
                 <>
                   <p className="text-sm text-muted">{t("equipSideHint")}</p>
@@ -532,7 +559,14 @@ export function SkinWorkspace({
           ) : (
             <div>
               {!skin.owned ? (
-                <p className="text-sm text-muted">{t("equipUnavailable")}</p>
+                <div className={cn("rounded-xl p-4 text-center", surfaceSubtleClass)}>
+                  <Lock className="mx-auto h-6 w-6 text-muted" aria-hidden />
+                  <p className="mt-2 text-sm text-muted">{t("equipUnavailable")}</p>
+                </div>
+              ) : !canUseStickers ? (
+                <div className={cn("rounded-xl p-4", surfaceSubtleClass)}>
+                  <p className="text-sm text-muted">{t("stickersPlanRequired")}</p>
+                </div>
               ) : stickerState.loading ? (
                 <div className="flex justify-center py-12">
                   <Loader2 className="h-8 w-8 motion-safe-spin text-muted" />
