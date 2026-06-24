@@ -120,10 +120,10 @@ export async function savePlayerWeaponStickers(
   for (const defIndex of normalized) {
     if (defIndex <= 0) continue;
     const sticker = await prisma.csgoStickerCatalog.findFirst({
-      where: { defIndex, enabled: true },
+      where: { defIndex, enabled: true, imageUrl: { not: null } },
     });
-    if (!sticker) {
-      throw new Error(`Sticker def_index ${defIndex} não está habilitado no catálogo.`);
+    if (!sticker || !sticker.imageUrl?.trim()) {
+      throw new Error(`Sticker def_index ${defIndex} não está disponível (sem imagem no catálogo).`);
     }
   }
 

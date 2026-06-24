@@ -43,6 +43,7 @@ export type SkinWorkspaceData = {
 };
 
 type WorkspaceTab = "settings" | "stickers";
+type StickerEditScope = LoadoutTeam | "both";
 
 type SkinWorkspaceProps = {
   open: boolean;
@@ -111,6 +112,7 @@ export function SkinWorkspace({
   const [tab, setTab] = useState<WorkspaceTab>("settings");
   const [pendingSide, setPendingSide] = useState<EquipSide>("CT");
   const [stickerTeam, setStickerTeam] = useState<LoadoutTeam>("CT");
+  const [stickerScope, setStickerScope] = useState<StickerEditScope>("CT");
   const [savingAll, setSavingAll] = useState(false);
 
   const canEquipT = skin ? weaponAllowedOnTeam(skin.weaponId, "T") : false;
@@ -152,6 +154,20 @@ export function SkinWorkspace({
               ? "CT"
               : "CT");
     setStickerTeam((prev) => (prev === nextStickerTeam ? prev : nextStickerTeam));
+    setStickerScope((prev) => {
+      const scope: StickerEditScope =
+        initialStickerTeam ??
+        (skin.equippedCT
+          ? "CT"
+          : skin.equippedT
+            ? "T"
+            : equipT && !equipCT
+              ? "T"
+              : equipCT && !equipT
+                ? "CT"
+                : "CT");
+      return prev === scope ? prev : scope;
+    });
 
     if (singleOnly && hasStickers && stickersEnabled && resolveInitialTab(initialTab) === "settings") {
       setTab("stickers");
@@ -203,19 +219,28 @@ export function SkinWorkspace({
         await onEquip(pendingSide);
       }
 
-      const stickerTeamForSave: LoadoutTeam =
-        pendingSide === "both"
-          ? stickerTeam
-          : pendingSide === "T"
-            ? "T"
-            : "CT";
-
       const shouldSaveStickers =
         stickersEnabled && skin!.owned && (anyEquipped || willEquip);
 
       if (shouldSaveStickers) {
-        const ok = await stickerState.saveWithTeam(stickerTeamForSave);
-        if (!ok) return;
+        const slotsToSave = stickerState.slots;
+        if (stickerScope === "both" && canBoth) {
+          const okT = await stickerState.saveWithTeam("T", slotsToSave);
+          if (!okT) return;
+          const okCT = await stickerState.saveWithTeam("CT", slotsToSave);
+          if (!okCT) return;
+        } else {
+          const teamToSave: LoadoutTeam =
+            stickerScope === "T" && canEquipT
+              ? "T"
+              : stickerScope === "CT" && canEquipCT
+                ? "CT"
+                : canEquipT
+                  ? "T"
+                  : "CT";
+          const ok = await stickerState.saveWithTeam(teamToSave, slotsToSave);
+          if (!ok) return;
+        }
       }
 
       toast.success(t("workspaceSaved"));
@@ -508,34 +533,6 @@ export function SkinWorkspace({
                 </div>
               )}
 
-              {supportsStickers && skin.owned && canBoth && (
-                <div className={cn("rounded-xl p-4", surfaceSubtleClass)}>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-                    {t("stickersTeamLabel")}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {canEquipCT && (
-                      <button
-                        type="button"
-                        onClick={() => setStickerTeam("CT")}
-                        className={teamPillClass("CT", stickerTeam === "CT")}
-                      >
-                        CT
-                      </button>
-                    )}
-                    {canEquipT && (
-                      <button
-                        type="button"
-                        onClick={() => setStickerTeam("T")}
-                        className={teamPillClass("T", stickerTeam === "T")}
-                      >
-                        TR
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-
               {anyEquipped && (
                 <Button
                   type="button"
@@ -573,7 +570,59 @@ export function SkinWorkspace({
                 </div>
               ) : (
                 <>
-                  <div className="relative">
+                  {canBoth && (
+                    <div className={cn("rounded-xl p-3", surfaceSubtleClass)}>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+                        {t("stickersTeamLabel")}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {canEquipT && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setStickerScope("T");
+                              setStickerTeam("T");
+                            }}
+                            className={teamPillClass("T", stickerScope === "T")}
+                          >
+                            TR
+                          </button>
+                        )}
+                        {canEquipCT && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setStickerScope("CT");
+                              setStickerTeam("CT");
+                            }}
+                            className={teamPillClass("CT", stickerScope === "CT")}
+                          >
+                            CT
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStickerScope("both");
+                            setStickerTeam("T");
+                          }}
+                          className={cn(
+                            "rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
+                            stickerScope === "both"
+                              ? "bg-primary text-primary-foreground"
+                              : chipInactiveHoverClass,
+                          )}
+                        >
+                          {t("teamBothShort")}
+                        </button>
+                      </div>
+                      {stickerScope === "both" && (
+                        <p className="mt-2 text-xs text-muted">{t("stickersEditBothHint")}</p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="relative mt-3">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
                     <input
                       className={cn(
@@ -654,6 +703,48 @@ export function SkinWorkspace({
                           {t("stickersNoResults")}
                         </p>
                       )}
+                    </div>
+                  )}
+
+                  {stickerState.pickerTotalPages > 1 && !stickerState.pickerLoading && (
+                    <div className="mt-4 flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        disabled={stickerState.pickerPage <= 1}
+                        onClick={() =>
+                          stickerState.goToPickerPage(stickerState.pickerPage - 1)
+                        }
+                        className={cn(
+                          "rounded-lg px-3 py-1.5 text-xs font-semibold",
+                          chipInactiveHoverClass,
+                          stickerState.pickerPage <= 1 && "opacity-40",
+                        )}
+                      >
+                        {t("stickersPagePrev")}
+                      </button>
+                      <span className="text-xs text-muted">
+                        {t("stickersPageLabel", {
+                          page: stickerState.pickerPage,
+                          total: stickerState.pickerTotalPages,
+                        })}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={
+                          stickerState.pickerPage >= stickerState.pickerTotalPages
+                        }
+                        onClick={() =>
+                          stickerState.goToPickerPage(stickerState.pickerPage + 1)
+                        }
+                        className={cn(
+                          "rounded-lg px-3 py-1.5 text-xs font-semibold",
+                          chipInactiveHoverClass,
+                          stickerState.pickerPage >= stickerState.pickerTotalPages &&
+                            "opacity-40",
+                        )}
+                      >
+                        {t("stickersPageNext")}
+                      </button>
                     </div>
                   )}
                 </>

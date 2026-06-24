@@ -49,12 +49,14 @@ export async function GET(request: NextRequest) {
   const search = params.get("search") ?? "";
 
   if (picker) {
-    const limit = Number(params.get("limit") ?? "60");
-    const items = await listEnabledStickersForPicker(
+    const page = Number(params.get("page") ?? "1");
+    const limit = Number(params.get("limit") ?? "24");
+    const result = await listEnabledStickersForPicker({
       search,
-      Number.isFinite(limit) ? limit : 60,
-    );
-    return NextResponse.json({ items });
+      page: Number.isFinite(page) ? page : 1,
+      limit: Number.isFinite(limit) ? limit : 24,
+    });
+    return NextResponse.json(result);
   }
 
   const weaponId = params.get("weaponId")?.trim() ?? "";

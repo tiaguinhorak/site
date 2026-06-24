@@ -37,8 +37,11 @@ export function useWeaponStickerState(
   const [pickerSearch, setPickerSearch] = useState("");
   const [pickerItems, setPickerItems] = useState<PickerSticker[]>([]);
   const [pickerLoading, setPickerLoading] = useState(false);
+  const [pickerPage, setPickerPage] = useState(1);
+  const [pickerTotalPages, setPickerTotalPages] = useState(1);
+  const [pickerTotal, setPickerTotal] = useState(0);
   const loadedResourceKeyRef = useRef("");
-  const lastPickerQueryRef = useRef("");
+  const lastPickerKeyRef = useRef("");
 
   const applySlotDetails = useCallback((details: SlotDetail[]) => {
     const labels = Array(STICKER_SLOT_COUNT).fill("");
@@ -91,26 +94,40 @@ export function useWeaponStickerState(
       setActiveSlot(null);
       setPickerSearch("");
       setPickerItems([]);
-      lastPickerQueryRef.current = "";
+      setPickerPage(1);
+      setPickerTotalPages(1);
+      setPickerTotal(0);
+      lastPickerKeyRef.current = "";
     }
     void loadCurrent();
   }, [enabled, resourceKey, loadCurrent]);
 
-  const loadPicker = useCallback(async (search: string, force = false) => {
+  const loadPicker = useCallback(async (search: string, force = false, page = 1) => {
     const query = search.trim();
-    if (!force && lastPickerQueryRef.current === query) return;
-    lastPickerQueryRef.current = query;
+    const safePage = Math.max(1, page);
+    const key = `${query}:${safePage}`;
+    if (!force && lastPickerKeyRef.current === key) return;
+    lastPickerKeyRef.current = key;
     setPickerLoading(true);
     try {
-      const params = new URLSearchParams({ picker: "1", limit: "48" });
+      const params = new URLSearchParams({
+        picker: "1",
+        limit: "24",
+        page: String(safePage),
+      });
       if (query) params.set("search", query);
       const res = await fetch(`/api/inventory/weapon-stickers?${params}`, {
         credentials: "same-origin",
       });
       const data = await res.json();
       setPickerItems(data.items ?? []);
+      setPickerPage(data.page ?? safePage);
+      setPickerTotalPages(data.totalPages ?? 1);
+      setPickerTotal(data.total ?? 0);
     } catch {
       setPickerItems([]);
+      setPickerTotalPages(1);
+      setPickerTotal(0);
     } finally {
       setPickerLoading(false);
     }
@@ -118,7 +135,9 @@ export function useWeaponStickerState(
 
   useEffect(() => {
     if (!enabled || !pickerActive) return;
-    const timer = setTimeout(() => loadPicker(pickerSearch), 300);
+    lastPickerKeyRef.current = "";
+    setPickerPage(1);
+    const timer = setTimeout(() => loadPicker(pickerSearch, true, 1), 300);
     return () => clearTimeout(timer);
   }, [pickerActive, pickerSearch, loadPicker, enabled]);
 
@@ -146,7 +165,7 @@ export function useWeaponStickerState(
       return next;
     });
     setPickerSearch("");
-    lastPickerQueryRef.current = "";
+    lastPickerKeyRef.current = "";
   }
 
   function clearSlot(index: number) {
@@ -199,6 +218,11 @@ export function useWeaponStickerState(
     return saveWithTeam();
   }
 
+  function goToPickerPage(page: number) {
+    const next = Math.max(1, Math.min(page, pickerTotalPages));
+    void loadPicker(pickerSearch, true, next);
+  }
+
   return {
     slots,
     slotLabels,
@@ -215,6 +239,10 @@ export function useWeaponStickerState(
     setPickerSearch,
     pickerItems,
     pickerLoading,
+    pickerPage,
+    pickerTotalPages,
+    pickerTotal,
     loadPicker,
+    goToPickerPage,
   };
 }

@@ -50,6 +50,10 @@ export async function lookupStickerCatalogPreview(defIndex: number) {
   };
 }
 
+function stickerHasImage(imageUrl: string | null | undefined): boolean {
+  return Boolean(imageUrl?.trim());
+}
+
 async function upsertStickerRow(
   input: {
     defIndex: number;
@@ -63,15 +67,18 @@ async function upsertStickerRow(
     where: { defIndex: input.defIndex },
   });
 
+  const imageUrl = apiRow?.imageUrl ?? existing?.imageUrl ?? null;
+  const canEnable = stickerHasImage(imageUrl);
+
   const data = {
     defIndex: input.defIndex,
     name: apiRow?.name ?? existing?.name ?? `Sticker ${input.defIndex}`,
-    imageUrl: apiRow?.imageUrl ?? existing?.imageUrl ?? null,
+    imageUrl,
     rarity: apiRow?.rarity ?? existing?.rarity ?? "comum",
     stickerType: apiRow?.stickerType ?? existing?.stickerType ?? null,
     effect: apiRow?.effect ?? existing?.effect ?? null,
     tournament: apiRow?.tournament ?? existing?.tournament ?? null,
-    enabled: input.enabled ?? existing?.enabled ?? true,
+    enabled: canEnable ? (input.enabled ?? existing?.enabled ?? true) : false,
     source: existing?.source && existing.source !== "sync" ? existing.source : input.source,
   };
 
@@ -91,6 +98,9 @@ export async function upsertStickerByDefIndex(defIndex: number, enabled = true) 
   if (!apiRow) {
     throw new Error("Sticker não encontrado na CSGO-API. Confira o def_index.");
   }
+  if (!stickerHasImage(apiRow.imageUrl)) {
+    throw new Error("Sticker sem imagem na CSGO-API — não pode ser habilitado.");
+  }
   return upsertStickerRow({ defIndex, source: "admin", enabled }, apiRow);
 }
 
@@ -98,6 +108,9 @@ export async function importAllStickersFromApi(options?: { enabled?: boolean }) 
   const apiRows = await listAllStickersFromApi();
   let imported = 0;
   for (const apiRow of apiRows) {
+    if (!apiRow.imageUrl?.trim()) {
+      continue;
+    }
     await upsertStickerRow(
       {
         defIndex: apiRow.defIndex,
@@ -109,7 +122,18 @@ export async function importAllStickersFromApi(options?: { enabled?: boolean }) 
     );
     imported += 1;
   }
+  await disableStickersWithoutImages();
   return { imported };
+}
+
+export async function disableStickersWithoutImages(): Promise<number> {
+  const result = await prisma.csgoStickerCatalog.updateMany({
+    where: {
+      OR: [{ imageUrl: null }, { imageUrl: "" }],
+    },
+    data: { enabled: false },
+  });
+  return result.count;
 }
 
 export async function listStickerCatalogAdmin(options: {
@@ -169,39 +193,73 @@ export async function deleteStickerCatalogAdmin(id: string) {
   return { ok: true };
 }
 
-export async function listEnabledStickersForPicker(search?: string, limit = 60) {
-  const trimmed = search?.trim() ?? "";
-  const rows = await prisma.csgoStickerCatalog.findMany({
-    where: {
-      enabled: true,
-      ...(trimmed
-        ? { name: { contains: trimmed, mode: "insensitive" } }
-        : {}),
-    },
-    orderBy: { name: "asc" },
-    take: limit,
-  });
+export async function listEnabledStickersForPicker(options?: {
+  search?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const page = Math.max(1, options?.page ?? 1);
+  const limit = Math.min(48, Math.max(1, options?.limit ?? 24));
+  const trimmed = options?.search?.trim() ?? "";
 
-  if (rows.length > 0) {
-    return rows.map(serializeRow);
+  const where = {
+    enabled: true,
+    imageUrl: { not: null },
+    ...(trimmed
+      ? { name: { contains: trimmed, mode: "insensitive" as const } }
+      : {}),
+  };
+
+  const [total, rows] = await Promise.all([
+    prisma.csgoStickerCatalog.count({ where }),
+    prisma.csgoStickerCatalog.findMany({
+      where,
+      orderBy: { name: "asc" },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+  ]);
+
+  const withImage = rows.filter((row) => stickerHasImage(row.imageUrl));
+
+  if (withImage.length > 0 || total > 0) {
+    return {
+      items: withImage.map(serializeRow),
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
   }
 
   const apiRows = await listAllStickersFromApi();
+  const apiWithImage = apiRows.filter((row) => stickerHasImage(row.imageUrl));
   const filtered = trimmed
-    ? apiRows.filter((row) => row.name.toLowerCase().includes(trimmed.toLowerCase()))
-    : apiRows;
+    ? apiWithImage.filter((row) =>
+        row.name.toLowerCase().includes(trimmed.toLowerCase()),
+      )
+    : apiWithImage;
 
-  return filtered.slice(0, limit).map((row) => ({
-    id: row.id,
-    defIndex: row.defIndex,
-    name: row.name,
-    imageUrl: row.imageUrl,
-    rarity: row.rarity,
-    stickerType: row.stickerType,
-    effect: row.effect,
-    tournament: row.tournament,
-    enabled: true,
-    source: "api-fallback",
-    updatedAt: new Date().toISOString(),
-  }));
+  const apiTotal = filtered.length;
+  const slice = filtered.slice((page - 1) * limit, page * limit);
+
+  return {
+    items: slice.map((row) => ({
+      id: row.id,
+      defIndex: row.defIndex,
+      name: row.name,
+      imageUrl: row.imageUrl,
+      rarity: row.rarity,
+      stickerType: row.stickerType,
+      effect: row.effect,
+      tournament: row.tournament,
+      enabled: true,
+      source: "api-fallback",
+      updatedAt: new Date().toISOString(),
+    })),
+    page,
+    limit,
+    total: apiTotal,
+    totalPages: Math.max(1, Math.ceil(apiTotal / limit)),
+  };
 }
