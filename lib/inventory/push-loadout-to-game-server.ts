@@ -11,6 +11,7 @@ import { getSkinsSyncKey } from "@/lib/env/skins-sync";
 
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 300;
+const FETCH_TIMEOUT_MS = 8000;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -46,6 +47,7 @@ async function pushLoadoutToTarget(
         },
         body: JSON.stringify(body),
         cache: "no-store",
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
 
       if (res.ok) {

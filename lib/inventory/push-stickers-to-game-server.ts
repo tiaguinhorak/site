@@ -7,6 +7,8 @@ import {
 } from "@/lib/csgo-api/config";
 import { getSkinsSyncKey } from "@/lib/env/skins-sync";
 
+const FETCH_TIMEOUT_MS = 8000;
+
 async function pushStickersToTarget(
   baseUrl: string,
   payload: Awaited<ReturnType<typeof getPlayerStickersForSync>>,
@@ -24,6 +26,7 @@ async function pushStickersToTarget(
       },
       body: JSON.stringify(payload),
       cache: "no-store",
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
 
     if (res.ok) return { baseUrl, ok: true };
