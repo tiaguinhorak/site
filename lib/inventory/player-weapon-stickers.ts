@@ -3,11 +3,23 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { weaponIdToItemDefIndex } from "@/lib/inventory/weapon-defindex";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
+import { normalizeWeaponId } from "@/lib/inventory/loadout-team";
 import { steamIdForGamePlugin } from "@/lib/steam/steam-id";
 
 export type WeaponStickerSlots = {
   slots: number[];
   wears: number[];
+};
+
+export type WeaponStickerSlotDetail = {
+  slot: number;
+  defIndex: number;
+  name: string;
+  imageUrl: string | null;
+};
+
+export type WeaponStickerSlotsEnriched = WeaponStickerSlots & {
+  slotDetails: WeaponStickerSlotDetail[];
 };
 
 export type PlayerWeaponStickerRow = {
@@ -30,21 +42,45 @@ export async function getPlayerWeaponStickers(
   steamId: string,
   weaponId: string,
   team: LoadoutTeam,
-): Promise<WeaponStickerSlots> {
-  const row = await prisma.csgoPlayerWeaponSticker.findUnique({
+): Promise<WeaponStickerSlotsEnriched> {
+  const normalizedWeaponId = normalizeWeaponId(weaponId);
+
+  const row = await prisma.csgoPlayerWeaponSticker.findFirst({
     where: {
-      steamId_weaponId_team: { steamId, weaponId, team },
+      steamId,
+      team,
+      OR: [{ weaponId: normalizedWeaponId }, { weaponId: weaponId.trim() }],
     },
   });
 
-  if (!row) {
-    return normalizeSlots([]);
-  }
+  const slots = row
+    ? [row.slot0, row.slot1, row.slot2, row.slot3, row.slot4]
+    : [];
+  const { slots: normalizedSlots, wears } = normalizeSlots(slots);
 
-  return {
-    slots: [row.slot0, row.slot1, row.slot2, row.slot3, row.slot4],
-    wears: [row.wear0, row.wear1, row.wear2, row.wear3, row.wear4],
-  };
+  const defIndices = normalizedSlots.filter((defIndex) => defIndex > 0);
+  const catalogStickers =
+    defIndices.length > 0
+      ? await prisma.csgoStickerCatalog.findMany({
+          where: { defIndex: { in: defIndices } },
+        })
+      : [];
+  const catalogByDef = new Map(catalogStickers.map((entry) => [entry.defIndex, entry]));
+
+  const slotDetails: WeaponStickerSlotDetail[] = normalizedSlots.map((defIndex, slot) => {
+    if (defIndex <= 0) {
+      return { slot, defIndex: 0, name: "", imageUrl: null };
+    }
+    const catalog = catalogByDef.get(defIndex);
+    return {
+      slot,
+      defIndex,
+      name: catalog?.name ?? `Sticker ${defIndex}`,
+      imageUrl: catalog?.imageUrl ?? null,
+    };
+  });
+
+  return { slots: normalizedSlots, wears, slotDetails };
 }
 
 export async function savePlayerWeaponStickers(
@@ -53,6 +89,7 @@ export async function savePlayerWeaponStickers(
   team: LoadoutTeam,
   slots: number[],
 ) {
+  const normalizedWeaponId = normalizeWeaponId(weaponId);
   const { slots: normalized, wears } = normalizeSlots(slots);
 
   // Only allow enabled catalog stickers (0 = empty slot).
@@ -67,10 +104,12 @@ export async function savePlayerWeaponStickers(
   }
 
   await prisma.csgoPlayerWeaponSticker.upsert({
-    where: { steamId_weaponId_team: { steamId, weaponId, team } },
+    where: {
+      steamId_weaponId_team: { steamId, weaponId: normalizedWeaponId, team },
+    },
     create: {
       steamId,
-      weaponId,
+      weaponId: normalizedWeaponId,
       team,
       slot0: normalized[0],
       slot1: normalized[1],
@@ -97,7 +136,7 @@ export async function savePlayerWeaponStickers(
     },
   });
 
-  return { weaponId, team, slots: normalized };
+  return { weaponId: normalizedWeaponId, team, slots: normalized };
 }
 
 export type StickerSyncEntry = {

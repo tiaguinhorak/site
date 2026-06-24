@@ -2,12 +2,16 @@ import { prisma } from "@/lib/prisma";
 import { CsgoApiError } from "@/lib/csgo-api/http";
 import { getCatalogIdsToUnequipOnEquip } from "@/lib/inventory/equip-slot-rules";
 import {
+  buildBothTeamsEquipCreateData,
+  buildBothTeamsEquipUpdateData,
   buildTeamEquipCreateData,
   buildTeamEquipUpdateData,
   unequipSlotForTeam,
 } from "@/lib/inventory/loadout-equip-helpers";
 import {
   weaponAllowedOnTeam,
+  weaponSupportsBothTeams,
+  type EquipSide,
   type LoadoutTeam,
 } from "@/lib/inventory/loadout-team";
 import type { InventoryCategory } from "@/lib/generated/prisma/client";
@@ -22,7 +26,7 @@ const CATEGORY_WEAPON_SLOT: Partial<Record<InventoryCategory, string>> = {
 export async function equipInventoryItemForUser(
   userId: string,
   inventoryItemId: string,
-  team: LoadoutTeam,
+  team: EquipSide,
 ) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -54,7 +58,11 @@ export async function equipInventoryItemForUser(
   const catalog = item.catalogSkin;
   const weaponId = catalog.weaponId;
 
-  if (!weaponAllowedOnTeam(weaponId, team)) {
+  if (team === "both") {
+    if (!weaponSupportsBothTeams(weaponId)) {
+      throw new CsgoApiError("Esta arma só pode ser equipada em um time (TR ou CT).", 400);
+    }
+  } else if (!weaponAllowedOnTeam(weaponId, team)) {
     throw new CsgoApiError(
       team === "T"
         ? "Esta arma não está disponível para o time Terrorista."
@@ -81,7 +89,12 @@ export async function equipInventoryItemForUser(
     });
 
     const catalogIdsForSlot = await getCatalogIdsToUnequipOnEquip(tx, weaponId);
-    await unequipSlotForTeam(tx, user.steamId!, catalogIdsForSlot, team);
+    if (team === "both") {
+      await unequipSlotForTeam(tx, user.steamId!, catalogIdsForSlot, "T");
+      await unequipSlotForTeam(tx, user.steamId!, catalogIdsForSlot, "CT");
+    } else {
+      await unequipSlotForTeam(tx, user.steamId!, catalogIdsForSlot, team);
+    }
 
     let playerSkin = await tx.csgoPlayerSkin.findFirst({
       where: { steamId: user.steamId!, skinId: catalog.id },
@@ -89,18 +102,30 @@ export async function equipInventoryItemForUser(
 
     if (!playerSkin) {
       playerSkin = await tx.csgoPlayerSkin.create({
-        data: buildTeamEquipCreateData(team, {
-          steamId: user.steamId!,
-          skinId: catalog.id,
-          wear: "field_tested",
-          seed: 0,
-          stattrak: false,
-        }),
+        data:
+          team === "both"
+            ? buildBothTeamsEquipCreateData({
+                steamId: user.steamId!,
+                skinId: catalog.id,
+                wear: "field_tested",
+                seed: 0,
+                stattrak: false,
+              })
+            : buildTeamEquipCreateData(team as LoadoutTeam, {
+                steamId: user.steamId!,
+                skinId: catalog.id,
+                wear: "field_tested",
+                seed: 0,
+                stattrak: false,
+              }),
       });
     } else {
       playerSkin = await tx.csgoPlayerSkin.update({
         where: { id: playerSkin.id },
-        data: buildTeamEquipUpdateData(team, playerSkin),
+        data:
+          team === "both"
+            ? buildBothTeamsEquipUpdateData()
+            : buildTeamEquipUpdateData(team as LoadoutTeam, playerSkin),
       });
     }
   });

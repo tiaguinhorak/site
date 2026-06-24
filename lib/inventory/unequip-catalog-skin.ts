@@ -2,12 +2,12 @@ import { prisma } from "@/lib/prisma";
 import { CsgoApiError } from "@/lib/csgo-api/http";
 import { getCatalogIdsToUnequipOnEquip } from "@/lib/inventory/equip-slot-rules";
 import { unequipSlotForTeam } from "@/lib/inventory/loadout-equip-helpers";
-import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
+import type { EquipSide, LoadoutTeam } from "@/lib/inventory/loadout-team";
 
 export async function unequipCatalogSkinForUser(
   userId: string,
   catalogSkinId: string,
-  team: LoadoutTeam,
+  team: EquipSide,
 ) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -23,7 +23,13 @@ export async function unequipCatalogSkinForUser(
   if (!catalog) throw new CsgoApiError("Skin não encontrada no catálogo.", 404);
 
   const catalogIdsForSlot = await getCatalogIdsToUnequipOnEquip(prisma, catalog.weaponId);
-  await unequipSlotForTeam(prisma, user.steamId, catalogIdsForSlot, team);
+
+  if (team === "both") {
+    await unequipSlotForTeam(prisma, user.steamId, catalogIdsForSlot, "T");
+    await unequipSlotForTeam(prisma, user.steamId, catalogIdsForSlot, "CT");
+  } else {
+    await unequipSlotForTeam(prisma, user.steamId, catalogIdsForSlot, team as LoadoutTeam);
+  }
 
   return {
     ok: true,
@@ -38,7 +44,7 @@ export async function unequipCatalogSkinForUser(
 export async function unequipWeaponForUser(
   userId: string,
   weaponId: string,
-  team: LoadoutTeam,
+  team: EquipSide,
 ) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -54,7 +60,12 @@ export async function unequipWeaponForUser(
     throw new CsgoApiError("Arma não encontrada no catálogo.", 404);
   }
 
-  await unequipSlotForTeam(prisma, user.steamId, catalogIdsForSlot, team);
+  if (team === "both") {
+    await unequipSlotForTeam(prisma, user.steamId, catalogIdsForSlot, "T");
+    await unequipSlotForTeam(prisma, user.steamId, catalogIdsForSlot, "CT");
+  } else {
+    await unequipSlotForTeam(prisma, user.steamId, catalogIdsForSlot, team as LoadoutTeam);
+  }
 
   return { ok: true, steamId: user.steamId, weaponId, team, unequipped: true };
 }

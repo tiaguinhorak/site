@@ -12,11 +12,16 @@ import { getCatalogWeaponOptions } from "@/lib/inventory/get-catalog-weapon-opti
 import { rarityAccent } from "@/lib/inventory/catalog-categories";
 import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
 import {
+  excludedWeaponIdsForDualTeam,
   excludedWeaponIdsForTeam,
   teamEquipField,
   weaponAllowedOnTeam,
+  weaponSupportsBothTeams,
   type LoadoutTeam,
 } from "@/lib/inventory/loadout-team";
+import { prismaRarityTierWhere } from "@/lib/inventory/rarity-filter";
+import { getCatalogRarityTiers } from "@/lib/inventory/get-catalog-rarity-tiers";
+import type { RarityKey } from "@/lib/inventory/rarity-tiers";
 
 const DEFAULT_LIMIT = 36;
 const MAX_LIMIT = 72;
@@ -33,6 +38,8 @@ export type CatalogSkinRow = {
   paintkit: number;
   paintkitName: string;
   equipped: boolean;
+  equippedT: boolean;
+  equippedCT: boolean;
   owned: boolean;
 };
 
@@ -45,6 +52,8 @@ export async function getCatalogSkinsForUser(
     page?: number;
     limit?: number;
     team?: LoadoutTeam;
+    dualTeamOnly?: boolean;
+    rarityTier?: RarityKey;
   },
 ): Promise<{
   items: CatalogSkinRow[];
@@ -54,6 +63,7 @@ export async function getCatalogSkinsForUser(
   totalPages: number;
   catalogTotal: number;
   weaponOptions: Awaited<ReturnType<typeof getCatalogWeaponOptions>>;
+  availableRarityTiers: RarityKey[];
 }> {
   const page = Math.max(1, options.page ?? 1);
   const limit = Math.min(MAX_LIMIT, Math.max(1, options.limit ?? DEFAULT_LIMIT));
@@ -61,13 +71,19 @@ export async function getCatalogSkinsForUser(
   const category = options.category ?? "all";
   const weaponIdParam = options.weaponId?.trim() ?? "";
   const team = options.team;
+  const dualTeamOnly = options.dualTeamOnly ?? false;
+  const rarityTier = options.rarityTier;
 
   await ensureCatalogReady();
 
   let weaponIdWhere: string | { notIn: string[] } | undefined;
   if (weaponIdParam) {
-    // Explicit weapon from dropdown — do not overwrite with team notIn (was breaking filters).
     weaponIdWhere = weaponIdParam;
+  } else if (dualTeamOnly) {
+    const excluded = excludedWeaponIdsForDualTeam();
+    if (excluded.length > 0) {
+      weaponIdWhere = { notIn: excluded };
+    }
   } else if (team) {
     const excluded = excludedWeaponIdsForTeam(team);
     if (excluded.length > 0) {
@@ -75,19 +91,25 @@ export async function getCatalogSkinsForUser(
     }
   }
 
+  const andClauses: Array<Record<string, unknown>> = [];
+  if (category !== "all") andClauses.push({ category });
+  if (weaponIdWhere !== undefined) andClauses.push({ weaponId: weaponIdWhere });
+  if (search) {
+    andClauses.push({
+      OR: [
+        { paintkitName: { contains: search, mode: "insensitive" as const } },
+        { weaponName: { contains: search, mode: "insensitive" as const } },
+      ],
+    });
+  }
+  if (rarityTier) {
+    andClauses.push(prismaRarityTierWhere(rarityTier));
+  }
+
   const where = {
     enabled: true,
     gameClient: { not: "cs2" as const },
-    ...(category !== "all" ? { category } : {}),
-    ...(weaponIdWhere !== undefined ? { weaponId: weaponIdWhere } : {}),
-    ...(search
-      ? {
-          OR: [
-            { paintkitName: { contains: search, mode: "insensitive" as const } },
-            { weaponName: { contains: search, mode: "insensitive" as const } },
-          ],
-        }
-      : {}),
+    ...(andClauses.length > 0 ? { AND: andClauses } : {}),
   };
 
   const user = await prisma.user.findUnique({
@@ -97,15 +119,13 @@ export async function getCatalogSkinsForUser(
 
   const equippedField = team ? teamEquipField(team) : null;
 
-  const [catalogTotal, equippedRows, total, rows, weaponOptions] = await Promise.all([
+  const [catalogTotal, equippedRows, total, rows, weaponOptions, availableRarityTiers] =
+    await Promise.all([
     getCatalogTotalCached(),
     user?.steamId
       ? prisma.csgoPlayerSkin.findMany({
-          where: {
-            steamId: user.steamId,
-            ...(equippedField ? { [equippedField]: true } : { equipped: true }),
-          },
-          select: { skinId: true },
+          where: { steamId: user.steamId },
+          select: { skinId: true, equippedT: true, equippedCT: true },
         })
       : Promise.resolve([]),
     prisma.csgoSkinCatalog.count({ where }),
@@ -118,30 +138,42 @@ export async function getCatalogSkinsForUser(
     page === 1
       ? getCatalogWeaponOptions(category).catch(() => [])
       : Promise.resolve([]),
+    getCatalogRarityTiers(),
   ]);
 
-  const equippedIds = new Set(equippedRows.map((row) => row.skinId));
+  const equippedBySkin = new Map(
+    equippedRows.map((row) => [row.skinId, { equippedT: row.equippedT, equippedCT: row.equippedCT }]),
+  );
   const allSkins = await canUserAccessAllCatalogSkins(userId);
   const ownedCatalogIds = allSkins ? null : await getOwnedCatalogSkinIdsForUser(userId);
 
-  const items: CatalogSkinRow[] = rows.map((row) => ({
-    id: row.id,
-    name: `${row.weaponName} | ${row.paintkitName}`,
-    category: row.category as InventoryCategoryKey,
-    rarity: row.rarity,
-    accent: rarityAccent(row.rarity),
-    imageUrl: row.imageUrl ?? catalogSkinImageUrl(row.id) ?? null,
-    weaponId: row.weaponId,
-    weaponName: row.weaponName,
-    paintkit: row.paintkit,
-    paintkitName: row.paintkitName,
-    equipped: equippedIds.has(row.id),
-    owned: allSkins || ownedCatalogIds?.has(row.id) === true,
-  }));
+  const items: CatalogSkinRow[] = rows.map((row) => {
+    const flags = equippedBySkin.get(row.id);
+    const equippedT = flags?.equippedT ?? false;
+    const equippedCT = flags?.equippedCT ?? false;
+    return {
+      id: row.id,
+      name: `${row.weaponName} | ${row.paintkitName}`,
+      category: row.category as InventoryCategoryKey,
+      rarity: row.rarity,
+      accent: rarityAccent(row.rarity),
+      imageUrl: row.imageUrl ?? catalogSkinImageUrl(row.id) ?? null,
+      weaponId: row.weaponId,
+      weaponName: row.weaponName,
+      paintkit: row.paintkit,
+      paintkitName: row.paintkitName,
+      equipped: equippedT || equippedCT,
+      equippedT,
+      equippedCT,
+      owned: allSkins || ownedCatalogIds?.has(row.id) === true,
+    };
+  });
 
-  const filteredWeaponOptions = team
-    ? weaponOptions.filter((w) => weaponAllowedOnTeam(w.weaponId, team))
-    : weaponOptions;
+  const filteredWeaponOptions = dualTeamOnly
+    ? weaponOptions.filter((w) => weaponSupportsBothTeams(w.weaponId))
+    : team
+      ? weaponOptions.filter((w) => weaponAllowedOnTeam(w.weaponId, team))
+      : weaponOptions;
 
   return {
     items,
@@ -151,5 +183,6 @@ export async function getCatalogSkinsForUser(
     totalPages: Math.max(1, Math.ceil(total / limit)),
     catalogTotal,
     weaponOptions: filteredWeaponOptions,
+    availableRarityTiers,
   };
 }

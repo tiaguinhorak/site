@@ -7,6 +7,7 @@ import {
   unequipCatalogSkinForUser,
   unequipWeaponForUser,
 } from "@/lib/inventory/unequip-catalog-skin";
+import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
 import { pushPlayerLoadoutToGameServer } from "@/lib/inventory/push-loadout-to-game-server";
 import {
   applyApiGuards,
@@ -21,7 +22,7 @@ const unequipSchema = z
   .object({
     catalogSkinId: z.string().min(1).optional(),
     weaponId: z.string().min(1).optional(),
-    team: z.enum(["T", "CT"]).optional(),
+    team: z.enum(["T", "CT", "both"]).optional(),
   })
   .refine((data) => data.catalogSkinId || data.weaponId, {
     message: "catalogSkinId ou weaponId é obrigatório.",
@@ -58,11 +59,16 @@ export async function POST(request: NextRequest) {
       ok: true,
     };
     if (result.steamId) {
-      const isGlove = result.weaponId.toLowerCase().includes("gloves") ||
+      const isGlove =
+        result.weaponId.toLowerCase().includes("gloves") ||
         result.weaponId.toLowerCase().includes("handwraps");
+      const clearGloveTeam =
+        isGlove && team !== "both"
+          ? (team as LoadoutTeam)
+          : undefined;
       gameSync = await pushPlayerLoadoutToGameServer(result.steamId, {
         clearWeaponIds: [result.weaponId],
-        clearGloveTeam: isGlove ? team : undefined,
+        clearGloveTeam: clearGloveTeam,
       });
     }
 

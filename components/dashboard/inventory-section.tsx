@@ -13,45 +13,39 @@ import {
   ChevronLeft,
   ChevronRight,
   RefreshCw,
-  CheckCircle2,
   AlertTriangle,
   PackageOpen,
-  Sticker,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { type InventoryCategoryKey } from "@/lib/profile";
-import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { cn } from "@/lib/utils";
 import {
   chipInactiveHoverClass,
   surfaceInputClass,
-  surfaceSubtleClass,
-  teamPillClass,
-  textWarningClass,
 } from "@/lib/ui/theme-surfaces";
-import { InventoryItemArt } from "@/components/dashboard/inventory-item-art";
-import { RemoteImage } from "@/components/ui/remote-image";
-import {
-  SkinPreviewModal,
-  type SkinPreviewData,
-} from "@/components/skins/skin-preview-modal";
 import { SkinRarityBadge } from "@/components/skins/skin-rarity-badge";
-import { SkinRarityLegend } from "@/components/skins/skin-rarity-legend";
-import { SkinRarityLine } from "@/components/skins/skin-rarity-line";
-import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
 import {
-  catalogSkinToPreview,
-  loadoutItemToPreview,
-} from "@/lib/inventory/skin-preview-mappers";
+  type EquipSide,
+  weaponSupportsBothTeams,
+} from "@/lib/inventory/loadout-team";
+import type { RarityKey } from "@/lib/inventory/rarity-tiers";
+import {
+  EquippedLoadoutGrid,
+  type EquippedLoadoutEntry,
+} from "@/components/inventory/equipped-loadout-grid";
+import { InventorySkinTile } from "@/components/inventory/inventory-skin-tile";
+import { SkinRarityFilter } from "@/components/inventory/skin-rarity-filter";
+import {
+  SkinWorkspace,
+  type SkinWorkspaceData,
+} from "@/components/inventory/skin-workspace";
+import { loadoutItemToPreview } from "@/lib/inventory/skin-preview-mappers";
 import { useSkinPreview } from "@/lib/use-skin-preview";
 import { useUser } from "@/lib/hooks/use-user";
 import { toast } from "@/lib/toast";
 import { InventoryPageSkeleton } from "@/components/loading/page-skeletons";
 import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
-import {
-  WeaponStickerModal,
-  weaponSupportsStickers,
-} from "@/components/dashboard/weapon-sticker-modal";
+import { SkinPreviewModal } from "@/components/skins/skin-preview-modal";
 
 type CatalogSkin = {
   id: string;
@@ -65,35 +59,75 @@ type CatalogSkin = {
   paintkit: number;
   paintkitName: string;
   equipped: boolean;
+  equippedT: boolean;
+  equippedCT: boolean;
   owned: boolean;
-};
-
-type LoadoutSticker = {
-  slot: number;
-  defIndex: number;
-  name: string;
-  imageUrl: string | null;
-};
-
-type LoadoutItem = {
-  catalogSkinId: string;
-  name: string;
-  weaponId: string;
-  paintkit: number;
-  imageUrl: string | null;
-  rarity: string;
-  accent: string;
-  team: LoadoutTeam;
-  equippedAt: string;
-  stickers: LoadoutSticker[];
 };
 
 type LoadoutResponse = {
   steamLinked: boolean;
   steamId: string | null;
   steamId2?: string | null;
-  items: LoadoutItem[];
+  items: EquippedLoadoutEntry[];
 };
+
+function unequipSideForItem(item: { equippedT: boolean; equippedCT: boolean }): EquipSide {
+  if (item.equippedT && item.equippedCT) return "both";
+  if (item.equippedT) return "T";
+  return "CT";
+}
+
+function catalogToWorkspace(
+  item: CatalogSkin,
+  categoryLabel?: string,
+): SkinWorkspaceData {
+  return {
+    catalogSkinId: item.id,
+    name: item.name,
+    weaponId: item.weaponId,
+    weaponName: item.weaponName,
+    paintkitName: item.paintkitName,
+    imageUrl: item.imageUrl ?? null,
+    accent: item.accent,
+    rarity: item.rarity,
+    category: categoryLabel,
+    owned: item.owned,
+    equippedT: item.equippedT,
+    equippedCT: item.equippedCT,
+  };
+}
+
+function loadoutToWorkspace(item: EquippedLoadoutEntry): SkinWorkspaceData {
+  return {
+    catalogSkinId: item.catalogSkinId,
+    name: item.name,
+    weaponId: item.weaponId,
+    imageUrl: item.imageUrl,
+    accent: item.accent,
+    rarity: item.rarity,
+    owned: true,
+    equippedT: item.equippedT,
+    equippedCT: item.equippedCT,
+  };
+}
+
+function mergeWorkspaceFromSources(
+  skin: SkinWorkspaceData,
+  catalog?: CatalogSkin | null,
+  loadout?: EquippedLoadoutEntry | null,
+): SkinWorkspaceData {
+  const equippedT = loadout?.equippedT ?? catalog?.equippedT ?? skin.equippedT;
+  const equippedCT = loadout?.equippedCT ?? catalog?.equippedCT ?? skin.equippedCT;
+  return {
+    ...skin,
+    equippedT,
+    equippedCT,
+    owned: catalog?.owned ?? skin.owned ?? true,
+    weaponName: catalog?.weaponName ?? skin.weaponName,
+    paintkitName: catalog?.paintkitName ?? skin.paintkitName,
+    imageUrl: catalog?.imageUrl ?? loadout?.imageUrl ?? skin.imageUrl,
+  };
+}
 
 const CATEGORY_ICON: Record<"all" | InventoryCategoryKey, typeof LayoutGrid> = {
   all: LayoutGrid,
@@ -134,182 +168,8 @@ async function postJson(
   return payload;
 }
 
-function LoadoutStickerRow({
-  stickers,
-  label,
-}: {
-  stickers: LoadoutSticker[];
-  label: string;
-}) {
-  if (stickers.length === 0) return null;
-
-  return (
-    <div className="mt-3 space-y-1.5">
-      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted">
-        <Sticker className="h-3 w-3 shrink-0" />
-        {label}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {stickers.map((sticker) => (
-          <div
-            key={`${sticker.slot}-${sticker.defIndex}`}
-            title={sticker.name}
-            className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-border/60 bg-black/35"
-          >
-            {sticker.imageUrl ? (
-              <RemoteImage
-                src={sticker.imageUrl}
-                alt=""
-                fill
-                sizes="40px"
-                className="object-contain p-0.5"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-muted">
-                <Sticker className="h-4 w-4" />
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function EquippedSidebar({
-  loadout,
-  team,
-  onRefresh,
-  onUnequip,
-  onPreview,
-  onStickers,
-  unequippingId,
-  refreshing,
-}: {
-  loadout: LoadoutResponse | null;
-  team: LoadoutTeam;
-  onRefresh: () => void;
-  onUnequip: (item: LoadoutItem) => void;
-  onPreview: (item: LoadoutItem) => void;
-  onStickers: (item: LoadoutItem) => void;
-  unequippingId: string | null;
-  refreshing: boolean;
-}) {
-  const t = useTranslations("inventory");
-  const confirmPresets = useConfirmPresets();
-
-  if (!loadout) return null;
-
-  const teamLabel = team === "T" ? t("teamT") : t("teamCT");
-  const sideItems = loadout.items.filter((item) => item.team === team);
-
-  return (
-    <aside className="lg:w-[22rem] shrink-0 self-stretch">
-      <div className="rounded-card glass-strong lg:sticky lg:top-24 lg:max-h-[calc(100vh-6rem)] lg:flex lg:flex-col">
-        <div className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3.5">
-          <p className="text-sm font-semibold leading-snug text-foreground">
-            {t("loadoutSidebarTeam", { team: teamLabel })}
-          </p>
-          <Button type="button" variant="ghost" size="sm" onClick={onRefresh} aria-label={t("retry")}>
-            <RefreshCw className={cn("h-4 w-4", refreshing && "motion-safe-spin")} />
-          </Button>
-        </div>
-
-        {!loadout.steamLinked ? (
-          <p className={cn("px-4 py-5 text-xs leading-relaxed", textWarningClass)}>
-            {t("loadoutSteamRequired")}
-          </p>
-        ) : sideItems.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-muted">{t("loadoutEmpty")}</p>
-        ) : (
-          <ul className="max-h-[min(72vh,640px)] space-y-3 overflow-y-auto p-3 lg:max-h-none lg:flex-1 lg:min-h-0">
-            {sideItems.map((item) => {
-              const supportsStickers = weaponSupportsStickers(item.weaponId);
-              const isUnequipping = unequippingId === item.catalogSkinId;
-
-              return (
-                <li
-                  key={`${item.team}-${item.catalogSkinId}`}
-                  className={cn(
-                    "rounded-xl border border-border/50 p-3 shadow-sm",
-                    surfaceSubtleClass,
-                  )}
-                >
-                  <div className="flex gap-3">
-                    <InventoryItemArt
-                      imageUrl={item.imageUrl}
-                      accent={item.accent}
-                      className="h-16 w-[4.5rem] shrink-0"
-                      onClick={() => onPreview(item)}
-                    />
-                    <div className="min-w-0 flex-1 space-y-1.5">
-                      <button
-                        type="button"
-                        onClick={() => onPreview(item)}
-                        className="line-clamp-2 text-left text-sm font-semibold leading-snug text-foreground hover:text-primary"
-                      >
-                        {item.name}
-                      </button>
-                      <SkinRarityBadge rarity={item.rarity} accent={item.accent} />
-                    </div>
-                  </div>
-
-                  <LoadoutStickerRow stickers={item.stickers} label={t("stickersShort")} />
-
-                  <div
-                    className={cn(
-                      "mt-3 flex flex-wrap gap-2 border-t border-border/50 pt-3",
-                      supportsStickers ? "justify-between" : "justify-end",
-                    )}
-                  >
-                    {supportsStickers && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="min-w-0 flex-1 normal-case tracking-normal"
-                        onClick={() => onStickers(item)}
-                      >
-                        <Sticker className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">{t("stickersShort")}</span>
-                      </Button>
-                    )}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className={cn(
-                        "normal-case tracking-normal text-muted hover:text-foreground",
-                        supportsStickers ? "shrink-0" : "w-full justify-center",
-                      )}
-                      disabled={isUnequipping ? true : undefined}
-                      confirm={confirmPresets.unequipSkin(item.name)}
-                      onClick={() => onUnequip(item)}
-                    >
-                      {isUnequipping ? "…" : t("unequip")}
-                    </Button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-
-        {loadout.steamLinked && (
-          <p className="border-t border-border/60 px-4 py-2.5 text-[10px] leading-relaxed text-muted">
-            {loadout.steamId2
-              ? t("loadoutSteamId2", { steamId: loadout.steamId2 })
-              : t("loadoutSteamId", { steamId: loadout.steamId ?? "" })}
-          </p>
-        )}
-      </div>
-    </aside>
-  );
-}
-
 export function InventorySection() {
   const t = useTranslations("inventory");
-  const confirmPresets = useConfirmPresets();
 
   const categoryLabels: Record<InventoryCategoryKey, string> = useMemo(
     () => ({
@@ -337,7 +197,8 @@ export function InventorySection() {
 
   const [items, setItems] = useState<CatalogSkin[]>([]);
   const [loadout, setLoadout] = useState<LoadoutResponse | null>(null);
-  const [loadoutTeam, setLoadoutTeam] = useState<LoadoutTeam>("CT");
+  const [dualTeamOnly, setDualTeamOnly] = useState(false);
+  const [rarityFilter, setRarityFilter] = useState<RarityKey | "all">("all");
   const [filter, setFilter] = useState<"all" | InventoryCategoryKey>("all");
   const [weaponFilter, setWeaponFilter] = useState("");
   const [weaponOptions, setWeaponOptions] = useState<
@@ -355,8 +216,11 @@ export function InventorySection() {
   const [equippingId, setEquippingId] = useState<string | null>(null);
   const [unequippingId, setUnequippingId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [previewSkin, setPreviewSkin] = useState<SkinPreviewData | null>(null);
-  const [stickerTarget, setStickerTarget] = useState<LoadoutItem | null>(null);
+  const [workspace, setWorkspace] = useState<{
+    skin: SkinWorkspaceData;
+    tab: "settings" | "stickers";
+  } | null>(null);
+  const [availableRarityTiers, setAvailableRarityTiers] = useState<RarityKey[]>([]);
   const [mounted, setMounted] = useState(false);
 
   const reqIdRef = useRef(0);
@@ -368,19 +232,19 @@ export function InventorySection() {
   const canGoPrev = mounted && page > 1 && !loading;
   const canGoNext = mounted && page < totalPages && !loading;
 
-  const fetchLoadout = useCallback(async () => {
-    setRefreshing(true);
+  const fetchLoadout = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) setRefreshing(true);
     try {
-      const response = await fetch(`/api/inventory/loadout?team=${loadoutTeam}`, {
+      const response = await fetch("/api/inventory/loadout", {
         credentials: "same-origin",
       });
       if (!response.ok) return;
       const data = (await response.json()) as LoadoutResponse;
       setLoadout(data);
     } finally {
-      setRefreshing(false);
+      if (!options?.silent) setRefreshing(false);
     }
-  }, [loadoutTeam]);
+  }, []);
 
   const pushLoadoutToServer = useCallback(async () => {
     try {
@@ -417,7 +281,7 @@ export function InventorySection() {
     setRefreshing(true);
     try {
       await pushLoadoutToServer();
-      const response = await fetch(`/api/inventory/loadout?team=${loadoutTeam}`, {
+      const response = await fetch("/api/inventory/loadout", {
         credentials: "same-origin",
       });
       if (response.ok) {
@@ -427,7 +291,7 @@ export function InventorySection() {
     } finally {
       setRefreshing(false);
     }
-  }, [loadoutTeam, pushLoadoutToServer]);
+  }, [pushLoadoutToServer]);
 
   const fetchSkins = useCallback(async () => {
     const reqId = ++reqIdRef.current;
@@ -440,8 +304,9 @@ export function InventorySection() {
         limit: "36",
         category: filter,
         search,
-        team: loadoutTeam,
       });
+      if (dualTeamOnly) params.set("dualTeamOnly", "1");
+      if (rarityFilter !== "all") params.set("rarityTier", rarityFilter);
       if (weaponFilter) params.set("weaponId", weaponFilter);
 
       const response = await fetch(`/api/inventory/skins?${params}`, {
@@ -465,6 +330,18 @@ export function InventorySection() {
       if (page === 1 && Array.isArray(data.weaponOptions)) {
         setWeaponOptions(data.weaponOptions);
       }
+      if (Array.isArray(data.availableRarityTiers)) {
+        const tiers = data.availableRarityTiers as RarityKey[];
+        setAvailableRarityTiers((prev) => {
+          if (
+            prev.length === tiers.length &&
+            prev.every((tier, index) => tier === tiers[index])
+          ) {
+            return prev;
+          }
+          return tiers;
+        });
+      }
     } catch {
       if (reqId === reqIdRef.current) setLoadError(true);
     } finally {
@@ -473,7 +350,7 @@ export function InventorySection() {
         setBootstrapped(true);
       }
     }
-  }, [filter, page, search, weaponFilter, loadoutTeam]);
+  }, [filter, page, search, weaponFilter, dualTeamOnly, rarityFilter]);
 
   useEffect(() => {
     const timer = setTimeout(() => setSearch(searchInput.trim()), 350);
@@ -485,32 +362,33 @@ export function InventorySection() {
     setWeaponFilter("");
     reqIdRef.current += 1;
     setItems([]);
-  }, [filter, search, loadoutTeam]);
+  }, [filter, search, dualTeamOnly, rarityFilter]);
 
   useEffect(() => {
-    setPreviewSkin((prev) => {
-      if (!prev?.id) return prev;
-      const stillEquipped = loadout?.items.some(
-        (entry) => entry.catalogSkinId === prev.id && entry.team === loadoutTeam,
-      );
-      if (prev.equipped === (stillEquipped ?? false)) return prev;
-      return { ...prev, equipped: stillEquipped ?? false };
-    });
-  }, [loadout, loadoutTeam]);
+    if (rarityFilter !== "all" && availableRarityTiers.length > 0 && !availableRarityTiers.includes(rarityFilter)) {
+      setRarityFilter("all");
+    }
+  }, [availableRarityTiers, rarityFilter]);
 
   useEffect(() => {
-    if (!previewSkin?.id) return;
-    const match = items.find((entry) => entry.id === previewSkin.id);
-    const loadoutEquipped = loadout?.items.some(
-      (entry) => entry.catalogSkinId === previewSkin.id && entry.team === loadoutTeam,
+    if (!workspace) return;
+    const catalog = items.find((i) => i.id === workspace.skin.catalogSkinId);
+    const loadoutEntry = loadout?.items.find(
+      (i) => i.catalogSkinId === workspace.skin.catalogSkinId,
     );
-    setPreviewSkin((prev) => {
-      if (!prev || prev.id !== previewSkin.id) return prev;
-      const equipped = match?.equipped ?? loadoutEquipped ?? prev.equipped;
-      if (prev.equipped === equipped) return prev;
-      return { ...prev, equipped };
+    setWorkspace((prev) => {
+      if (!prev) return prev;
+      const merged = mergeWorkspaceFromSources(prev.skin, catalog, loadoutEntry);
+      if (
+        merged.equippedT === prev.skin.equippedT &&
+        merged.equippedCT === prev.skin.equippedCT &&
+        merged.owned === prev.skin.owned
+      ) {
+        return prev;
+      }
+      return { ...prev, skin: merged };
     });
-  }, [items, previewSkin?.id, loadout, loadoutTeam]);
+  }, [items, loadout, workspace?.skin.catalogSkinId]);
 
   useEffect(() => {
     fetchLoadout();
@@ -520,14 +398,18 @@ export function InventorySection() {
     fetchSkins();
   }, [fetchSkins]);
 
-  const handleEquip = async (item: CatalogSkin) => {
+  const handleEquip = async (item: CatalogSkin, side: EquipSide) => {
     if (!item.owned) return;
     setEquippingId(item.id);
     try {
-      const payload = await postJson("/api/inventory/equip", {
-        catalogSkinId: item.id,
-        team: loadoutTeam,
-      }, t("gameSyncPartial"));
+      const payload = await postJson(
+        "/api/inventory/equip",
+        {
+          catalogSkinId: item.id,
+          team: side,
+        },
+        t("gameSyncPartial"),
+      );
       if (payload?.gameSync?.ok) {
         toast.success(
           payload.gameSync.applyMode === "immediate"
@@ -535,11 +417,8 @@ export function InventorySection() {
             : t("gameSyncStaged"),
         );
       }
-      await fetchLoadout();
+      await fetchLoadout({ silent: true });
       await fetchSkins();
-      setPreviewSkin((prev) =>
-        prev?.id === item.id ? { ...prev, equipped: true } : prev,
-      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("equipFailed"));
     } finally {
@@ -547,13 +426,20 @@ export function InventorySection() {
     }
   };
 
-  const handleUnequip = async (catalogSkinId: string, weaponId: string) => {
+  const handleUnequip = async (
+    catalogSkinId: string,
+    side: EquipSide,
+  ) => {
     setUnequippingId(catalogSkinId);
     try {
-      const payload = await postJson("/api/inventory/unequip", {
-        catalogSkinId,
-        team: loadoutTeam,
-      }, t("gameSyncPartial"));
+      const payload = await postJson(
+        "/api/inventory/unequip",
+        {
+          catalogSkinId,
+          team: side,
+        },
+        t("gameSyncPartial"),
+      );
       if (payload?.gameSync?.ok) {
         toast.success(
           payload.gameSync.applyMode === "immediate"
@@ -561,11 +447,8 @@ export function InventorySection() {
             : t("gameSyncStaged"),
         );
       }
-      await fetchLoadout();
+      await fetchLoadout({ silent: true });
       await fetchSkins();
-      setPreviewSkin((prev) =>
-        prev?.id === catalogSkinId ? { ...prev, equipped: false } : prev,
-      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("unequipFailed"));
     } finally {
@@ -573,19 +456,46 @@ export function InventorySection() {
     }
   };
 
-  const openCatalogPreview = (item: CatalogSkin) => {
-    setPreviewSkin(
-      catalogSkinToPreview({
-        ...item,
-        category: categoryLabels[item.category],
-      }),
-    );
+  const openCatalogWorkspace = (
+    item: CatalogSkin,
+    tab: "settings" | "stickers" = "settings",
+  ) => {
+    setWorkspace({
+      skin: catalogToWorkspace(item, categoryLabels[item.category]),
+      tab,
+    });
   };
 
-  const openLoadoutPreview = (item: LoadoutItem) => {
-    setPreviewSkin(loadoutItemToPreview(item));
+  const openLoadoutWorkspace = (
+    item: EquippedLoadoutEntry,
+    tab: "settings" | "stickers" = "settings",
+  ) => {
+    setWorkspace({ skin: loadoutToWorkspace(item), tab });
   };
 
+  const workspaceCatalogItem =
+    workspace
+      ? items.find((i) => i.id === workspace.skin.catalogSkinId) ??
+        ({
+          id: workspace.skin.catalogSkinId,
+          name: workspace.skin.name,
+          category: "rifle" as InventoryCategoryKey,
+          rarity: workspace.skin.rarity,
+          accent: workspace.skin.accent,
+          imageUrl: workspace.skin.imageUrl,
+          weaponId: workspace.skin.weaponId,
+          weaponName: workspace.skin.weaponName,
+          paintkit: 0,
+          paintkitName: workspace.skin.paintkitName ?? "",
+          equipped: workspace.skin.equippedT || workspace.skin.equippedCT,
+          equippedT: workspace.skin.equippedT,
+          equippedCT: workspace.skin.equippedCT,
+          owned: workspace.skin.owned ?? true,
+        } satisfies CatalogSkin)
+      : null;
+
+  const equippedCount = loadout?.items.length ?? 0;
+  const showDualTeamFilter = weaponOptions.some((w) => weaponSupportsBothTeams(w.weaponId));
   const showEmptyCatalog = bootstrapped && !loading && !loadError && catalogTotal === 0;
   const showNoResults = bootstrapped && !loading && !loadError && catalogTotal > 0 && items.length === 0;
   const catalogGridLoading = loading && items.length === 0;
@@ -595,100 +505,115 @@ export function InventorySection() {
   }
 
   return (
-    <section>
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-        <EquippedSidebar
-          loadout={loadout}
-          team={loadoutTeam}
-          onRefresh={refreshLoadoutAndServer}
-          refreshing={refreshing}
-          unequippingId={unequippingId}
-          onUnequip={(item) => handleUnequip(item.catalogSkinId, item.weaponId)}
-          onPreview={openLoadoutPreview}
-          onStickers={(item) => setStickerTarget(item)}
-        />
+    <section className="space-y-6">
+      <EquippedLoadoutGrid
+        title={t("loadoutSidebarTitle")}
+        count={equippedCount}
+        steamLinked={loadout?.steamLinked ?? false}
+        steamId={loadout?.steamId ?? null}
+        steamId2={loadout?.steamId2}
+        items={loadout?.items ?? []}
+        refreshing={refreshing}
+        onRefresh={refreshLoadoutAndServer}
+        onOpen={openLoadoutWorkspace}
+      />
 
-        <div className="min-w-0 flex-1">
-          <div className="mb-4 rounded-card glass-strong p-4">
-            <div className="mb-3 flex flex-wrap gap-2">
-              {(["CT", "T"] as const).map((team) => {
-                const active = loadoutTeam === team;
-                const label = team === "T" ? t("teamT") : t("teamCT");
-                return (
-                  <button
-                    key={team}
-                    type="button"
-                    onClick={() => setLoadoutTeam(team)}
-                    className={cn(
-                      "inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold transition-all",
-                      teamPillClass(team, active),
-                    )}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-              <input
-                type="search"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder={t("searchPlaceholder")}
-                className={cn("w-full rounded-xl py-2.5 pl-10 pr-4 text-sm", surfaceInputClass)}
-              />
-            </div>
-
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {filters.map((f) => {
-                const Icon = CATEGORY_ICON[f.id];
-                const active = filter === f.id;
-                return (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => setFilter(f.id)}
-                    className={cn(
-                      "inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-                      active
-                        ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground"
-                        : chipInactiveHoverClass,
-                    )}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    {f.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {weaponOptions.length > 0 && (
-              <div className="mt-3 border-t border-border/50 pt-3">
-                <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted">
-                  {t("weaponFilterLabel")}
-                </label>
-                <select
-                  value={weaponFilter}
-                  onChange={(e) => {
-                    setWeaponFilter(e.target.value);
-                    setPage(1);
-                  }}
-                  className={cn("w-full rounded-lg px-3 py-2 text-sm", surfaceInputClass)}
-                >
-                  <option value="">{t("catAllWeapons")}</option>
-                  {weaponOptions.map((w) => (
-                    <option key={w.weaponId} value={w.weaponId}>
-                      {w.weaponName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <SkinRarityLegend className="mt-3 border-t border-border/50 pt-3" />
+      <div>
+        <div className="mb-4 rounded-card glass-strong p-4">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+            <input
+              type="search"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder={t("searchPlaceholder")}
+              className={cn("w-full rounded-xl py-2.5 pl-10 pr-4 text-sm", surfaceInputClass)}
+            />
           </div>
+
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {filters.map((f) => {
+              const Icon = CATEGORY_ICON[f.id];
+              const active = filter === f.id;
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setFilter(f.id)}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                    active
+                      ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground"
+                      : chipInactiveHoverClass,
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {f.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {availableRarityTiers.length > 0 && (
+          <div className="mt-3 border-t border-border/50 pt-3">
+            <label className="mb-2 block text-[10px] font-semibold uppercase tracking-wider text-muted">
+              {t("rarityLegendTitle")}
+            </label>
+            <SkinRarityFilter
+              value={rarityFilter}
+              availableTiers={availableRarityTiers}
+              onChange={(tier) => {
+                setRarityFilter(tier);
+                setPage(1);
+              }}
+            />
+          </div>
+          )}
+
+          {showDualTeamFilter && (
+          <div className="mt-3 border-t border-border/50 pt-3">
+            <button
+              type="button"
+              onClick={() => {
+                setDualTeamOnly((v) => !v);
+                setPage(1);
+              }}
+              className={cn(
+                "inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold transition-all",
+                dualTeamOnly
+                  ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground"
+                  : chipInactiveHoverClass,
+              )}
+            >
+              {t("dualTeamFilter")}
+            </button>
+            <p className="mt-1.5 text-[10px] text-muted">{t("dualTeamFilterHint")}</p>
+          </div>
+          )}
+
+          {weaponOptions.length > 0 && (
+            <div className="mt-3 border-t border-border/50 pt-3">
+              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted">
+                {t("weaponFilterLabel")}
+              </label>
+              <select
+                value={weaponFilter}
+                onChange={(e) => {
+                  setWeaponFilter(e.target.value);
+                  setPage(1);
+                }}
+                className={cn("w-full rounded-lg px-3 py-2 text-sm", surfaceInputClass)}
+              >
+                <option value="">{t("catAllWeapons")}</option>
+                {weaponOptions.map((w) => (
+                  <option key={w.weaponId} value={w.weaponId}>
+                    {w.weaponName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
 
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
             {catalogGridLoading ? (
@@ -704,9 +629,12 @@ export function InventorySection() {
           </div>
 
           {catalogGridLoading ? (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <SkeletonCard key={i} className="h-56" />
+            <div
+              className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 transition-opacity"
+              aria-busy="true"
+            >
+              {Array.from({ length: 10 }).map((_, i) => (
+                <SkeletonCard key={i} className="h-32" />
               ))}
             </div>
           ) : loadError ? (
@@ -731,91 +659,31 @@ export function InventorySection() {
           ) : (
             <div
               className={cn(
-                "grid gap-3 sm:grid-cols-2 xl:grid-cols-3 transition-opacity",
+                "grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 transition-opacity",
                 loading && "opacity-60",
               )}
             >
-              {items.map((item) => (
-                <article
-                  key={item.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => {
-                    if ((e.target as HTMLElement).closest("button")) return;
-                    openCatalogPreview(item);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      openCatalogPreview(item);
-                    }
-                  }}
-                  className={cn(
-                    "relative flex flex-col overflow-hidden rounded-card glass cursor-pointer transition-shadow hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
-                    item.equipped && "ring-1 ring-emerald-400/35",
-                  )}
-                >
-                  <SkinRarityLine accent={item.accent} rarity={item.rarity} />
-                  <div className="flex flex-col p-3">
-                    <InventoryItemArt
-                      imageUrl={item.imageUrl}
-                      accent={item.accent}
-                      className="h-28 w-full"
-                      priority={false}
-                    />
-                    <h3 className="mt-2 line-clamp-2 text-sm font-bold text-foreground">
-                      {item.name}
-                    </h3>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                      <span className="text-[10px] uppercase tracking-wider text-muted">
-                        {categoryLabels[item.category]}
-                      </span>
+              {items.map((item) => {
+                const anyEquipped = item.equippedT || item.equippedCT;
+
+                return (
+                  <InventorySkinTile
+                    key={item.id}
+                    name={item.name}
+                    imageUrl={item.imageUrl ?? null}
+                    accent={item.accent}
+                    rarity={item.rarity}
+                    equippedT={item.equippedT}
+                    equippedCT={item.equippedCT}
+                    onClick={() => openCatalogWorkspace(item)}
+                    className={cn(anyEquipped && "ring-1 ring-emerald-400/35")}
+                  >
+                    <div className="mt-2 flex flex-wrap items-center justify-center gap-1">
                       <SkinRarityBadge rarity={item.rarity} accent={item.accent} />
                     </div>
-                    <Button
-                      type="button"
-                      variant={item.equipped ? "outline" : "primary"}
-                      size="sm"
-                      className="mt-3 w-full"
-                      disabled={
-                        equippingId === item.id ||
-                        unequippingId === item.id ||
-                        (!item.equipped && !item.owned)
-                          ? true
-                          : undefined
-                      }
-                      confirm={
-                        item.equipped
-                          ? confirmPresets.unequipSkin(item.name)
-                          : confirmPresets.equipSkin(item.name)
-                      }
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (item.equipped) {
-                          handleUnequip(item.id, item.weaponId);
-                        } else {
-                          handleEquip(item);
-                        }
-                      }}
-                    >
-                      {item.equipped
-                        ? unequippingId === item.id
-                          ? t("unequipping")
-                          : t("unequip")
-                        : equippingId === item.id
-                          ? t("equipping")
-                          : !item.owned
-                            ? t("equipUnavailable")
-                            : t("equip")}
-                    </Button>
-                  </div>
-                  {item.equipped && (
-                    <span className="absolute right-2 top-3 inline-flex items-center gap-0.5 rounded-full bg-emerald-500/90 px-1.5 py-0.5 text-[9px] font-bold uppercase text-black">
-                      <CheckCircle2 className="h-3 w-3" />
-                    </span>
-                  )}
-                </article>
-              ))}
+                  </InventorySkinTile>
+                );
+              })}
             </div>
           )}
 
@@ -846,47 +714,30 @@ export function InventorySection() {
               </Button>
             </div>
           )}
-        </div>
       </div>
 
-      <SkinPreviewModal
-        open={previewSkin !== null}
-        skin={previewSkin}
-        onClose={() => setPreviewSkin(null)}
+      <SkinWorkspace
+        open={workspace !== null}
+        skin={workspace?.skin ?? null}
+        initialTab={workspace?.tab}
         actionLoading={
-          previewSkin?.id
-            ? equippingId === previewSkin.id || unequippingId === previewSkin.id
+          workspace?.skin.catalogSkinId
+            ? equippingId === workspace.skin.catalogSkinId ||
+              unequippingId === workspace.skin.catalogSkinId
             : false
         }
-        onEquip={
-          previewSkin?.id && !previewSkin.equipped
-            ? () => {
-                const item = items.find((i) => i.id === previewSkin.id);
-                if (item) handleEquip(item);
-              }
-            : undefined
-        }
-        onUnequip={
-          previewSkin?.id && previewSkin.equipped
-            ? () => {
-                const item = items.find((i) => i.id === previewSkin.id);
-                if (item) handleUnequip(item.id, item.weaponId);
-                else if (loadout?.items.some((l) => l.catalogSkinId === previewSkin.id)) {
-                  const li = loadout.items.find((l) => l.catalogSkinId === previewSkin.id);
-                  if (li) handleUnequip(li.catalogSkinId, li.weaponId);
-                }
-              }
-            : undefined
-        }
-      />
-
-      <WeaponStickerModal
-        open={stickerTarget !== null}
-        weaponId={stickerTarget?.weaponId ?? ""}
-        weaponName={stickerTarget?.name ?? ""}
-        team={loadoutTeam}
-        onClose={() => setStickerTarget(null)}
-        onSaved={() => void fetchLoadout()}
+        onClose={() => setWorkspace(null)}
+        onEquip={async (side) => {
+          if (workspaceCatalogItem) await handleEquip(workspaceCatalogItem, side);
+        }}
+        onUnequip={async (side) => {
+          if (!workspace?.skin) return;
+          await handleUnequip(workspace.skin.catalogSkinId, side);
+        }}
+        onSaved={() => {
+          void fetchLoadout({ silent: true });
+          void fetchSkins();
+        }}
       />
     </section>
   );
@@ -921,17 +772,18 @@ export function InventoryPreview() {
 
   return (
     <>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {equipped.slice(0, 6).map((item) => (
-          <button
-            key={`${item.team}-${item.catalogSkinId}`}
-            type="button"
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        {equipped.slice(0, 10).map((item) => (
+          <InventorySkinTile
+            key={item.catalogSkinId}
+            name={item.name}
+            imageUrl={item.imageUrl}
+            accent={item.accent}
+            rarity={item.rarity}
+            equippedT={item.equippedT}
+            equippedCT={item.equippedCT}
             onClick={() => openPreview(loadoutItemToPreview(item))}
-            className="rounded-xl glass p-3 text-left transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-          >
-            <InventoryItemArt imageUrl={item.imageUrl} accent={item.accent} className="h-12" />
-            <p className="mt-2 truncate text-sm font-semibold text-foreground">{item.name}</p>
-          </button>
+          />
         ))}
       </div>
       <SkinPreviewModal open={isPreviewOpen} skin={previewSkin} onClose={closePreview} />

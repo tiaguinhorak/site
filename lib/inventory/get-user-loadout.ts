@@ -6,6 +6,7 @@ import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
 import { rarityAccent } from "@/lib/inventory/catalog-categories";
 import {
   teamEquipField,
+  normalizeWeaponId,
   type LoadoutTeam,
 } from "@/lib/inventory/loadout-team";
 import type { InventoryCategoryKey } from "@/lib/profile";
@@ -27,9 +28,11 @@ export type UserLoadoutItem = {
   imageUrl: string | null;
   rarity: string;
   accent: string;
-  team: LoadoutTeam;
+  equippedT: boolean;
+  equippedCT: boolean;
   equippedAt: string;
-  stickers: LoadoutSticker[];
+  stickersT: LoadoutSticker[];
+  stickersCT: LoadoutSticker[];
 };
 
 export async function getUserServerLoadout(userId: string, team?: LoadoutTeam) {
@@ -87,7 +90,10 @@ export async function getUserServerLoadout(userId: string, team?: LoadoutTeam) {
   );
 
   function stickersForWeapon(weaponId: string, side: LoadoutTeam): LoadoutSticker[] {
-    const row = stickerRows.find((r) => r.weaponId === weaponId && r.team === side);
+    const normalized = normalizeWeaponId(weaponId);
+    const row = stickerRows.find(
+      (r) => normalizeWeaponId(r.weaponId) === normalized && r.team === side,
+    );
     if (!row) return [];
 
     const slotValues = [row.slot0, row.slot1, row.slot2, row.slot3, row.slot4];
@@ -107,36 +113,22 @@ export async function getUserServerLoadout(userId: string, team?: LoadoutTeam) {
     return stickers;
   }
 
-  const items: UserLoadoutItem[] = [];
-
-  for (const row of equipped) {
-    const teams: LoadoutTeam[] = team
-      ? [team]
-      : row.equippedT && row.equippedCT
-        ? ["T", "CT"]
-        : row.equippedT
-          ? ["T"]
-          : row.equippedCT
-            ? ["CT"]
-            : [];
-
-    for (const side of teams) {
-      items.push({
-        catalogSkinId: row.skinId,
-        name: `${row.skin.weaponName} | ${row.skin.paintkitName}`,
-        category: row.skin.category as InventoryCategoryKey,
-        weaponId: row.skin.weaponId,
-        paintkit: row.skin.paintkit,
-        paintkitName: row.skin.paintkitName,
-        imageUrl: row.skin.imageUrl ?? catalogSkinImageUrl(row.skinId) ?? null,
-        rarity: row.skin.rarity,
-        accent: rarityAccent(row.skin.rarity),
-        team: side,
-        equippedAt: row.createdAt.toISOString(),
-        stickers: stickersForWeapon(row.skin.weaponId, side),
-      });
-    }
-  }
+  const items: UserLoadoutItem[] = equipped.map((row) => ({
+    catalogSkinId: row.skinId,
+    name: `${row.skin.weaponName} | ${row.skin.paintkitName}`,
+    category: row.skin.category as InventoryCategoryKey,
+    weaponId: row.skin.weaponId,
+    paintkit: row.skin.paintkit,
+    paintkitName: row.skin.paintkitName,
+    imageUrl: row.skin.imageUrl ?? catalogSkinImageUrl(row.skinId) ?? null,
+    rarity: row.skin.rarity,
+    accent: rarityAccent(row.skin.rarity),
+    equippedT: row.equippedT,
+    equippedCT: row.equippedCT,
+    equippedAt: row.createdAt.toISOString(),
+    stickersT: stickersForWeapon(row.skin.weaponId, "T"),
+    stickersCT: stickersForWeapon(row.skin.weaponId, "CT"),
+  }));
 
   return {
     steamLinked: true,

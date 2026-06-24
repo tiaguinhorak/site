@@ -5,6 +5,7 @@ import { getCatalogSkinsForUser } from "@/lib/inventory/get-catalog-skins";
 import { jsonErrorKey } from "@/lib/i18n/api-route";
 import type { InventoryCategoryKey } from "@/lib/profile";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
+import type { RarityKey } from "@/lib/inventory/rarity-tiers";
 
 const CATEGORIES = new Set<InventoryCategoryKey | "all">([
   "all",
@@ -36,6 +37,21 @@ export async function GET(request: NextRequest) {
   const team =
     teamParam === "T" || teamParam === "CT" ? (teamParam as LoadoutTeam) : undefined;
 
+  const dualTeamOnly = params.get("dualTeamOnly") === "1" || params.get("dualTeamOnly") === "true";
+
+  const rarityParam = params.get("rarityTier");
+  const RARITY_TIERS = new Set<RarityKey>([
+    "mythic",
+    "legendary",
+    "epic",
+    "rare",
+    "uncommon",
+    "common",
+  ]);
+  const rarityTier = RARITY_TIERS.has(rarityParam as RarityKey)
+    ? (rarityParam as RarityKey)
+    : undefined;
+
   const result = await getCatalogSkinsForUser(userId, {
     category,
     search,
@@ -43,6 +59,8 @@ export async function GET(request: NextRequest) {
     page: Number.isFinite(page) ? page : 1,
     limit: Number.isFinite(limit) ? limit : 36,
     team,
+    dualTeamOnly,
+    rarityTier,
   });
 
   return NextResponse.json(result);

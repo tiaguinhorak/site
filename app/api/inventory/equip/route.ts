@@ -19,7 +19,7 @@ const equipSchema = z
   .object({
     inventoryItemId: z.string().min(1).optional(),
     catalogSkinId: z.string().min(1).optional(),
-    team: z.enum(["T", "CT"]).optional(),
+    team: z.enum(["T", "CT", "both"]).optional(),
   })
   .refine((data) => data.inventoryItemId || data.catalogSkinId, {
     message: "inventoryItemId ou catalogSkinId é obrigatório.",

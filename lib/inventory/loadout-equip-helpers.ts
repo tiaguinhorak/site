@@ -49,6 +49,35 @@ export async function unequipSlotForTeam(
   });
 }
 
+export function buildBothTeamsEquipCreateData(
+  base: {
+    steamId: string;
+    skinId: string;
+    wear: "factory_new" | "minimal_wear" | "field_tested" | "well_worn" | "battle_scarred";
+    seed: number;
+    stattrak: boolean;
+  },
+): Prisma.CsgoPlayerSkinUncheckedCreateInput {
+  return {
+    steamId: base.steamId,
+    skinId: base.skinId,
+    wear: base.wear,
+    seed: base.seed,
+    stattrak: base.stattrak,
+    equipped: true,
+    equippedT: true,
+    equippedCT: true,
+  };
+}
+
+export function buildBothTeamsEquipUpdateData(): Prisma.CsgoPlayerSkinUpdateInput {
+  return {
+    equipped: true,
+    equippedT: true,
+    equippedCT: true,
+  };
+}
+
 export function buildTeamEquipCreateData(
   team: LoadoutTeam,
   base: {

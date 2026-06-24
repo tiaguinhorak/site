@@ -1,5 +1,8 @@
 export type LoadoutTeam = "T" | "CT";
 
+/** Equip target: one side or both (dual-team weapons only). */
+export type EquipSide = LoadoutTeam | "both";
+
 /**
  * Weapons only available to Terrorists in the buy menu — cannot equip skins on CT.
  * Shared weapons (AWP, Deagle, Nova, etc.) are intentionally omitted.
@@ -41,6 +44,11 @@ export function weaponAllowedOnTeam(weaponId: string, team: LoadoutTeam): boolea
   return true;
 }
 
+/** Shared buy-menu weapons can be equipped on TR and CT (knives, gloves, AWP, etc.). */
+export function weaponSupportsBothTeams(weaponId: string): boolean {
+  return weaponAllowedOnTeam(weaponId, "T") && weaponAllowedOnTeam(weaponId, "CT");
+}
+
 export function teamEquipField(team: LoadoutTeam): "equippedT" | "equippedCT" {
   return team === "T" ? "equippedT" : "equippedCT";
 }
@@ -59,4 +67,9 @@ export function mergeEquippedFlags(equippedT: boolean, equippedCT: boolean): boo
 export function excludedWeaponIdsForTeam(team: LoadoutTeam): string[] {
   const source = team === "T" ? CT_ONLY_WEAPON_IDS : T_ONLY_WEAPON_IDS;
   return [...source];
+}
+
+/** Weapon IDs that cannot be equipped on both TR and CT (team-exclusive buy menu). */
+export function excludedWeaponIdsForDualTeam(): string[] {
+  return [...T_ONLY_WEAPON_IDS, ...CT_ONLY_WEAPON_IDS];
 }
