@@ -177,12 +177,17 @@ export async function probeGameServer(input: ProbeInput): Promise<GameServerProb
             { direct: true },
           );
           const plugins = pluginsAttempt.ok ? pluginsAttempt.output : "";
-        const hasGate = includesAny(plugins, ["clutch_platform_gate", "platform_gate"]);
-          const hasSkins = includesAny(plugins, [
-            "z_clutch_skins_bridge",
-            "clutch_skins_bridge",
-            "skins_bridge",
-          ]);
+        const hasGate = includesAny(plugins, [
+          "clutch_platform_gate",
+          "platform_gate",
+          "clutch platform gate",
+        ]);
+        const hasSkins = includesAny(plugins, [
+          "z_clutch_skins_bridge",
+          "clutch_skins_bridge",
+          "skins_bridge",
+          "clutch skins bridge",
+        ]);
           pushCheck(
             checks,
             "gate",
