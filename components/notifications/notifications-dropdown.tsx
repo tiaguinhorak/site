@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell, CheckCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -35,11 +35,12 @@ export function NotificationsDropdown({
   }
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const notificationQuery = useMemo(() => ({ limit: 8, page: 1 }), []);
   const { notifications, unreadCount, markRead, markAllRead, refresh } =
     useNotifications({
       enabled: authenticated,
       pollMs: 60000,
-      query: { limit: 8, page: 1 },
+      query: notificationQuery,
     });
   const openNotification = useNotificationNavigation();
 

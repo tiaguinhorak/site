@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 import { secureApi } from "@/lib/api/client";
 
 export type NotificationItem = {
@@ -47,7 +46,6 @@ export function useNotifications(options?: {
   enabled?: boolean;
   query?: NotificationQuery;
 }) {
-  const pathname = usePathname();
   const enabled = options?.enabled ?? true;
   const query = options?.query;
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -96,7 +94,7 @@ export function useNotifications(options?: {
   useEffect(() => {
     setLoading(true);
     refresh();
-  }, [refresh, pathname]);
+  }, [refresh]);
 
   useEffect(() => {
     if (!enabled || !options?.pollMs) return;

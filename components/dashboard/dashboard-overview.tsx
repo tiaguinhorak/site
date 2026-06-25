@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Flame } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -22,8 +22,9 @@ export function DashboardOverview() {
   const t = useTranslations("overview");
   const tNotif = useTranslations("notifications");
   const confirmPresets = useConfirmPresets();
+  const notificationQuery = useMemo(() => ({ limit: 3, page: 1 }), []);
   const { notifications, markRead } = useNotifications({
-    query: { limit: 3, page: 1 },
+    query: notificationQuery,
   });
   const openNotification = useNotificationNavigation();
 
