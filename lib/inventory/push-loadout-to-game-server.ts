@@ -115,22 +115,40 @@ function pushSecondaryLoadoutsInBackground(
   })();
 }
 
+export type PushLoadoutResult = {
+  ok: boolean;
+  error?: string;
+  applyMode?: "staged" | "immediate";
+  skinsOk: boolean;
+  stickersOk: boolean;
+  stickerError?: string;
+};
+
 /**
- * Syncs equipped loadout to ranked (awaited) + warmup/extras (background).
- * Equip UI only waits for CSGO_API_URL — warmup LAN failures do not block the panel.
+ * Syncs equipped loadout + stickers to ranked (awaited) + warmup/extras (background).
  */
 export async function pushPlayerLoadoutToGameServer(
   steamId64: string,
   options?: PushLoadoutOptions,
-): Promise<{ ok: boolean; error?: string; applyMode?: "staged" | "immediate" }> {
+): Promise<PushLoadoutResult> {
   const syncKey = getSkinsSyncKey();
   if (!syncKey) {
-    return { ok: false, error: "CSGO_SKINS_SYNC_KEY not configured" };
+    return {
+      ok: false,
+      error: "CSGO_SKINS_SYNC_KEY not configured",
+      skinsOk: false,
+      stickersOk: false,
+    };
   }
 
   const targets = getCsgoApiPushTargets();
   if (targets.length === 0) {
-    return { ok: false, error: "CSGO_API_URL not configured" };
+    return {
+      ok: false,
+      error: "CSGO_API_URL not configured",
+      skinsOk: false,
+      stickersOk: false,
+    };
   }
 
   const payload = await getPlayerLoadoutForSync(steamId64);
@@ -157,7 +175,12 @@ export async function pushPlayerLoadoutToGameServer(
   pushSecondaryLoadoutsInBackground(secondaryUrls, body, syncKey);
 
   if (!primary.ok) {
-    return { ok: false, error: primary.error };
+    return {
+      ok: false,
+      error: primary.error,
+      skinsOk: false,
+      stickersOk: false,
+    };
   }
 
   const stickerResult = await pushPlayerStickersToGameServer(steamId64);
@@ -165,10 +188,16 @@ export async function pushPlayerLoadoutToGameServer(
     console.warn("[Clutch] pushPlayerStickersToGameServer:", stickerResult.error);
   }
 
+  const stickersOk = stickerResult.ok;
+  const ok = primary.ok && stickersOk;
+
   return {
-    ok: true,
+    ok,
     applyMode: primary.applyMode,
-    error: stickerResult.error,
+    error: stickersOk ? undefined : stickerResult.error,
+    skinsOk: true,
+    stickersOk,
+    stickerError: stickerResult.error,
   };
 }
 

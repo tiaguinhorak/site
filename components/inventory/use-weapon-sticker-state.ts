@@ -281,9 +281,16 @@ export function useWeaponStickerState(
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? t("stickersSaveFailed"));
+      if (data.gameSyncWarning) {
+        toast.error(data.gameSyncWarning);
+        return false;
+      }
       if (data.gameSync && !data.gameSync.ok) {
         toast.error(data.gameSync.error ?? t("stickersGameSyncFailed"));
         return false;
+      }
+      if (data.gameSync?.ok) {
+        toast.success(t("stickersGameSyncOk"));
       }
       return true;
     } catch (err) {

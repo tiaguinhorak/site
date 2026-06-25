@@ -37,5 +37,13 @@ export async function POST(request: NextRequest) {
   }
 
   const gameSync = await pushPlayerLoadoutToGameServer(user.steamId);
-  return NextResponse.json({ ok: gameSync.ok, gameSync });
+  return NextResponse.json({
+    ok: gameSync.ok,
+    gameSync,
+    gameSyncWarning: gameSync.ok
+      ? undefined
+      : (gameSync.stickerError ??
+        gameSync.error ??
+        "Falha ao enviar loadout/stickers à VPS — verifique CSGO_API_URL no .env"),
+  });
 }

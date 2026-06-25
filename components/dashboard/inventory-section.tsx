@@ -34,6 +34,7 @@ import {
   EquippedLoadoutGrid,
   type EquippedLoadoutEntry,
 } from "@/components/inventory/equipped-loadout-grid";
+import { GameServerPushBanner } from "@/components/inventory/game-server-push-banner";
 import { InventorySkinTile } from "@/components/inventory/inventory-skin-tile";
 import { SkinRarityFilter } from "@/components/inventory/skin-rarity-filter";
 import {
@@ -551,6 +552,7 @@ export function InventorySection() {
 
   return (
     <section className="space-y-6">
+      <GameServerPushBanner />
       <EquippedLoadoutGrid
         title={t("loadoutSidebarTitle")}
         count={equippedCount}
