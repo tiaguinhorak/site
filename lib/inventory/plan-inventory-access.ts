@@ -14,7 +14,7 @@ export type InventoryPlanLimits = {
   canUseStickers: boolean;
 };
 
-const STICKER_SLOT_COUNT = 5;
+const STICKER_SLOT_COUNT = 4;
 
 function planToClient(plan: Plan): ClientPlan {
   switch (plan) {

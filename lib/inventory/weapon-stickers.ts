@@ -1,3 +1,5 @@
+import { weaponSupportsStickersById } from "@/lib/inventory/weapon-sticker-slot-limits";
+
 export function weaponSupportsStickers(weaponId: string): boolean {
-  return !weaponId.includes("glove");
+  return weaponSupportsStickersById(weaponId);
 }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
+import { STICKER_SLOT_STORAGE_COUNT } from "@/lib/inventory/weapon-sticker-slot-limits";
 import { toast } from "@/lib/toast";
 
 export type PickerSticker = {
@@ -12,7 +13,7 @@ export type PickerSticker = {
   imageUrl: string | null;
 };
 
-export const STICKER_SLOT_COUNT = 5;
+export const STICKER_SLOT_COUNT = STICKER_SLOT_STORAGE_COUNT;
 
 type SlotDetail = {
   slot: number;

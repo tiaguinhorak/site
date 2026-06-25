@@ -19,6 +19,11 @@ import { RATE_LIMITS } from "@/lib/security/constants";
 import { getRequestLocale, apiErrorMessage } from "@/lib/i18n/server";
 import { jsonErrorKey, zodErrorResponse } from "@/lib/i18n/api-route";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
+import { weaponIdToItemDefIndex } from "@/lib/inventory/weapon-defindex";
+import {
+  effectiveMaxStickerSlots,
+  maxStickerSlotsForWeaponId,
+} from "@/lib/inventory/weapon-sticker-slot-limits";
 
 const saveSchema = z.object({
   weaponId: z.string().min(1),
@@ -74,6 +79,13 @@ export async function GET(request: NextRequest) {
   try {
     const steamId = await requireUserSteamId(userId);
     const limits = await getInventoryPlanLimits(userId);
+    const defIndex = await weaponIdToItemDefIndex(weaponId);
+    const weaponMaxStickerSlots = maxStickerSlotsForWeaponId(weaponId);
+    const effectiveSlots = effectiveMaxStickerSlots(
+      weaponId,
+      limits.maxStickerSlots,
+      defIndex,
+    );
     const stickers = await getPlayerWeaponStickers(steamId, weaponId, team);
     return NextResponse.json({
       weaponId,
@@ -81,6 +93,8 @@ export async function GET(request: NextRequest) {
       ...stickers,
       limits: {
         maxStickerSlots: limits.maxStickerSlots,
+        weaponMaxStickerSlots,
+        effectiveMaxStickerSlots: effectiveSlots,
         canUseStickers: limits.canUseStickers,
         plan: limits.plan,
       },

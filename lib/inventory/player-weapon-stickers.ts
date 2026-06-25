@@ -11,7 +11,10 @@ import {
 } from "@/lib/inventory/csgo-api-sticker-index";
 import { normalizeStickerImageUrl } from "@/lib/inventory/sticker-image-url";
 import {
-  clampStickerSlotsToPlan,
+  clampStickerSlotsToWeapon,
+  STICKER_SLOT_STORAGE_COUNT,
+} from "@/lib/inventory/weapon-sticker-slot-limits";
+import {
   getInventoryPlanLimits,
 } from "@/lib/inventory/plan-inventory-access";
 
@@ -38,7 +41,7 @@ export type PlayerWeaponStickerRow = {
   wears: number[];
 };
 
-const SLOT_COUNT = 5;
+const SLOT_COUNT = STICKER_SLOT_STORAGE_COUNT;
 
 function normalizeSlots(slots: number[]): WeaponStickerSlots {
   const normalized = slots.slice(0, SLOT_COUNT).map((n) => (Number.isFinite(n) ? Math.max(0, n) : 0));
@@ -113,8 +116,9 @@ export async function savePlayerWeaponStickers(
   }
 
   const normalizedWeaponId = normalizeWeaponId(weaponId);
+  const defIndex = await weaponIdToItemDefIndex(normalizedWeaponId);
   const { slots: normalized, wears } = normalizeSlots(
-    clampStickerSlotsToPlan(slots, limits.maxStickerSlots),
+    clampStickerSlotsToWeapon(slots, normalizedWeaponId, limits.maxStickerSlots, defIndex),
   );
 
   // Only allow enabled catalog stickers (0 = empty slot).
@@ -193,10 +197,18 @@ export async function getAllPlayerStickersForSync(): Promise<
       const weaponIndex = await weaponIdToItemDefIndex(row.weaponId);
       if (!weaponIndex) continue;
 
+      const rawSlots = [row.slot0, row.slot1, row.slot2, row.slot3, row.slot4];
+      const slots = clampStickerSlotsToWeapon(
+        rawSlots,
+        row.weaponId,
+        STICKER_SLOT_STORAGE_COUNT,
+        weaponIndex,
+      );
+
       entries.push({
         weaponIndex,
         team: row.team as LoadoutTeam,
-        slots: [row.slot0, row.slot1, row.slot2, row.slot3, row.slot4],
+        slots,
         wears: [row.wear0, row.wear1, row.wear2, row.wear3, row.wear4],
       });
     }
@@ -224,7 +236,12 @@ export async function getPlayerStickersForSync(steamId64: string): Promise<{
     const weaponIndex = await weaponIdToItemDefIndex(row.weaponId);
     if (!weaponIndex) continue;
 
-    const slots = [row.slot0, row.slot1, row.slot2, row.slot3, row.slot4];
+    const slots = clampStickerSlotsToWeapon(
+      [row.slot0, row.slot1, row.slot2, row.slot3, row.slot4],
+      row.weaponId,
+      STICKER_SLOT_STORAGE_COUNT,
+      weaponIndex,
+    );
 
     entries.push({
       weaponIndex,

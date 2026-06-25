@@ -11,13 +11,16 @@ import { SkinRarityLine } from "@/components/skins/skin-rarity-line";
 import { StickerImage } from "@/components/inventory/sticker-image";
 import { TeamEquipBadge } from "@/components/inventory/team-equip-badge";
 import {
-  STICKER_SLOT_COUNT,
   useWeaponStickerState,
 } from "@/components/inventory/use-weapon-sticker-state";
 import type { EquipSide } from "@/lib/inventory/loadout-team";
 import { weaponAllowedOnTeam } from "@/lib/inventory/loadout-team";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
 import { weaponSupportsStickers } from "@/lib/inventory/weapon-stickers";
+import {
+  effectiveMaxStickerSlots,
+  uiStickerSlotCount,
+} from "@/lib/inventory/weapon-sticker-slot-limits";
 import { cn } from "@/lib/utils";
 import {
   chipInactiveHoverClass,
@@ -101,7 +104,7 @@ export function SkinWorkspace({
   skin,
   initialTab = "settings",
   initialStickerTeam,
-  maxStickerSlots = 5,
+  maxStickerSlots = 4,
   canUseStickers = true,
   actionLoading,
   onClose,
@@ -122,6 +125,8 @@ export function SkinWorkspace({
   const canBoth = canEquipT && canEquipCT;
   const supportsStickers = skin ? weaponSupportsStickers(skin.weaponId) : false;
   const stickersEnabled = supportsStickers && canUseStickers;
+  const weaponStickerUiCount = skin ? uiStickerSlotCount(skin.weaponId) : 0;
+  const stickerSlotLimit = skin ? effectiveMaxStickerSlots(skin.weaponId, maxStickerSlots) : 0;
   const anyEquipped = skin ? skin.equippedT || skin.equippedCT : false;
 
   const stickerHookEnabled = open && Boolean(skin) && stickersEnabled;
@@ -244,7 +249,7 @@ export function SkinWorkspace({
   }
 
   function openSlot(slotIndex: number) {
-    if (!stickersEnabled || isStickerSlotLocked(slotIndex, maxStickerSlots)) return;
+    if (!stickersEnabled || isStickerSlotLocked(slotIndex, stickerSlotLimit)) return;
     setTab("stickers");
     stickerState.setActiveSlot(slotIndex);
     stickerState.setPickerSearch("");
@@ -350,13 +355,13 @@ export function SkinWorkspace({
 
                 {supportsStickers && (
                   <div className="flex shrink-0 items-center justify-center gap-2 border-t border-border/40 bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)] px-3 py-3">
-                    {Array.from({ length: STICKER_SLOT_COUNT }).map((_, index) => {
+                    {Array.from({ length: weaponStickerUiCount }).map((_, index) => {
                       const filled = stickerState.slots[index] > 0;
                       const active = activeSlotIndex === index;
                       const slotLabel = stickerState.slotLabels[index];
                       const slotImage = stickerState.slotImageUrls[index];
                       const slotLocked =
-                        !canUseStickers || isStickerSlotLocked(index, maxStickerSlots);
+                        !canUseStickers || isStickerSlotLocked(index, stickerSlotLimit);
                       return (
                         <div key={index} className="relative">
                           <button

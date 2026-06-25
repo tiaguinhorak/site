@@ -2,7 +2,7 @@ import type { UserProfile } from "@/lib/serializers";
 
 export type ClientPlan = UserProfile["plan"];
 
-export const INVENTORY_STICKER_SLOT_COUNT = 5;
+export const INVENTORY_STICKER_SLOT_COUNT = 4;
 
 export function maxStickerSlotsForPlan(plan: ClientPlan, isAdmin: boolean): number {
   if (isAdmin) return INVENTORY_STICKER_SLOT_COUNT;
