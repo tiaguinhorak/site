@@ -4,8 +4,8 @@
  */
 
 export const CSGO_WEAPON_STICKER_SLOTS_DEFAULT = 4;
-/** DB / API array size (slot0–slot4); CS:GO uses up to 4 on most weapons. */
-export const STICKER_SLOT_STORAGE_COUNT = 5;
+/** DB / API array size (slot0–slot3); CS:GO Legacy uses 4 slots per gun. */
+export const STICKER_SLOT_STORAGE_COUNT = 4;
 
 /** Elite / admin plan cap used for UI defaults. */
 export const CSGO_PLAN_STICKER_SLOT_CAP = 4;

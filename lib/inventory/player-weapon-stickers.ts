@@ -66,7 +66,7 @@ export async function getPlayerWeaponStickers(
   });
 
   const slots = row
-    ? [row.slot0, row.slot1, row.slot2, row.slot3, row.slot4]
+    ? [row.slot0, row.slot1, row.slot2, row.slot3]
     : [];
   const { slots: normalizedSlots, wears } = normalizeSlots(slots);
 
@@ -132,38 +132,46 @@ export async function savePlayerWeaponStickers(
     }
   }
 
-  await prisma.csgoPlayerWeaponSticker.upsert({
-    where: {
-      steamId_weaponId_team: { steamId, weaponId: normalizedWeaponId, team },
-    },
-    create: {
-      steamId,
-      weaponId: normalizedWeaponId,
-      team,
-      slot0: normalized[0],
-      slot1: normalized[1],
-      slot2: normalized[2],
-      slot3: normalized[3],
-      slot4: normalized[4],
-      wear0: wears[0],
-      wear1: wears[1],
-      wear2: wears[2],
-      wear3: wears[3],
-      wear4: wears[4],
-    },
-    update: {
-      slot0: normalized[0],
-      slot1: normalized[1],
-      slot2: normalized[2],
-      slot3: normalized[3],
-      slot4: normalized[4],
-      wear0: wears[0],
-      wear1: wears[1],
-      wear2: wears[2],
-      wear3: wears[3],
-      wear4: wears[4],
-    },
-  });
+  const allEmpty = normalized.every((slot) => slot <= 0);
+
+  if (allEmpty) {
+    await prisma.csgoPlayerWeaponSticker.deleteMany({
+      where: { steamId, weaponId: normalizedWeaponId, team },
+    });
+  } else {
+    await prisma.csgoPlayerWeaponSticker.upsert({
+      where: {
+        steamId_weaponId_team: { steamId, weaponId: normalizedWeaponId, team },
+      },
+      create: {
+        steamId,
+        weaponId: normalizedWeaponId,
+        team,
+        slot0: normalized[0],
+        slot1: normalized[1],
+        slot2: normalized[2],
+        slot3: normalized[3],
+        slot4: 0,
+        wear0: wears[0],
+        wear1: wears[1],
+        wear2: wears[2],
+        wear3: wears[3],
+        wear4: 0,
+      },
+      update: {
+        slot0: normalized[0],
+        slot1: normalized[1],
+        slot2: normalized[2],
+        slot3: normalized[3],
+        slot4: 0,
+        wear0: wears[0],
+        wear1: wears[1],
+        wear2: wears[2],
+        wear3: wears[3],
+        wear4: 0,
+      },
+    });
+  }
 
   return { weaponId: normalizedWeaponId, team, slots: normalized };
 }
@@ -197,7 +205,7 @@ export async function getAllPlayerStickersForSync(): Promise<
       const weaponIndex = await weaponIdToItemDefIndex(row.weaponId);
       if (!weaponIndex) continue;
 
-      const rawSlots = [row.slot0, row.slot1, row.slot2, row.slot3, row.slot4];
+      const rawSlots = [row.slot0, row.slot1, row.slot2, row.slot3];
       const slots = clampStickerSlotsToWeapon(
         rawSlots,
         row.weaponId,
@@ -209,7 +217,7 @@ export async function getAllPlayerStickersForSync(): Promise<
         weaponIndex,
         team: row.team as LoadoutTeam,
         slots,
-        wears: [row.wear0, row.wear1, row.wear2, row.wear3, row.wear4],
+        wears: [row.wear0, row.wear1, row.wear2, row.wear3],
       });
     }
 
@@ -237,7 +245,7 @@ export async function getPlayerStickersForSync(steamId64: string): Promise<{
     if (!weaponIndex) continue;
 
     const slots = clampStickerSlotsToWeapon(
-      [row.slot0, row.slot1, row.slot2, row.slot3, row.slot4],
+      [row.slot0, row.slot1, row.slot2, row.slot3],
       row.weaponId,
       STICKER_SLOT_STORAGE_COUNT,
       weaponIndex,
@@ -247,7 +255,7 @@ export async function getPlayerStickersForSync(steamId64: string): Promise<{
       weaponIndex,
       team: row.team as LoadoutTeam,
       slots,
-      wears: [row.wear0, row.wear1, row.wear2, row.wear3, row.wear4],
+      wears: [row.wear0, row.wear1, row.wear2, row.wear3],
     });
   }
 

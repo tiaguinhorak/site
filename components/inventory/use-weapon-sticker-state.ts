@@ -209,9 +209,7 @@ export function useWeaponStickerState(
 
   useEffect(() => {
     if (!enabled || !pickerActive) return;
-    lastPickerKeyRef.current = "";
-    setPickerPage(1);
-    const timer = setTimeout(() => loadPicker(pickerSearch, true, 1), 300);
+    const timer = setTimeout(() => loadPicker(pickerSearch, false, 1), 300);
     return () => clearTimeout(timer);
   }, [pickerActive, pickerSearch, loadPicker, enabled]);
 

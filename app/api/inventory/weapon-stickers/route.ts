@@ -28,7 +28,7 @@ import {
 const saveSchema = z.object({
   weaponId: z.string().min(1),
   team: z.enum(["T", "CT"]),
-  slots: z.array(z.number().int().min(0)).max(5),
+  slots: z.array(z.number().int().min(0)).max(4),
 });
 
 async function requireUserSteamId(userId: string): Promise<string> {

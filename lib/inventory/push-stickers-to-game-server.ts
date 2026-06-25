@@ -58,9 +58,6 @@ export async function pushPlayerStickersToGameServer(
   }
 
   const payload = await getPlayerStickersForSync(steamId64);
-  if (!payload.entries.length) {
-    return { ok: true };
-  }
 
   const targets = getCsgoApiPushTargets();
   if (targets.length === 0) {

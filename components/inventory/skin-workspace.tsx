@@ -246,27 +246,24 @@ export function SkinWorkspace({
     }
   }
 
-  function openSlot(slotIndex: number) {
-    if (!stickersEnabled || !skin || !stickerLimits) return;
-    if (!isStickerSlotEditable(slotIndex, stickerLimits)) return;
-    setTab("stickers");
-    stickerState.setActiveSlot(slotIndex);
-    stickerState.setPickerSearch("");
-    stickerState.loadPicker("", true);
-  }
-
   function openStickersTab() {
     if (!stickerLimits) return;
     setTab("stickers");
-    const first = stickerLimits.effectiveMaxSlots > 0 ? 0 : null;
-    for (let i = 0; i < stickerLimits.visibleSlotCount; i++) {
-      if (isStickerSlotEditable(i, stickerLimits)) {
-        stickerState.setActiveSlot(i);
-        stickerState.loadPicker("", true);
-        return;
+    if (stickerState.activeSlot === null) {
+      for (let i = 0; i < stickerLimits.visibleSlotCount; i++) {
+        if (isStickerSlotEditable(i, stickerLimits)) {
+          stickerState.setActiveSlot(i);
+          return;
+        }
       }
     }
-    if (first !== null) stickerState.setActiveSlot(first);
+  }
+
+  function selectStickerSlot(slotIndex: number) {
+    if (!stickersEnabled || !skin || !stickerLimits) return;
+    if (!isStickerSlotEditable(slotIndex, stickerLimits)) return;
+    if (tab !== "stickers") setTab("stickers");
+    stickerState.setActiveSlot(slotIndex);
   }
 
   const activeSlotIndex = stickerState.activeSlot;
@@ -358,7 +355,7 @@ export function SkinWorkspace({
                 </div>
                 <SkinRarityLine accent={skin.accent} rarity={skin.rarity} position="bottom" />
 
-                {supportsStickers && stickersEnabled && skin && (
+                {supportsStickers && stickersEnabled && (
                   <div className="flex shrink-0 items-center justify-center gap-2 border-t border-border/40 bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)] px-3 py-3">
                     <WeaponStickerSlotGrid
                       weaponId={skin.weaponId}
@@ -367,11 +364,8 @@ export function SkinWorkspace({
                       slotLabels={stickerState.slotLabels}
                       slotImageUrls={stickerState.slotImageUrls}
                       activeSlot={activeSlotIndex}
-                      onSelectSlot={openSlot}
-                      onClearSlot={(index) => {
-                        stickerState.clearSlot(index);
-                        if (activeSlotIndex === index) stickerState.setActiveSlot(index);
-                      }}
+                      onSelectSlot={selectStickerSlot}
+                      onClearSlot={(index) => stickerState.clearSlot(index)}
                       size="sm"
                       showClear
                     />
@@ -526,22 +520,6 @@ export function SkinWorkspace({
                 </div>
               ) : (
                 <>
-                  <WeaponStickerSlotGrid
-                    weaponId={skin.weaponId}
-                    planMax={maxStickerSlots}
-                    slots={stickerState.slots}
-                    slotLabels={stickerState.slotLabels}
-                    slotImageUrls={stickerState.slotImageUrls}
-                    activeSlot={stickerState.activeSlot}
-                    onSelectSlot={(index) => {
-                      stickerState.setActiveSlot(index);
-                      stickerState.setPickerSearch("");
-                      stickerState.loadPicker("", true);
-                    }}
-                    onClearSlot={(index) => stickerState.clearSlot(index)}
-                    showClear
-                  />
-
                   {canBoth && (
                     <div className={cn("rounded-xl p-3", surfaceSubtleClass)}>
                       <p className="text-xs font-semibold uppercase tracking-wider text-muted">
