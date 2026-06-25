@@ -1,6 +1,7 @@
 import "server-only";
 
-import { getCsgoApiBaseUrl, csgoBackendAuthHeaders } from "@/lib/csgo-api/config";
+import { getCsgoApiBaseUrl, getCsgoApiPushTargets, csgoBackendAuthHeaders } from "@/lib/csgo-api/config";
+import type { CsgoGameServer } from "@/lib/csgo-api/server-types";
 
 type CsgoRequestInit = {
   method?: string;
@@ -18,8 +19,12 @@ export class CsgoBackendError extends Error {
   }
 }
 
-function buildUrl(path: string, searchParams?: Record<string, string | undefined>): string {
-  const base = getCsgoApiBaseUrl();
+function buildUrl(
+  path: string,
+  searchParams?: Record<string, string | undefined>,
+  baseUrl?: string,
+): string {
+  const base = baseUrl ?? getCsgoApiBaseUrl();
   const normalized = path.startsWith("/") ? path : `/${path}`;
   const url = new URL(normalized, `${base}/`);
   if (searchParams) {
@@ -30,13 +35,51 @@ function buildUrl(path: string, searchParams?: Record<string, string | undefined
   return url.toString();
 }
 
+export type CsgoBackendServer = CsgoGameServer & { apiBaseUrl: string };
+
+/** Lista servidores de todas as APIs (ranked + warmup + extras). */
+export async function listAllCsgoApiServers(): Promise<CsgoBackendServer[]> {
+  const merged: CsgoBackendServer[] = [];
+  const seen = new Set<string>();
+
+  for (const base of getCsgoApiPushTargets()) {
+    try {
+      const servers = await csgoBackendFetchAt<CsgoGameServer[]>("/api/servers", base);
+      for (const server of servers) {
+        const key = `${server.host}:${server.port}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        merged.push({ ...server, apiBaseUrl: base });
+      }
+    } catch {
+      /* API offline or auth failure */
+    }
+  }
+
+  return merged;
+}
+
+/** Encontra qual api-csgo tem este server id (ranked vs warmup). */
+export async function resolveCsgoServerBackend(serverId: string): Promise<string | null> {
+  for (const base of getCsgoApiPushTargets()) {
+    try {
+      await csgoBackendFetchAt(`/api/servers/${serverId}`, base);
+      return base;
+    } catch {
+      /* not on this API */
+    }
+  }
+  return null;
+}
+
 /** Cliente server-side para o backend CS:GO (não expõe a API key ao browser). */
-export async function csgoBackendFetch<T = unknown>(
+export async function csgoBackendFetchAt<T = unknown>(
   path: string,
+  baseUrl: string,
   init: CsgoRequestInit = {},
 ): Promise<T> {
   const method = init.method ?? (init.body ? "POST" : "GET");
-  const res = await fetch(buildUrl(path, init.searchParams), {
+  const res = await fetch(buildUrl(path, init.searchParams, baseUrl), {
     method,
     headers: {
       ...csgoBackendAuthHeaders(),
@@ -65,6 +108,13 @@ export async function csgoBackendFetch<T = unknown>(
     return JSON.parse(text) as T;
   }
   return text as T;
+}
+
+export async function csgoBackendFetch<T = unknown>(
+  path: string,
+  init: CsgoRequestInit = {},
+): Promise<T> {
+  return csgoBackendFetchAt(path, getCsgoApiBaseUrl(), init);
 }
 
 export async function getCsgoBackendHealth(): Promise<{ status: string; timestamp: string }> {

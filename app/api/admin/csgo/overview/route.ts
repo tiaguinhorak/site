@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth/admin";
 import { prisma } from "@/lib/prisma";
 import { cached } from "@/lib/csgo-api/request-cache";
-import { csgoBackendFetch } from "@/lib/csgo-api/client";
+import { csgoBackendFetch, listAllCsgoApiServers } from "@/lib/csgo-api/client";
 import { queryCsgoServersLive } from "@/lib/csgo-api/query-live-server";
 import type { CsgoGameServer, CsgoMatchSummary } from "@/lib/csgo-api/server-types";
 import { formatConnectCommand } from "@/lib/servers/connect";
@@ -52,7 +52,8 @@ async function resolveServerApiStatus(
 async function buildOverview(syncApiStatus = false) {
   const servers = await cached("csgo:api-servers", 10_000, async () => {
     try {
-      return await csgoBackendFetch<CsgoGameServer[]>("/api/servers");
+      const merged = await listAllCsgoApiServers();
+      return merged.map(({ apiBaseUrl: _, ...server }) => server);
     } catch {
       return [];
     }

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { csgoBackendFetch, CsgoBackendError } from "@/lib/csgo-api/client";
+import { csgoBackendFetchAt, CsgoBackendError, resolveCsgoServerBackend, csgoBackendFetch } from "@/lib/csgo-api/client";
 import { orphanCsgoProcessHelp } from "@/lib/csgo-api/orphan-process-help";
 import { queryCsgoServerLive, refreshCsgoServerLive } from "@/lib/csgo-api/query-live-server";
 import type { CsgoGameServer } from "@/lib/csgo-api/server-types";
@@ -48,15 +48,25 @@ function mapsMatch(actual: string | null | undefined, expected: string): boolean
   return normalizeMapId(actual) === normalizeMapId(expected);
 }
 
+async function getServerApiBase(serverId: string): Promise<string> {
+  const base = await resolveCsgoServerBackend(serverId);
+  if (!base) {
+    throw new CsgoBackendError("Servidor não encontrado em nenhuma API CS:GO.", 404);
+  }
+  return base;
+}
+
 async function getServer(serverId: string): Promise<CsgoGameServer> {
-  return csgoBackendFetch<CsgoGameServer>(`/api/servers/${serverId}`);
+  const base = await getServerApiBase(serverId);
+  return csgoBackendFetchAt<CsgoGameServer>(`/api/servers/${serverId}`, base);
 }
 
 async function syncServerApiStatus(serverId: string): Promise<CsgoGameServer> {
+  const base = await getServerApiBase(serverId);
   try {
-    return await csgoBackendFetch<CsgoGameServer>(`/api/servers/${serverId}/status`);
+    return await csgoBackendFetchAt<CsgoGameServer>(`/api/servers/${serverId}/status`, base);
   } catch {
-    return getServer(serverId);
+    return csgoBackendFetchAt<CsgoGameServer>(`/api/servers/${serverId}`, base);
   }
 }
 
@@ -109,9 +119,12 @@ function mapMismatchWarning(expectedMap: string, actualMap: string | null): stri
 }
 
 async function tryRconShutdown(serverId: string, host: string, port: number): Promise<boolean> {
+  const base = await resolveCsgoServerBackend(serverId);
+  if (!base) return false;
+
   for (const command of RCON_QUIT_COMMANDS) {
     try {
-      await csgoBackendFetch(`/api/servers/${serverId}/rcon`, {
+      await csgoBackendFetchAt(`/api/servers/${serverId}/rcon`, base, {
         method: "POST",
         body: { command },
       });
@@ -126,7 +139,8 @@ async function tryRconShutdown(serverId: string, host: string, port: number): Pr
 }
 
 async function invokeApiStop(serverId: string): Promise<CsgoGameServer> {
-  return csgoBackendFetch<CsgoGameServer>(`/api/servers/${serverId}/stop`, {
+  const base = await getServerApiBase(serverId);
+  return csgoBackendFetchAt<CsgoGameServer>(`/api/servers/${serverId}/stop`, base, {
     method: "POST",
   });
 }
@@ -155,8 +169,17 @@ async function tryRconChangeMap(
   server: CsgoGameServer,
   map: string,
 ): Promise<ServerControlResult> {
+  const base = await resolveCsgoServerBackend(serverId);
+  if (!base) {
+    return {
+      ok: false,
+      message: "Servidor não encontrado em nenhuma API CS:GO.",
+      server,
+    };
+  }
+
   try {
-    await csgoBackendFetch(`/api/servers/${serverId}/rcon`, {
+    await csgoBackendFetchAt(`/api/servers/${serverId}/rcon`, base, {
       method: "POST",
       body: { command: `changelevel ${map}` },
     });
@@ -209,7 +232,8 @@ export async function startCsgoServer(
   }
 
   try {
-    const server = await csgoBackendFetch<CsgoGameServer>(`/api/servers/${serverId}/start`, {
+    const base = await getServerApiBase(serverId);
+    const server = await csgoBackendFetchAt<CsgoGameServer>(`/api/servers/${serverId}/start`, base, {
       method: "POST",
       body: { map },
     });
@@ -383,7 +407,8 @@ export async function updateCsgoServerMetadata(
   patch: { name?: string; pool?: "ranked" | "warmup" | "public" },
 ): Promise<ServerControlResult> {
   try {
-    const server = await csgoBackendFetch<CsgoGameServer>(`/api/servers/${serverId}`, {
+    const base = await getServerApiBase(serverId);
+    const server = await csgoBackendFetchAt<CsgoGameServer>(`/api/servers/${serverId}`, base, {
       method: "PATCH",
       body: patch,
     });
@@ -409,7 +434,8 @@ export async function deleteCsgoServer(serverId: string): Promise<ServerControlR
   }
 
   try {
-    await csgoBackendFetch(`/api/servers/${serverId}`, { method: "DELETE" });
+    const base = await getServerApiBase(serverId);
+    await csgoBackendFetchAt(`/api/servers/${serverId}`, base, { method: "DELETE" });
     return {
       ok: true,
       message: `Registro de ${before.name} removido da API.`,

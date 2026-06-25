@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { csgoBackendFetch } from "@/lib/csgo-api/client";
+import { listAllCsgoApiServers } from "@/lib/csgo-api/client";
 import { cached, throttled } from "@/lib/csgo-api/request-cache";
 import { queryCsgoServersLive } from "@/lib/csgo-api/query-live-server";
 import type { CsgoGameServer, CsgoMatchSummary } from "@/lib/csgo-api/server-types";
@@ -33,7 +33,8 @@ async function fetchLiveMatchesByServer(): Promise<Map<string, CsgoMatchSummary>
 async function listCsgoApiServers(): Promise<CsgoGameServer[]> {
   return cached("csgo:api-servers", 10_000, async () => {
     try {
-      return await csgoBackendFetch<CsgoGameServer[]>("/api/servers");
+      const merged = await listAllCsgoApiServers();
+      return merged.map(({ apiBaseUrl: _, ...server }) => server);
     } catch {
       return [];
     }
