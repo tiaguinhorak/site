@@ -7,6 +7,9 @@ export const CSGO_WEAPON_STICKER_SLOTS_DEFAULT = 4;
 /** DB / API array size (slot0–slot4); CS:GO uses up to 4 on most weapons. */
 export const STICKER_SLOT_STORAGE_COUNT = 5;
 
+/** Elite / admin plan cap used for UI defaults. */
+export const CSGO_PLAN_STICKER_SLOT_CAP = 4;
+
 /** Item defindexes with zero sticker slots (knives / melee). */
 const ZERO_STICKER_DEFINDEXES = new Set<number>([
   42, // generic knife fallback
@@ -50,17 +53,29 @@ const STICKER_SLOTS_BY_DEFINDEX: Record<number, number> = {
   64: 4,
 };
 
+function isNonStickerWeaponId(weaponId: string): boolean {
+  const id = weaponId.trim().toLowerCase();
+  return (
+    id.includes("glove") ||
+    id.includes("knife") ||
+    id.includes("bayonet") ||
+    id.includes("grenade") ||
+    id === "weapon_c4" ||
+    id === "weapon_taser"
+  );
+}
+
 function isKnifeWeaponId(weaponId: string): boolean {
   const id = weaponId.trim().toLowerCase();
   return id.includes("knife") || id.includes("bayonet");
 }
 
-export function weaponSupportsStickersById(weaponId: string): boolean {
-  const id = weaponId.trim().toLowerCase();
-  if (id.includes("glove")) return false;
-  if (isKnifeWeaponId(id)) return false;
-  return maxStickerSlotsForWeaponDefIndex(null, id) > 0;
-}
+export type WeaponStickerLimitState = {
+  supportsStickers: boolean;
+  weaponMaxSlots: number;
+  effectiveMaxSlots: number;
+  visibleSlotCount: number;
+};
 
 export function maxStickerSlotsForWeaponDefIndex(
   defIndex: number | null | undefined,
@@ -75,7 +90,7 @@ export function maxStickerSlotsForWeaponDefIndex(
     return CSGO_WEAPON_STICKER_SLOTS_DEFAULT;
   }
 
-  if (weaponId && isKnifeWeaponId(weaponId)) return 0;
+  if (weaponId && isNonStickerWeaponId(weaponId)) return 0;
   if (weaponId?.trim()) return CSGO_WEAPON_STICKER_SLOTS_DEFAULT;
   return 0;
 }
@@ -92,6 +107,53 @@ export function effectiveMaxStickerSlots(
   const weaponMax = maxStickerSlotsForWeaponDefIndex(defIndex ?? null, weaponId);
   if (weaponMax <= 0 || planMax <= 0) return 0;
   return Math.min(planMax, weaponMax);
+}
+
+export function getWeaponStickerLimitState(
+  weaponId: string,
+  planMax: number,
+  defIndex?: number | null,
+): WeaponStickerLimitState {
+  const weaponMax = maxStickerSlotsForWeaponDefIndex(defIndex ?? null, weaponId);
+  const supportsStickers = weaponMax > 0 && !isNonStickerWeaponId(weaponId);
+  const effectiveMax = supportsStickers
+    ? effectiveMaxStickerSlots(weaponId, planMax, defIndex)
+    : 0;
+
+  return {
+    supportsStickers,
+    weaponMaxSlots: supportsStickers ? weaponMax : 0,
+    effectiveMaxSlots: effectiveMax,
+    visibleSlotCount: supportsStickers ? weaponMax : 0,
+  };
+}
+
+export function isStickerSlotEditable(
+  slotIndex: number,
+  limits: WeaponStickerLimitState,
+): boolean {
+  return (
+    limits.supportsStickers &&
+    slotIndex >= 0 &&
+    slotIndex < limits.weaponMaxSlots &&
+    slotIndex < limits.effectiveMaxSlots
+  );
+}
+
+/** Slot exists on the weapon model but requires a higher plan. */
+export function isStickerSlotPlanLocked(
+  slotIndex: number,
+  limits: WeaponStickerLimitState,
+): boolean {
+  return (
+    limits.supportsStickers &&
+    slotIndex >= limits.effectiveMaxSlots &&
+    slotIndex < limits.weaponMaxSlots
+  );
+}
+
+export function weaponSupportsStickersById(weaponId: string): boolean {
+  return getWeaponStickerLimitState(weaponId, CSGO_PLAN_STICKER_SLOT_CAP).supportsStickers;
 }
 
 export function clampStickerSlotsToWeapon(
@@ -112,6 +174,5 @@ export function clampStickerSlotsToWeapon(
 }
 
 export function uiStickerSlotCount(weaponId: string): number {
-  const max = maxStickerSlotsForWeaponId(weaponId);
-  return max > 0 ? max : 0;
+  return getWeaponStickerLimitState(weaponId, CSGO_PLAN_STICKER_SLOT_CAP).visibleSlotCount;
 }

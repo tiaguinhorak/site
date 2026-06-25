@@ -16,11 +16,7 @@ import {
 import type { EquipSide } from "@/lib/inventory/loadout-team";
 import { weaponAllowedOnTeam } from "@/lib/inventory/loadout-team";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
-import { weaponSupportsStickers } from "@/lib/inventory/weapon-stickers";
-import {
-  effectiveMaxStickerSlots,
-  uiStickerSlotCount,
-} from "@/lib/inventory/weapon-sticker-slot-limits";
+import { getWeaponStickerLimitState, isStickerSlotEditable } from "@/lib/inventory/weapon-sticker-slot-limits";
 import { cn } from "@/lib/utils";
 import {
   chipInactiveHoverClass,
@@ -28,7 +24,7 @@ import {
   surfaceSubtleClass,
   teamPillClass,
 } from "@/lib/ui/theme-surfaces";
-import { isStickerSlotLocked } from "@/lib/inventory/plan-inventory-client";
+import { WeaponStickerSlotGrid } from "@/components/inventory/weapon-sticker-slot-grid";
 import { toast } from "@/lib/toast";
 
 export type SkinWorkspaceData = {
@@ -123,10 +119,9 @@ export function SkinWorkspace({
   const canEquipT = skin ? weaponAllowedOnTeam(skin.weaponId, "T") : false;
   const canEquipCT = skin ? weaponAllowedOnTeam(skin.weaponId, "CT") : false;
   const canBoth = canEquipT && canEquipCT;
-  const supportsStickers = skin ? weaponSupportsStickers(skin.weaponId) : false;
+  const supportsStickers = skin ? getWeaponStickerLimitState(skin.weaponId, maxStickerSlots).supportsStickers : false;
+  const stickerLimits = skin ? getWeaponStickerLimitState(skin.weaponId, maxStickerSlots) : null;
   const stickersEnabled = supportsStickers && canUseStickers;
-  const weaponStickerUiCount = skin ? uiStickerSlotCount(skin.weaponId) : 0;
-  const stickerSlotLimit = skin ? effectiveMaxStickerSlots(skin.weaponId, maxStickerSlots) : 0;
   const anyEquipped = skin ? skin.equippedT || skin.equippedCT : false;
 
   const stickerHookEnabled = open && Boolean(skin) && stickersEnabled;
@@ -137,7 +132,7 @@ export function SkinWorkspace({
     stickerViewTeam,
     stickerHookEnabled,
     pickerActive,
-    { mirrorEditsToBoth: stickerScope === "both" },
+    { mirrorEditsToBoth: stickerScope === "both", planMaxStickerSlots: maxStickerSlots },
   );
 
   useEffect(() => {
@@ -146,7 +141,9 @@ export function SkinWorkspace({
     const equipCT = weaponAllowedOnTeam(skin.weaponId, "CT");
     const both = equipT && equipCT;
     const singleOnly = !both && (equipT || equipCT);
-    const hasStickers = weaponSupportsStickers(skin.weaponId) && stickersEnabled;
+    const hasStickers = skin
+      ? getWeaponStickerLimitState(skin.weaponId, maxStickerSlots).supportsStickers && stickersEnabled
+      : false;
     setTab(resolveInitialTab(initialTab));
     const side = defaultPendingSide(skin, equipT, equipCT);
     setPendingSide(side);
@@ -175,6 +172,7 @@ export function SkinWorkspace({
     skin?.equippedT,
     skin?.weaponId,
     stickersEnabled,
+    maxStickerSlots,
   ]);
 
   useEffect(() => {
@@ -249,7 +247,8 @@ export function SkinWorkspace({
   }
 
   function openSlot(slotIndex: number) {
-    if (!stickersEnabled || isStickerSlotLocked(slotIndex, stickerSlotLimit)) return;
+    if (!stickersEnabled || !skin || !stickerLimits) return;
+    if (!isStickerSlotEditable(slotIndex, stickerLimits)) return;
     setTab("stickers");
     stickerState.setActiveSlot(slotIndex);
     stickerState.setPickerSearch("");
@@ -257,11 +256,17 @@ export function SkinWorkspace({
   }
 
   function openStickersTab() {
+    if (!stickerLimits) return;
     setTab("stickers");
-    if (stickerState.activeSlot === null) {
-      stickerState.setActiveSlot(0);
+    const first = stickerLimits.effectiveMaxSlots > 0 ? 0 : null;
+    for (let i = 0; i < stickerLimits.visibleSlotCount; i++) {
+      if (isStickerSlotEditable(i, stickerLimits)) {
+        stickerState.setActiveSlot(i);
+        stickerState.loadPicker("", true);
+        return;
+      }
     }
-    stickerState.loadPicker(stickerState.pickerSearch, true);
+    if (first !== null) stickerState.setActiveSlot(first);
   }
 
   const activeSlotIndex = stickerState.activeSlot;
@@ -353,69 +358,24 @@ export function SkinWorkspace({
                 </div>
                 <SkinRarityLine accent={skin.accent} rarity={skin.rarity} position="bottom" />
 
-                {supportsStickers && (
+                {supportsStickers && stickersEnabled && skin && (
                   <div className="flex shrink-0 items-center justify-center gap-2 border-t border-border/40 bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)] px-3 py-3">
-                    {Array.from({ length: weaponStickerUiCount }).map((_, index) => {
-                      const filled = stickerState.slots[index] > 0;
-                      const active = activeSlotIndex === index;
-                      const slotLabel = stickerState.slotLabels[index];
-                      const slotImage = stickerState.slotImageUrls[index];
-                      const slotLocked =
-                        !canUseStickers || isStickerSlotLocked(index, stickerSlotLimit);
-                      return (
-                        <div key={index} className="relative">
-                          <button
-                            type="button"
-                            onClick={() => openSlot(index)}
-                            disabled={slotLocked}
-                            className={cn(
-                              "flex h-11 w-11 items-center justify-center rounded-lg border-2 transition-all",
-                              surfaceSubtleClass,
-                              slotLocked && "cursor-not-allowed opacity-45",
-                              active && !slotLocked
-                                ? "border-primary ring-2 ring-primary/45 shadow-[0_0_14px_color-mix(in_srgb,var(--primary)_40%,transparent)] scale-105"
-                                : filled && !slotLocked
-                                  ? "border-primary/50"
-                                  : "border-border/40 opacity-75 hover:opacity-100",
-                            )}
-                            aria-label={t("stickersSlotPicker", { slot: index + 1 })}
-                            aria-pressed={active}
-                          >
-                            {slotLocked ? (
-                              <Lock className="h-4 w-4 text-muted" aria-hidden />
-                            ) : filled && slotImage ? (
-                              <StickerImage
-                                src={slotImage}
-                                alt=""
-                                className="h-8 w-8 object-contain"
-                              />
-                            ) : filled ? (
-                              <span className="line-clamp-2 px-0.5 text-center text-[8px] font-semibold leading-tight text-foreground">
-                                {slotLabel || `#${stickerState.slots[index]}`}
-                              </span>
-                            ) : (
-                              <span className="text-[10px] font-bold text-muted">{index + 1}</span>
-                            )}
-                          </button>
-                          {filled && !slotLocked && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                stickerState.clearSlot(index);
-                                if (activeSlotIndex === index) {
-                                  stickerState.setActiveSlot(index);
-                                }
-                              }}
-                              className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-foreground/90 text-[9px] font-bold text-background shadow-sm hover:bg-destructive"
-                              aria-label={t("stickersClear")}
-                            >
-                              ×
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
+                    <WeaponStickerSlotGrid
+                      weaponId={skin.weaponId}
+                      planMax={maxStickerSlots}
+                      slots={stickerState.slots}
+                      slotLabels={stickerState.slotLabels}
+                      slotImageUrls={stickerState.slotImageUrls}
+                      activeSlot={activeSlotIndex}
+                      onSelectSlot={openSlot}
+                      onClearSlot={(index) => {
+                        stickerState.clearSlot(index);
+                        if (activeSlotIndex === index) stickerState.setActiveSlot(index);
+                      }}
+                      size="sm"
+                      showClear
+                      compact
+                    />
                   </div>
                 )}
               </div>
@@ -567,6 +527,22 @@ export function SkinWorkspace({
                 </div>
               ) : (
                 <>
+                  <WeaponStickerSlotGrid
+                    weaponId={skin.weaponId}
+                    planMax={maxStickerSlots}
+                    slots={stickerState.slots}
+                    slotLabels={stickerState.slotLabels}
+                    slotImageUrls={stickerState.slotImageUrls}
+                    activeSlot={stickerState.activeSlot}
+                    onSelectSlot={(index) => {
+                      stickerState.setActiveSlot(index);
+                      stickerState.setPickerSearch("");
+                      stickerState.loadPicker("", true);
+                    }}
+                    onClearSlot={(index) => stickerState.clearSlot(index)}
+                    showClear
+                  />
+
                   {canBoth && (
                     <div className={cn("rounded-xl p-3", surfaceSubtleClass)}>
                       <p className="text-xs font-semibold uppercase tracking-wider text-muted">

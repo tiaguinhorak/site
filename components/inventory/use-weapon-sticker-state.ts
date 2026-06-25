@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
-import { STICKER_SLOT_STORAGE_COUNT } from "@/lib/inventory/weapon-sticker-slot-limits";
+import {
+  STICKER_SLOT_STORAGE_COUNT,
+  getWeaponStickerLimitState,
+  isStickerSlotEditable,
+} from "@/lib/inventory/weapon-sticker-slot-limits";
 import { toast } from "@/lib/toast";
 
 export type PickerSticker = {
@@ -58,6 +62,7 @@ function teamCacheFromResponse(
 
 type UseWeaponStickerStateOptions = {
   mirrorEditsToBoth?: boolean;
+  planMaxStickerSlots?: number;
 };
 
 export function useWeaponStickerState(
@@ -68,6 +73,8 @@ export function useWeaponStickerState(
   options?: UseWeaponStickerStateOptions,
 ) {
   const mirrorEditsToBoth = options?.mirrorEditsToBoth ?? false;
+  const planMaxStickerSlots = options?.planMaxStickerSlots ?? STICKER_SLOT_COUNT;
+  const stickerLimits = getWeaponStickerLimitState(weaponId, planMaxStickerSlots);
   const t = useTranslations("inventory");
   const [byTeam, setByTeam] = useState<Record<LoadoutTeam, TeamStickerCache>>({
     T: emptyTeamCache(),
@@ -216,6 +223,7 @@ export function useWeaponStickerState(
   ) {
     const target = slotIndex ?? activeSlot;
     if (target === null) return;
+    if (!isStickerSlotEditable(target, stickerLimits)) return;
 
     applyEditToTeams((prev) => {
       const nextSlots = [...prev.slots];
@@ -236,6 +244,7 @@ export function useWeaponStickerState(
   }
 
   function clearSlot(index: number) {
+    if (!isStickerSlotEditable(index, stickerLimits)) return;
     applyEditToTeams((prev) => {
       const nextSlots = [...prev.slots];
       const nextLabels = [...prev.slotLabels];
@@ -318,5 +327,6 @@ export function useWeaponStickerState(
     pickerTotal,
     loadPicker,
     goToPickerPage,
+    stickerLimits,
   };
 }
