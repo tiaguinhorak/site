@@ -90,6 +90,7 @@ export function useWeaponStickerState(
   const [pickerTotalPages, setPickerTotalPages] = useState(1);
   const [pickerTotal, setPickerTotal] = useState(0);
   const loadedWeaponIdRef = useRef("");
+  const loadGenerationRef = useRef(0);
   const lastPickerKeyRef = useRef("");
 
   const display = byTeam[viewTeam];
@@ -115,6 +116,7 @@ export function useWeaponStickerState(
 
   const loadAllTeams = useCallback(async () => {
     if (!weaponId || !enabled) return;
+    const generation = ++loadGenerationRef.current;
     setLoading(true);
     try {
       const teams: LoadoutTeam[] = ["T", "CT"];
@@ -138,6 +140,10 @@ export function useWeaponStickerState(
         }),
       );
 
+      if (generation !== loadGenerationRef.current) {
+        return;
+      }
+
       const next: Record<LoadoutTeam, TeamStickerCache> = {
         T: emptyTeamCache(),
         CT: emptyTeamCache(),
@@ -147,9 +153,13 @@ export function useWeaponStickerState(
       }
       setByTeam(next);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("stickersLoadFailed"));
+      if (generation === loadGenerationRef.current) {
+        toast.error(err instanceof Error ? err.message : t("stickersLoadFailed"));
+      }
     } finally {
-      setLoading(false);
+      if (generation === loadGenerationRef.current) {
+        setLoading(false);
+      }
     }
   }, [weaponId, enabled, t]);
 
@@ -266,8 +276,18 @@ export function useWeaponStickerState(
     teamOverride?: LoadoutTeam,
     slotsOverride?: number[],
   ): Promise<boolean> {
+    if (loading) {
+      return false;
+    }
+
     const teamToSave = teamOverride ?? viewTeam;
-    const slotsToSave = slotsOverride ?? byTeam[teamToSave].slots;
+    const slotsToSave = (slotsOverride ?? byTeam[teamToSave].slots).slice(
+      0,
+      STICKER_SLOT_COUNT,
+    );
+    while (slotsToSave.length < STICKER_SLOT_COUNT) {
+      slotsToSave.push(0);
+    }
     setSaving(true);
     try {
       const res = await fetch("/api/inventory/weapon-stickers", {

@@ -216,10 +216,15 @@ export function SkinWorkspace({
 
       if (shouldSaveStickers) {
         if (stickerScope === "both" && canBoth) {
-          const slotsToSave = stickerState.getTeamSlots("T");
-          const okT = await stickerState.saveWithTeam("T", slotsToSave);
+          const okT = await stickerState.saveWithTeam(
+            "T",
+            stickerState.getTeamSlots("T"),
+          );
           if (!okT) return;
-          const okCT = await stickerState.saveWithTeam("CT", slotsToSave);
+          const okCT = await stickerState.saveWithTeam(
+            "CT",
+            stickerState.getTeamSlots("CT"),
+          );
           if (!okCT) return;
         } else {
           const teamToSave: LoadoutTeam =

@@ -23,12 +23,13 @@ import { weaponIdToItemDefIndex } from "@/lib/inventory/weapon-defindex";
 import {
   effectiveMaxStickerSlots,
   maxStickerSlotsForWeaponId,
+  STICKER_SLOT_STORAGE_COUNT,
 } from "@/lib/inventory/weapon-sticker-slot-limits";
 
 const saveSchema = z.object({
   weaponId: z.string().min(1),
   team: z.enum(["T", "CT"]),
-  slots: z.array(z.number().int().min(0)).max(4),
+  slots: z.array(z.number().int().min(0)).length(STICKER_SLOT_STORAGE_COUNT),
 });
 
 async function requireUserSteamId(userId: string): Promise<string> {
