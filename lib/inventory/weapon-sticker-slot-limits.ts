@@ -124,7 +124,7 @@ export function getWeaponStickerLimitState(
     supportsStickers,
     weaponMaxSlots: supportsStickers ? weaponMax : 0,
     effectiveMaxSlots: effectiveMax,
-    visibleSlotCount: supportsStickers ? weaponMax : 0,
+    visibleSlotCount: effectiveMax,
   };
 }
 
@@ -135,7 +135,6 @@ export function isStickerSlotEditable(
   return (
     limits.supportsStickers &&
     slotIndex >= 0 &&
-    slotIndex < limits.weaponMaxSlots &&
     slotIndex < limits.effectiveMaxSlots
   );
 }

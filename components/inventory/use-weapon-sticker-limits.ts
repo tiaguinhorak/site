@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import {
   getWeaponStickerLimitState,
   isStickerSlotEditable,
-  isStickerSlotPlanLocked,
   type WeaponStickerLimitState,
 } from "@/lib/inventory/weapon-sticker-slot-limits";
 
@@ -14,7 +13,6 @@ export function useWeaponStickerLimits(weaponId: string, planMax: number) {
     return {
       limits,
       isSlotEditable: (slotIndex: number) => isStickerSlotEditable(slotIndex, limits),
-      isSlotPlanLocked: (slotIndex: number) => isStickerSlotPlanLocked(slotIndex, limits),
       firstEditableSlot: findFirstEditableSlot(limits),
     };
   }, [weaponId, planMax]);

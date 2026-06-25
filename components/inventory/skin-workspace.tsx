@@ -374,7 +374,6 @@ export function SkinWorkspace({
                       }}
                       size="sm"
                       showClear
-                      compact
                     />
                   </div>
                 )}
