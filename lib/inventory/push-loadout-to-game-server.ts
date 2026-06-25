@@ -32,7 +32,7 @@ type TargetPushResult = {
   baseUrl: string;
   ok: boolean;
   error?: string;
-  applyMode?: "staged" | "immediate";
+  applyMode?: "staged" | "immediate" | "deferred_join" | "db_only";
 };
 
 async function pushLoadoutToTarget(
@@ -59,14 +59,19 @@ async function pushLoadoutToTarget(
 
       if (res.ok) {
         const bodyText = await res.text().catch(() => "");
-        let applyMode: "staged" | "immediate" = "staged";
+        let applyMode: "staged" | "immediate" | "deferred_join" | "db_only" = "db_only";
         try {
           const data = JSON.parse(bodyText) as { applyMode?: string };
-          if (data.applyMode === "immediate") {
-            applyMode = "immediate";
+          if (
+            data.applyMode === "immediate" ||
+            data.applyMode === "deferred_join" ||
+            data.applyMode === "staged" ||
+            data.applyMode === "db_only"
+          ) {
+            applyMode = data.applyMode;
           }
         } catch {
-          // non-json body — default staged
+          // non-json body — default db_only
         }
         return { baseUrl, ok: true, applyMode };
       }
@@ -118,7 +123,7 @@ function pushSecondaryLoadoutsInBackground(
 export type PushLoadoutResult = {
   ok: boolean;
   error?: string;
-  applyMode?: "staged" | "immediate";
+  applyMode?: "staged" | "immediate" | "deferred_join" | "db_only";
   skinsOk: boolean;
   stickersOk: boolean;
   stickerError?: string;
