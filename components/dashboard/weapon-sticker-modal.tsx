@@ -36,7 +36,7 @@ export function WeaponStickerModal({
         onClick={onClose}
       />
       <div
-        className="relative z-10 w-full max-w-lg rounded-card glass-strong p-5 shadow-xl"
+        className="relative z-10 w-full max-w-2xl rounded-card glass-strong p-5 shadow-xl sm:p-6"
         role="dialog"
         aria-modal="true"
       >

@@ -10,10 +10,8 @@ export const STICKER_SLOT_STORAGE_COUNT = 4;
 /** Elite / admin plan cap used for UI defaults. */
 export const CSGO_PLAN_STICKER_SLOT_CAP = 4;
 
-/** Item defindexes with zero sticker slots (knives / melee). */
-const ZERO_STICKER_DEFINDEXES = new Set<number>([
-  42, // generic knife fallback
-]);
+/** Item defindexes with zero sticker slots (knives / melee classname fallback). */
+const KNIFE_ITEM_DEFINDEX = 42;
 
 /** Per-defindex overrides when not the default 4 (CS:GO Legacy). */
 const STICKER_SLOTS_BY_DEFINDEX: Record<number, number> = {
@@ -82,15 +80,18 @@ export function maxStickerSlotsForWeaponDefIndex(
   weaponId?: string,
 ): number {
   if (weaponId && isKnifeWeaponId(weaponId)) return 0;
+  if (weaponId && isNonStickerWeaponId(weaponId)) return 0;
 
   if (defIndex != null && defIndex > 0) {
-    if (ZERO_STICKER_DEFINDEXES.has(defIndex)) return 0;
+    // Defindex 42 is the generic knife item — only zero slots when the weapon is a knife.
+    if (defIndex === KNIFE_ITEM_DEFINDEX && weaponId && isKnifeWeaponId(weaponId)) {
+      return 0;
+    }
     const mapped = STICKER_SLOTS_BY_DEFINDEX[defIndex];
     if (mapped !== undefined) return mapped;
     return CSGO_WEAPON_STICKER_SLOTS_DEFAULT;
   }
 
-  if (weaponId && isNonStickerWeaponId(weaponId)) return 0;
   if (weaponId?.trim()) return CSGO_WEAPON_STICKER_SLOTS_DEFAULT;
   return 0;
 }

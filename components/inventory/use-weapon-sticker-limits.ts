@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { clientWeaponIdToDefIndex } from "@/lib/inventory/weapon-defindex-client";
 import {
   getWeaponStickerLimitState,
   isStickerSlotEditable,
@@ -9,7 +10,8 @@ import {
 
 export function useWeaponStickerLimits(weaponId: string, planMax: number) {
   return useMemo(() => {
-    const limits = getWeaponStickerLimitState(weaponId, planMax);
+    const defIndex = clientWeaponIdToDefIndex(weaponId);
+    const limits = getWeaponStickerLimitState(weaponId, planMax, defIndex);
     return {
       limits,
       isSlotEditable: (slotIndex: number) => isStickerSlotEditable(slotIndex, limits),

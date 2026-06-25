@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
 import { WeaponStickerSlotGrid } from "@/components/inventory/weapon-sticker-slot-grid";
-import { StickerImage } from "@/components/inventory/sticker-image";
+import { StickerPickerTile } from "@/components/inventory/sticker-picker-tile";
 import { useWeaponStickerLimits } from "@/components/inventory/use-weapon-sticker-limits";
 import { surfaceSubtleClass } from "@/lib/ui/theme-surfaces";
 import { cn } from "@/lib/utils";
@@ -79,51 +79,67 @@ export function WeaponStickerEditor({
           state.loadPicker("", true);
         }}
         onClearSlot={(index) => state.clearSlot(index)}
+        size="sm"
+        layout="stack"
         showClear
+        showHint
       />
 
       {state.activeSlot !== null && (
         <>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-primary">
+              {t("stickersSlotPicker", { slot: state.activeSlot + 1 })}
+            </p>
+            {state.slots[state.activeSlot] > 0 && (
+              <button
+                type="button"
+                onClick={() => state.clearSlot(state.activeSlot!)}
+                className="text-xs font-medium text-muted underline-offset-2 hover:text-destructive hover:underline"
+              >
+                {t("stickersClear")}
+              </button>
+            )}
+          </div>
           <input
-            className={cn("w-full rounded-xl border border-border px-3 py-2 text-sm", surfaceSubtleClass)}
+            className={cn(
+              "w-full rounded-xl border border-border px-3 py-2.5 text-sm",
+              surfaceSubtleClass,
+            )}
             placeholder={t("stickersSearchPlaceholder")}
             value={state.pickerSearch}
             onChange={(e) => state.setPickerSearch(e.target.value)}
           />
           {state.pickerLoading ? (
-            <div className="flex justify-center py-8">
+            <div className="flex justify-center py-10">
               <Loader2 className="h-6 w-6 motion-safe-spin text-muted" />
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {state.pickerItems.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() =>
-                    state.selectSticker(
-                      item.defIndex,
-                      item.name,
-                      state.activeSlot,
-                      item.imageUrl,
-                    )
-                  }
-                  className={cn(
-                    "flex flex-col items-center rounded-xl border-2 p-2",
-                    surfaceSubtleClass,
-                    item.defIndex === state.slots[state.activeSlot!]
-                      ? "border-primary"
-                      : "border-border/30",
-                  )}
-                >
-                  {item.imageUrl ? (
-                    <StickerImage src={item.imageUrl} alt="" className="h-10 w-10 object-contain" />
-                  ) : (
-                    <div className="h-10 w-10 rounded-lg bg-white/5" />
-                  )}
-                  <span className="mt-1 line-clamp-2 text-center text-[10px]">{item.name}</span>
-                </button>
-              ))}
+            <div className="grid grid-cols-3 gap-3">
+              {state.pickerItems.map((item) => {
+                const compatible = state.isPickerStickerCompatible(item);
+                const isSelected =
+                  compatible && item.defIndex === state.slots[state.activeSlot!];
+                return (
+                  <StickerPickerTile
+                    key={item.id}
+                    name={item.name}
+                    imageUrl={item.imageUrl}
+                    selected={isSelected}
+                    compatible={compatible}
+                    lockTitle={state.stickerLockLabel(item.incompatibleReason)}
+                    onSelect={() =>
+                      state.selectSticker(
+                        item.defIndex,
+                        item.name,
+                        state.activeSlot,
+                        item.imageUrl,
+                        item.incompatibleReason,
+                      )
+                    }
+                  />
+                );
+              })}
             </div>
           )}
         </>

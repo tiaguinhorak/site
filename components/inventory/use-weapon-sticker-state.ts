@@ -8,6 +8,12 @@ import {
   getWeaponStickerLimitState,
   isStickerSlotEditable,
 } from "@/lib/inventory/weapon-sticker-slot-limits";
+import { clientWeaponIdToDefIndex } from "@/lib/inventory/weapon-defindex-client";
+import {
+  getStickerWeaponCompatibility,
+  type StickerWeaponCompatibilityReason,
+} from "@/lib/inventory/sticker-weapon-compatibility";
+import { weaponIdToDisplayName } from "@/lib/inventory/weapon-display-name";
 import { toast } from "@/lib/toast";
 
 export type PickerSticker = {
@@ -15,6 +21,11 @@ export type PickerSticker = {
   defIndex: number;
   name: string;
   imageUrl: string | null;
+  compatible?: boolean;
+  incompatibleReason?: StickerWeaponCompatibilityReason | null;
+  effect?: string | null;
+  tournament?: string | null;
+  stickerType?: string | null;
 };
 
 export const STICKER_SLOT_COUNT = STICKER_SLOT_STORAGE_COUNT;
@@ -74,7 +85,11 @@ export function useWeaponStickerState(
 ) {
   const mirrorEditsToBoth = options?.mirrorEditsToBoth ?? false;
   const planMaxStickerSlots = options?.planMaxStickerSlots ?? STICKER_SLOT_COUNT;
-  const stickerLimits = getWeaponStickerLimitState(weaponId, planMaxStickerSlots);
+  const stickerLimits = getWeaponStickerLimitState(
+    weaponId,
+    planMaxStickerSlots,
+    clientWeaponIdToDefIndex(weaponId),
+  );
   const t = useTranslations("inventory");
   const [byTeam, setByTeam] = useState<Record<LoadoutTeam, TeamStickerCache>>({
     T: emptyTeamCache(),
@@ -187,9 +202,10 @@ export function useWeaponStickerState(
   }, [enabled, weaponId, loadAllTeams]);
 
   const loadPicker = useCallback(async (search: string, force = false, page = 1) => {
+    if (!weaponId) return;
     const query = search.trim();
     const safePage = Math.max(1, page);
-    const key = `${query}:${safePage}`;
+    const key = `${weaponId}:${query}:${safePage}`;
     if (!force && lastPickerKeyRef.current === key) return;
     lastPickerKeyRef.current = key;
     setPickerLoading(true);
@@ -198,6 +214,7 @@ export function useWeaponStickerState(
         picker: "1",
         limit: "24",
         page: String(safePage),
+        weaponId,
       });
       if (query) params.set("search", query);
       const res = await fetch(`/api/inventory/weapon-stickers?${params}`, {
@@ -215,23 +232,66 @@ export function useWeaponStickerState(
     } finally {
       setPickerLoading(false);
     }
-  }, []);
+  }, [weaponId]);
 
   useEffect(() => {
     if (!enabled || !pickerActive) return;
     const timer = setTimeout(() => loadPicker(pickerSearch, false, 1), 300);
     return () => clearTimeout(timer);
-  }, [pickerActive, pickerSearch, loadPicker, enabled]);
+  }, [pickerActive, pickerSearch, loadPicker, enabled, weaponId]);
+
+  const weaponDisplayName = weaponIdToDisplayName(weaponId);
+
+  function stickerIncompatibleMessage(
+    reason: StickerWeaponCompatibilityReason | null | undefined,
+  ): string {
+    if (reason === "legacy_cs2_only") {
+      return t("stickersStickerLegacyIncompatible", { weaponName: weaponDisplayName });
+    }
+    return t("stickersStickerWeaponIncompatible", { weaponName: weaponDisplayName });
+  }
+
+  function stickerLockLabel(
+    reason: StickerWeaponCompatibilityReason | null | undefined,
+  ): string {
+    if (reason === "legacy_cs2_only") {
+      return t("stickersStickerLegacyLock", { weaponName: weaponDisplayName });
+    }
+    return t("stickersStickerWeaponLock", { weaponName: weaponDisplayName });
+  }
+
+  function isPickerStickerCompatible(item: PickerSticker): boolean {
+    if (item.compatible === false) return false;
+    const compat = getStickerWeaponCompatibility(
+      {
+        defIndex: item.defIndex,
+        effect: item.effect,
+        tournament: item.tournament,
+        stickerType: item.stickerType,
+      },
+      weaponId,
+    );
+    return compat.compatible;
+  }
 
   function selectSticker(
     defIndex: number,
     name: string,
     slotIndex?: number,
     imageUrl?: string | null,
+    incompatibleReason?: StickerWeaponCompatibilityReason | null,
   ) {
     const target = slotIndex ?? activeSlot;
     if (target === null) return;
     if (!isStickerSlotEditable(target, stickerLimits)) return;
+
+    const compat = getStickerWeaponCompatibility({ defIndex }, weaponId);
+    if (!compat.compatible) {
+      toast.error(
+        stickerIncompatibleMessage(incompatibleReason ?? compat.reason),
+      );
+      return;
+    }
 
     applyEditToTeams((prev) => {
       const nextSlots = [...prev.slots];
@@ -249,6 +309,14 @@ export function useWeaponStickerState(
 
     setPickerSearch("");
     lastPickerKeyRef.current = "";
+
+    // Advance to next slot (equip flow: 1 → 2 → 3 → 4)
+    if (target < stickerLimits.visibleSlotCount - 1) {
+      const next = target + 1;
+      if (isStickerSlotEditable(next, stickerLimits)) {
+        setActiveSlot(next);
+      }
+    }
   }
 
   function clearSlot(index: number) {
@@ -353,5 +421,9 @@ export function useWeaponStickerState(
     loadPicker,
     goToPickerPage,
     stickerLimits,
+    weaponDisplayName,
+    isPickerStickerCompatible,
+    stickerLockLabel,
+    stickerIncompatibleMessage,
   };
 }

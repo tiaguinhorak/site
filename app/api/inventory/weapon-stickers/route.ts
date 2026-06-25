@@ -57,10 +57,12 @@ export async function GET(request: NextRequest) {
   if (picker) {
     const page = Number(params.get("page") ?? "1");
     const limit = Number(params.get("limit") ?? "24");
+    const weaponId = params.get("weaponId")?.trim() ?? "";
     const result = await listEnabledStickersForPicker({
       search,
       page: Number.isFinite(page) ? page : 1,
       limit: Number.isFinite(limit) ? limit : 24,
+      weaponId: weaponId || undefined,
     });
     return NextResponse.json(result);
   }
@@ -87,7 +89,9 @@ export async function GET(request: NextRequest) {
       limits.maxStickerSlots,
       defIndex,
     );
-    const stickers = await getPlayerWeaponStickers(steamId, weaponId, team);
+    const stickers = await getPlayerWeaponStickers(steamId, weaponId, team, {
+      planMax: limits.maxStickerSlots,
+    });
     return NextResponse.json({
       weaponId,
       team,

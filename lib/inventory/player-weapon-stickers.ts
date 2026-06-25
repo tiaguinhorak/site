@@ -15,6 +15,8 @@ import {
   STICKER_SLOT_STORAGE_COUNT,
   weaponSupportsStickersById,
 } from "@/lib/inventory/weapon-sticker-slot-limits";
+import { getStickerWeaponCompatibility } from "@/lib/inventory/sticker-weapon-compatibility";
+import { weaponIdToDisplayName } from "@/lib/inventory/weapon-display-name";
 import {
   getInventoryPlanLimits,
 } from "@/lib/inventory/plan-inventory-access";
@@ -51,12 +53,35 @@ function normalizeSlots(slots: number[]): WeaponStickerSlots {
   return { slots: normalized, wears };
 }
 
+function zeroIncompatibleStickerSlots(slots: number[], weaponId: string): number[] {
+  return slots.map((defIndex) => {
+    if (defIndex <= 0) return 0;
+    const compat = getStickerWeaponCompatibility({ defIndex }, weaponId);
+    return compat.compatible ? defIndex : 0;
+  });
+}
+
+function sanitizeStickerSlotsForWeapon(
+  slots: number[],
+  weaponId: string,
+  planMax: number,
+  defIndex?: number | null,
+): number[] {
+  return zeroIncompatibleStickerSlots(
+    clampStickerSlotsToWeapon(slots, weaponId, planMax, defIndex),
+    weaponId,
+  );
+}
+
 export async function getPlayerWeaponStickers(
   steamId: string,
   weaponId: string,
   team: LoadoutTeam,
+  options?: { planMax?: number },
 ): Promise<WeaponStickerSlotsEnriched> {
   const normalizedWeaponId = normalizeWeaponId(weaponId);
+  const defIndex = await weaponIdToItemDefIndex(normalizedWeaponId);
+  const planMax = options?.planMax ?? STICKER_SLOT_STORAGE_COUNT;
 
   const row = await prisma.csgoPlayerWeaponSticker.findFirst({
     where: {
@@ -69,7 +94,9 @@ export async function getPlayerWeaponStickers(
   const slots = row
     ? [row.slot0, row.slot1, row.slot2, row.slot3]
     : [];
-  const { slots: normalizedSlots, wears } = normalizeSlots(slots);
+  const { slots: normalizedSlots, wears } = normalizeSlots(
+    sanitizeStickerSlotsForWeapon(slots, normalizedWeaponId, planMax, defIndex),
+  );
 
   const defIndices = normalizedSlots.filter((defIndex) => defIndex > 0);
   const catalogStickers =
@@ -119,17 +146,41 @@ export async function savePlayerWeaponStickers(
   const normalizedWeaponId = normalizeWeaponId(weaponId);
   const defIndex = await weaponIdToItemDefIndex(normalizedWeaponId);
   const { slots: normalized, wears } = normalizeSlots(
-    clampStickerSlotsToWeapon(slots, normalizedWeaponId, limits.maxStickerSlots, defIndex),
+    sanitizeStickerSlotsForWeapon(slots, normalizedWeaponId, limits.maxStickerSlots, defIndex),
   );
 
+  const weaponDisplayName = weaponIdToDisplayName(normalizedWeaponId);
+
   // Only allow enabled catalog stickers (0 = empty slot).
-  for (const defIndex of normalized) {
-    if (defIndex <= 0) continue;
+  for (const stickerDefIndex of normalized) {
+    if (stickerDefIndex <= 0) continue;
     const sticker = await prisma.csgoStickerCatalog.findFirst({
-      where: { defIndex, enabled: true, imageUrl: { not: null } },
+      where: { defIndex: stickerDefIndex, enabled: true, imageUrl: { not: null } },
     });
     if (!sticker || !sticker.imageUrl?.trim()) {
-      throw new Error(`Sticker def_index ${defIndex} não está disponível (sem imagem no catálogo).`);
+      throw new Error(
+        `Sticker def_index ${stickerDefIndex} não está disponível (sem imagem no catálogo).`,
+      );
+    }
+
+    const compat = getStickerWeaponCompatibility(
+      {
+        defIndex: stickerDefIndex,
+        effect: sticker.effect,
+        tournament: sticker.tournament,
+        stickerType: sticker.stickerType,
+      },
+      normalizedWeaponId,
+    );
+    if (!compat.compatible) {
+      if (compat.reason === "legacy_cs2_only") {
+        throw new Error(
+          `O sticker "${sticker.name}" é do CS2 e não funciona no CS:GO Legacy (não use na ${weaponDisplayName}).`,
+        );
+      }
+      throw new Error(
+        `O sticker "${sticker.name}" não pode ser aplicado na ${weaponDisplayName}.`,
+      );
     }
   }
 
@@ -209,11 +260,14 @@ export async function getAllPlayerStickersForSync(): Promise<
       if (!weaponIndex) continue;
 
       const rawSlots = [row.slot0, row.slot1, row.slot2, row.slot3];
-      const slots = clampStickerSlotsToWeapon(
-        rawSlots,
+      const slots = zeroIncompatibleStickerSlots(
+        clampStickerSlotsToWeapon(
+          rawSlots,
+          row.weaponId,
+          STICKER_SLOT_STORAGE_COUNT,
+          weaponIndex,
+        ),
         row.weaponId,
-        STICKER_SLOT_STORAGE_COUNT,
-        weaponIndex,
       );
 
       entries.push({
@@ -249,11 +303,14 @@ export async function getPlayerStickersForSync(steamId64: string): Promise<{
     const weaponIndex = await weaponIdToItemDefIndex(row.weaponId);
     if (!weaponIndex) continue;
 
-    const slots = clampStickerSlotsToWeapon(
-      [row.slot0, row.slot1, row.slot2, row.slot3],
+    const slots = zeroIncompatibleStickerSlots(
+      clampStickerSlotsToWeapon(
+        [row.slot0, row.slot1, row.slot2, row.slot3],
+        row.weaponId,
+        STICKER_SLOT_STORAGE_COUNT,
+        weaponIndex,
+      ),
       row.weaponId,
-      STICKER_SLOT_STORAGE_COUNT,
-      weaponIndex,
     );
 
     entries.push({

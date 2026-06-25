@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { RemoteImage } from "@/components/ui/remote-image";
 import { SkinRarityBadge } from "@/components/skins/skin-rarity-badge";
 import { SkinRarityLine } from "@/components/skins/skin-rarity-line";
-import { StickerImage } from "@/components/inventory/sticker-image";
 import { TeamEquipBadge } from "@/components/inventory/team-equip-badge";
 import {
   useWeaponStickerState,
@@ -17,6 +16,7 @@ import type { EquipSide } from "@/lib/inventory/loadout-team";
 import { weaponAllowedOnTeam } from "@/lib/inventory/loadout-team";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
 import { getWeaponStickerLimitState, isStickerSlotEditable } from "@/lib/inventory/weapon-sticker-slot-limits";
+import { clientWeaponIdToDefIndex } from "@/lib/inventory/weapon-defindex-client";
 import { cn } from "@/lib/utils";
 import {
   chipInactiveHoverClass,
@@ -25,6 +25,7 @@ import {
   teamPillClass,
 } from "@/lib/ui/theme-surfaces";
 import { WeaponStickerSlotGrid } from "@/components/inventory/weapon-sticker-slot-grid";
+import { StickerPickerTile } from "@/components/inventory/sticker-picker-tile";
 import { toast } from "@/lib/toast";
 
 export type SkinWorkspaceData = {
@@ -119,8 +120,20 @@ export function SkinWorkspace({
   const canEquipT = skin ? weaponAllowedOnTeam(skin.weaponId, "T") : false;
   const canEquipCT = skin ? weaponAllowedOnTeam(skin.weaponId, "CT") : false;
   const canBoth = canEquipT && canEquipCT;
-  const supportsStickers = skin ? getWeaponStickerLimitState(skin.weaponId, maxStickerSlots).supportsStickers : false;
-  const stickerLimits = skin ? getWeaponStickerLimitState(skin.weaponId, maxStickerSlots) : null;
+  const supportsStickers = skin
+    ? getWeaponStickerLimitState(
+        skin.weaponId,
+        maxStickerSlots,
+        clientWeaponIdToDefIndex(skin.weaponId),
+      ).supportsStickers
+    : false;
+  const stickerLimits = skin
+    ? getWeaponStickerLimitState(
+        skin.weaponId,
+        maxStickerSlots,
+        clientWeaponIdToDefIndex(skin.weaponId),
+      )
+    : null;
   const stickersEnabled = supportsStickers && canUseStickers;
   const anyEquipped = skin ? skin.equippedT || skin.equippedCT : false;
 
@@ -142,7 +155,11 @@ export function SkinWorkspace({
     const both = equipT && equipCT;
     const singleOnly = !both && (equipT || equipCT);
     const hasStickers = skin
-      ? getWeaponStickerLimitState(skin.weaponId, maxStickerSlots).supportsStickers && stickersEnabled
+      ? getWeaponStickerLimitState(
+          skin.weaponId,
+          maxStickerSlots,
+          clientWeaponIdToDefIndex(skin.weaponId),
+        ).supportsStickers && stickersEnabled
       : false;
     setTab(resolveInitialTab(initialTab));
     const side = defaultPendingSide(skin, equipT, equipCT);
@@ -179,6 +196,25 @@ export function SkinWorkspace({
     if (!open || !skin) return;
     setPendingSide((prev) => clampPendingSide(prev, canEquipT, canEquipCT));
   }, [open, skin?.weaponId, canEquipT, canEquipCT]);
+
+  useEffect(() => {
+    if (!open || !skin || tab !== "stickers" || !stickersEnabled || !stickerLimits) return;
+    if (stickerState.activeSlot !== null) return;
+    for (let i = 0; i < stickerLimits.effectiveMaxSlots; i++) {
+      if (isStickerSlotEditable(i, stickerLimits)) {
+        stickerState.setActiveSlot(i);
+        break;
+      }
+    }
+  }, [
+    open,
+    skin,
+    tab,
+    stickersEnabled,
+    stickerLimits,
+    stickerState.activeSlot,
+    stickerState.setActiveSlot,
+  ]);
 
   useEffect(() => {
     if (!open) return;
@@ -255,7 +291,7 @@ export function SkinWorkspace({
     if (!stickerLimits) return;
     setTab("stickers");
     if (stickerState.activeSlot === null) {
-      for (let i = 0; i < stickerLimits.visibleSlotCount; i++) {
+      for (let i = 0; i < stickerLimits.effectiveMaxSlots; i++) {
         if (isStickerSlotEditable(i, stickerLimits)) {
           stickerState.setActiveSlot(i);
           return;
@@ -361,7 +397,7 @@ export function SkinWorkspace({
                 <SkinRarityLine accent={skin.accent} rarity={skin.rarity} position="bottom" />
 
                 {supportsStickers && stickersEnabled && (
-                  <div className="flex shrink-0 items-center justify-center gap-2 border-t border-border/40 bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)] px-3 py-3">
+                  <div className="flex shrink-0 justify-center border-t border-border/40 bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)] px-4 py-3">
                     <WeaponStickerSlotGrid
                       weaponId={skin.weaponId}
                       planMax={maxStickerSlots}
@@ -371,7 +407,8 @@ export function SkinWorkspace({
                       activeSlot={activeSlotIndex}
                       onSelectSlot={selectStickerSlot}
                       onClearSlot={(index) => stickerState.clearSlot(index)}
-                      size="sm"
+                      size="md"
+                      layout="stack"
                       showClear
                     />
                   </div>
@@ -603,46 +640,31 @@ export function SkinWorkspace({
                       <Loader2 className="h-6 w-6 motion-safe-spin text-muted" />
                     </div>
                   ) : (
-                    <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+                    <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4">
                       {stickerState.pickerItems.map((item) => {
+                        const compatible = stickerState.isPickerStickerCompatible(item);
                         const isSelected =
-                          item.defIndex > 0 && item.defIndex === selectedStickerDefIndex;
+                          compatible &&
+                          item.defIndex > 0 &&
+                          item.defIndex === selectedStickerDefIndex;
                         return (
-                          <button
+                          <StickerPickerTile
                             key={item.id}
-                            type="button"
-                            onClick={() =>
+                            name={item.name}
+                            imageUrl={item.imageUrl}
+                            selected={isSelected}
+                            compatible={compatible}
+                            lockTitle={stickerState.stickerLockLabel(item.incompatibleReason)}
+                            onSelect={() =>
                               stickerState.selectSticker(
                                 item.defIndex,
                                 item.name,
                                 stickerState.activeSlot ?? 0,
                                 item.imageUrl,
+                                item.incompatibleReason,
                               )
                             }
-                            className={cn(
-                              "flex flex-col items-center rounded-xl border-2 p-2 transition-all",
-                              surfaceSubtleClass,
-                              isSelected
-                                ? "border-primary ring-2 ring-primary/35 shadow-[0_0_12px_color-mix(in_srgb,var(--primary)_35%,transparent)]"
-                                : "border-border/30",
-                              !isSelected && chipInactiveHoverClass,
-                            )}
-                            aria-pressed={isSelected}
-                          >
-                            {item.imageUrl ? (
-                              <StickerImage
-                                key={item.id}
-                                src={item.imageUrl}
-                                alt={item.name}
-                                className="h-12 w-12 object-contain"
-                              />
-                            ) : (
-                              <div className="h-12 w-12 rounded-lg bg-white/5" />
-                            )}
-                            <span className="mt-1.5 line-clamp-2 text-center text-[10px] leading-tight text-foreground">
-                              {item.name}
-                            </span>
-                          </button>
+                          />
                         );
                       })}
                       {stickerState.pickerItems.length === 0 && (

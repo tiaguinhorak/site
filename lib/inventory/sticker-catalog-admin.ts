@@ -11,6 +11,14 @@ import {
   normalizeStickerImageUrl,
   stickerHasDisplayImage,
 } from "@/lib/inventory/sticker-image-url";
+import {
+  getStickerWeaponCompatibility,
+  isCs2OnlySticker,
+  isLegacyCompatibleSticker,
+  LEGACY_MAX_STICKER_DEFINDEX,
+  stickerCompatibilityMeta,
+  type StickerWeaponCompatibilityReason,
+} from "@/lib/inventory/sticker-weapon-compatibility";
 
 export type StickerCatalogAdminRow = {
   id: string;
@@ -72,7 +80,14 @@ async function upsertStickerRow(
   });
 
   const imageUrl = normalizeStickerImageUrl(apiRow?.imageUrl ?? existing?.imageUrl ?? null);
-  const canEnable = stickerHasImage(imageUrl);
+  const meta = stickerCompatibilityMeta({
+    defIndex: input.defIndex,
+    effect: apiRow?.effect ?? existing?.effect,
+    tournament: apiRow?.tournament ?? existing?.tournament,
+    stickerType: apiRow?.stickerType ?? existing?.stickerType,
+  });
+  const legacyCompatible = isLegacyCompatibleSticker(meta);
+  const canEnable = stickerHasImage(imageUrl) && legacyCompatible;
 
   const data = {
     defIndex: input.defIndex,
@@ -105,6 +120,9 @@ export async function upsertStickerByDefIndex(defIndex: number, enabled = true) 
   if (!stickerHasImage(apiRow.imageUrl)) {
     throw new Error("Sticker sem imagem na CSGO-API — não pode ser habilitado.");
   }
+  if (isCs2OnlySticker(stickerCompatibilityMeta(apiRow))) {
+    throw new Error("Sticker do CS2 — não disponível no CS:GO Legacy.");
+  }
   return upsertStickerRow({ defIndex, source: "admin", enabled }, apiRow);
 }
 
@@ -127,7 +145,28 @@ export async function importAllStickersFromApi(options?: { enabled?: boolean }) 
     imported += 1;
   }
   await disableStickersWithoutImages();
-  return { imported };
+  const disabledCs2 = await disableCs2StickersInCatalog();
+  return { imported, disabledCs2 };
+}
+
+export async function disableCs2StickersInCatalog(): Promise<number> {
+  const byDefIndex = await prisma.csgoStickerCatalog.updateMany({
+    where: {
+      enabled: true,
+      defIndex: { gt: LEGACY_MAX_STICKER_DEFINDEX },
+    },
+    data: { enabled: false },
+  });
+
+  const byEffect = await prisma.csgoStickerCatalog.updateMany({
+    where: {
+      enabled: true,
+      effect: { in: ["Lenticular", "Embroidered"] },
+    },
+    data: { enabled: false },
+  });
+
+  return byDefIndex.count + byEffect.count;
 }
 
 export async function disableStickersWithoutImages(): Promise<number> {
@@ -197,22 +236,59 @@ export async function deleteStickerCatalogAdmin(id: string) {
   return { ok: true };
 }
 
+export type StickerPickerItem = StickerCatalogAdminRow & {
+  compatible: boolean;
+  incompatibleReason: StickerWeaponCompatibilityReason | null;
+};
+
+function enrichPickerItem(
+  row: StickerCatalogAdminRow,
+  weaponId?: string,
+): StickerPickerItem {
+  if (!weaponId?.trim()) {
+    return { ...row, compatible: true, incompatibleReason: null };
+  }
+
+  const compat = getStickerWeaponCompatibility(
+    {
+      defIndex: row.defIndex,
+      effect: row.effect,
+      tournament: row.tournament,
+      stickerType: row.stickerType,
+    },
+    weaponId,
+  );
+
+  return {
+    ...row,
+    compatible: compat.compatible,
+    incompatibleReason: compat.compatible ? null : compat.reason,
+  };
+}
+
+function legacyPickerWhere(search?: string) {
+  return {
+    enabled: true,
+    imageUrl: { not: null },
+    defIndex: { lte: LEGACY_MAX_STICKER_DEFINDEX },
+    effect: { notIn: ["Lenticular", "Embroidered"] },
+    ...(search
+      ? { name: { contains: search, mode: "insensitive" as const } }
+      : {}),
+  };
+}
+
 export async function listEnabledStickersForPicker(options?: {
   search?: string;
   page?: number;
   limit?: number;
+  weaponId?: string;
 }) {
   const page = Math.max(1, options?.page ?? 1);
   const limit = Math.min(48, Math.max(1, options?.limit ?? 24));
   const trimmed = options?.search?.trim() ?? "";
-
-  const where = {
-    enabled: true,
-    imageUrl: { not: null },
-    ...(trimmed
-      ? { name: { contains: trimmed, mode: "insensitive" as const } }
-      : {}),
-  };
+  const weaponId = options?.weaponId?.trim() ?? "";
+  const where = legacyPickerWhere(trimmed || undefined);
 
   const [total, rows] = await Promise.all([
     prisma.csgoStickerCatalog.count({ where }),
@@ -228,7 +304,7 @@ export async function listEnabledStickersForPicker(options?: {
 
   if (withImage.length > 0 || total > 0) {
     return {
-      items: withImage.map(serializeRow),
+      items: withImage.map((row) => enrichPickerItem(serializeRow(row), weaponId)),
       page,
       limit,
       total,
@@ -237,7 +313,11 @@ export async function listEnabledStickersForPicker(options?: {
   }
 
   const apiRows = await listAllStickersFromApi();
-  const apiWithImage = apiRows.filter((row) => stickerHasImage(row.imageUrl));
+  const apiWithImage = apiRows.filter(
+    (row) =>
+      stickerHasImage(row.imageUrl) &&
+      isLegacyCompatibleSticker(stickerCompatibilityMeta(row)),
+  );
   const filtered = trimmed
     ? apiWithImage.filter((row) =>
         row.name.toLowerCase().includes(trimmed.toLowerCase()),
@@ -248,19 +328,24 @@ export async function listEnabledStickersForPicker(options?: {
   const slice = filtered.slice((page - 1) * limit, page * limit);
 
   return {
-    items: slice.map((row) => ({
-      id: row.id,
-      defIndex: row.defIndex,
-      name: row.name,
-      imageUrl: row.imageUrl,
-      rarity: row.rarity,
-      stickerType: row.stickerType,
-      effect: row.effect,
-      tournament: row.tournament,
-      enabled: true,
-      source: "api-fallback",
-      updatedAt: new Date().toISOString(),
-    })),
+    items: slice.map((row) =>
+      enrichPickerItem(
+        {
+          id: row.id,
+          defIndex: row.defIndex,
+          name: row.name,
+          imageUrl: row.imageUrl,
+          rarity: row.rarity,
+          stickerType: row.stickerType,
+          effect: row.effect,
+          tournament: row.tournament,
+          enabled: true,
+          source: "api-fallback",
+          updatedAt: new Date().toISOString(),
+        },
+        weaponId,
+      ),
+    ),
     page,
     limit,
     total: apiTotal,
