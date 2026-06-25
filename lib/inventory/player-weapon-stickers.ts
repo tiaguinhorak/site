@@ -13,6 +13,7 @@ import { normalizeStickerImageUrl } from "@/lib/inventory/sticker-image-url";
 import {
   clampStickerSlotsToWeapon,
   STICKER_SLOT_STORAGE_COUNT,
+  weaponSupportsStickersById,
 } from "@/lib/inventory/weapon-sticker-slot-limits";
 import {
   getInventoryPlanLimits,
@@ -202,6 +203,8 @@ export async function getAllPlayerStickersForSync(): Promise<
     const entries: StickerSyncEntry[] = [];
 
     for (const row of playerRows) {
+      if (!weaponSupportsStickersById(row.weaponId)) continue;
+
       const weaponIndex = await weaponIdToItemDefIndex(row.weaponId);
       if (!weaponIndex) continue;
 
@@ -241,6 +244,8 @@ export async function getPlayerStickersForSync(steamId64: string): Promise<{
   const entries: StickerSyncEntry[] = [];
 
   for (const row of rows) {
+    if (!weaponSupportsStickersById(row.weaponId)) continue;
+
     const weaponIndex = await weaponIdToItemDefIndex(row.weaponId);
     if (!weaponIndex) continue;
 
