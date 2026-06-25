@@ -143,7 +143,21 @@ export async function PUT(request: NextRequest) {
       parsed.data.slots,
     );
     const gameSync = await pushPlayerStickersToGameServer(steamId);
-    return NextResponse.json({ ok: true, ...result, gameSync });
+    if (!gameSync.ok) {
+      console.warn(
+        "[weapon-stickers] game server sticker push failed:",
+        gameSync.error ?? "unknown",
+      );
+    }
+    return NextResponse.json({
+      ok: true,
+      ...result,
+      gameSync,
+      gameSyncWarning: gameSync.ok
+        ? undefined
+        : (gameSync.error ??
+          "Stickers salvos no site, mas o servidor não recebeu — verifique CSGO_API_URL no .env"),
+    });
   } catch (err) {
     if (err instanceof CsgoApiError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
