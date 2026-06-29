@@ -2,8 +2,8 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import type { InventoryCategoryKey } from "@/lib/profile";
-import { canUserAccessAllCatalogSkins } from "@/lib/inventory/catalog-access";
-import { getOwnedCatalogSkinIdsForUser } from "@/lib/inventory/inventory-ownership";
+import { getUserCatalogAccess } from "@/lib/inventory/user-catalog-access-cache";
+import { getEquippedRowsCached } from "@/lib/inventory/equipped-rows-cache";
 import {
   ensureCatalogReady,
   getCatalogTotalCached,
@@ -21,6 +21,8 @@ import {
 } from "@/lib/inventory/loadout-team";
 import { prismaRarityTierWhere } from "@/lib/inventory/rarity-filter";
 import { getCatalogRarityTiers } from "@/lib/inventory/get-catalog-rarity-tiers";
+import { getCatalogRowsCached } from "@/lib/inventory/catalog-rows-cache";
+import { getUserSteamIdCached } from "@/lib/inventory/user-steam-id-cache";
 import type { RarityKey } from "@/lib/inventory/rarity-tiers";
 
 const DEFAULT_LIMIT = 36;
@@ -112,29 +114,33 @@ export async function getCatalogSkinsForUser(
     ...(andClauses.length > 0 ? { AND: andClauses } : {}),
   };
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { steamId: true },
-  });
+  let steamId: string | null = null;
+  try {
+    steamId = await getUserSteamIdCached(userId);
+  } catch {
+    // user has no steam linked — equip state will be empty
+  }
 
   const equippedField = team ? teamEquipField(team) : null;
 
-  const [catalogTotal, equippedRows, total, rows, weaponOptions, availableRarityTiers] =
+  const cacheParams = {
+    category,
+    search,
+    weaponId: weaponIdParam,
+    page,
+    limit,
+    team,
+    dualTeamOnly,
+    rarityTier,
+  };
+
+  const [catalogTotal, equippedRows, { rows, count: total }, weaponOptions, availableRarityTiers] =
     await Promise.all([
     getCatalogTotalCached(),
-    user?.steamId
-      ? prisma.csgoPlayerSkin.findMany({
-          where: { steamId: user.steamId },
-          select: { skinId: true, equippedT: true, equippedCT: true },
-        })
+    steamId
+      ? getEquippedRowsCached(steamId)
       : Promise.resolve([]),
-    prisma.csgoSkinCatalog.count({ where }),
-    prisma.csgoSkinCatalog.findMany({
-      where,
-      orderBy: [{ weaponName: "asc" }, { paintkitName: "asc" }],
-      skip: (page - 1) * limit,
-      take: limit,
-    }),
+    getCatalogRowsCached(cacheParams, where),
     page === 1
       ? getCatalogWeaponOptions(category).catch(() => [])
       : Promise.resolve([]),
@@ -144,8 +150,9 @@ export async function getCatalogSkinsForUser(
   const equippedBySkin = new Map(
     equippedRows.map((row) => [row.skinId, { equippedT: row.equippedT, equippedCT: row.equippedCT }]),
   );
-  const allSkins = await canUserAccessAllCatalogSkins(userId);
-  const ownedCatalogIds = allSkins ? null : await getOwnedCatalogSkinIdsForUser(userId);
+  const access = await getUserCatalogAccess(userId);
+  const allSkins = access.allSkins;
+  const ownedCatalogIds = access.ownedIds;
 
   const items: CatalogSkinRow[] = rows.map((row) => {
     const flags = equippedBySkin.get(row.id);

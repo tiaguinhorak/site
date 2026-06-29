@@ -215,8 +215,12 @@ export async function disableNonLegacyAgentsInCatalog() {
 }
 
 let ensureAgentsPromise: Promise<void> | null = null;
+let ensureAgentsLastRunAt = 0;
+const ENSURE_AGENTS_TTL_MS = 5 * 60 * 1000;
 
 export async function ensureLegacyAgentCatalogAndLoadouts() {
+  if (Date.now() - ensureAgentsLastRunAt < ENSURE_AGENTS_TTL_MS) return;
+
   if (!ensureAgentsPromise) {
     ensureAgentsPromise = (async () => {
       const count = await prisma.csgoAgentCatalog.count();
@@ -226,6 +230,7 @@ export async function ensureLegacyAgentCatalogAndLoadouts() {
         await resyncAgentCatalogTeamsFromApi();
       }
       await disableNonLegacyAgentsInCatalog();
+      ensureAgentsLastRunAt = Date.now();
     })().finally(() => {
       ensureAgentsPromise = null;
     });

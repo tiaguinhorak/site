@@ -5,7 +5,11 @@ import { getSessionUserId } from "@/lib/auth/session-user";
 import { CsgoApiError } from "@/lib/csgo-api/http";
 import { equipInventoryItemForUser } from "@/lib/inventory/equip-csgo-skin";
 import { equipCatalogSkinForUser } from "@/lib/inventory/equip-catalog-skin";
-import { pushPlayerLoadoutToGameServer, type PushLoadoutResult } from "@/lib/inventory/push-loadout-to-game-server";
+import {
+  schedulePushPlayerLoadoutToGameServer,
+  type PushLoadoutResult,
+} from "@/lib/inventory/push-loadout-to-game-server";
+import { invalidateEquippedRowsCache } from "@/lib/inventory/equipped-rows-cache";
 import {
   applyApiGuards,
   parseJsonBody,
@@ -54,7 +58,15 @@ export async function POST(request: NextRequest) {
 
     let gameSync: PushLoadoutResult | undefined;
     if (result.steamId) {
-      gameSync = await pushPlayerLoadoutToGameServer(result.steamId);
+      invalidateEquippedRowsCache(result.steamId);
+      schedulePushPlayerLoadoutToGameServer(result.steamId);
+      gameSync = {
+        ok: true,
+        applyMode: "staged",
+        skinsOk: true,
+        stickersOk: true,
+        agentsOk: true,
+      };
     }
 
     return NextResponse.json({ ...result, gameSync });

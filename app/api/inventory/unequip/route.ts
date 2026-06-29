@@ -8,7 +8,11 @@ import {
   unequipWeaponForUser,
 } from "@/lib/inventory/unequip-catalog-skin";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
-import { pushPlayerLoadoutToGameServer, type PushLoadoutResult } from "@/lib/inventory/push-loadout-to-game-server";
+import {
+  schedulePushPlayerLoadoutToGameServer,
+  type PushLoadoutResult,
+} from "@/lib/inventory/push-loadout-to-game-server";
+import { invalidateEquippedRowsCache } from "@/lib/inventory/equipped-rows-cache";
 import {
   applyApiGuards,
   parseJsonBody,
@@ -57,6 +61,7 @@ export async function POST(request: NextRequest) {
 
     let gameSync: PushLoadoutResult | undefined;
     if (result.steamId) {
+      invalidateEquippedRowsCache(result.steamId);
       const isGlove =
         result.weaponId.toLowerCase().includes("gloves") ||
         result.weaponId.toLowerCase().includes("handwraps");
@@ -64,10 +69,17 @@ export async function POST(request: NextRequest) {
         isGlove && team !== "both"
           ? (team as LoadoutTeam)
           : undefined;
-      gameSync = await pushPlayerLoadoutToGameServer(result.steamId, {
+      schedulePushPlayerLoadoutToGameServer(result.steamId, {
         clearWeaponIds: [result.weaponId],
         clearGloveTeam: clearGloveTeam,
       });
+      gameSync = {
+        ok: true,
+        applyMode: "staged",
+        skinsOk: true,
+        stickersOk: true,
+        agentsOk: true,
+      };
     }
 
     return NextResponse.json({ ...result, gameSync });

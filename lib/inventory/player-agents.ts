@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
 import { steamIdForGamePlugin } from "@/lib/steam/steam-id";
 import { lookupAgentFromApi } from "@/lib/inventory/csgo-api-agent-index";
+import { skinPreviewImageUrl } from "@/lib/inventory/skin-images";
 import {
   agentModelPlayerToGamePath,
   isLegacyCompatibleAgent,
@@ -40,7 +41,9 @@ async function resolveAgentMeta(defIndex: number) {
   return {
     defIndex,
     name: catalog?.name ?? (await lookupAgentFromApi(defIndex))?.name ?? `Agent ${defIndex}`,
-    imageUrl: catalog?.imageUrl ?? (await lookupAgentFromApi(defIndex))?.imageUrl ?? null,
+    imageUrl: skinPreviewImageUrl(
+      catalog?.imageUrl ?? (await lookupAgentFromApi(defIndex))?.imageUrl ?? null,
+    ),
     team: (catalog?.team ?? "T") as LoadoutTeam,
     modelPath,
   };

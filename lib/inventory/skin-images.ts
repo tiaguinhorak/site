@@ -27,15 +27,25 @@ export function catalogSkinImageUrl(catalogId: string | null | undefined): strin
 
 /** Request full-resolution Steam economy preview for workspace/modal heroes. */
 export function skinPreviewImageUrl(url: string | null | undefined): string | null {
-  return steamEconomyImageUrl(url, 512);
+  return economyImageUrl(url, 512);
 }
 
 /** Smaller but crisp tile URL for grids (256px). */
 export function skinGridImageUrl(url: string | null | undefined): string | null {
-  return steamEconomyImageUrl(url, 256);
+  return economyImageUrl(url, 256);
 }
 
-function steamEconomyImageUrl(
+/** High-quality grid tiles for agents (384px). */
+export function agentGridImageUrl(url: string | null | undefined): string | null {
+  return economyImageUrl(url, 384);
+}
+
+/** Hero preview for agent workspace (512px). */
+export function agentPreviewImageUrl(url: string | null | undefined): string | null {
+  return economyImageUrl(url, 512);
+}
+
+export function economyImageUrl(
   url: string | null | undefined,
   size: number,
 ): string | null {

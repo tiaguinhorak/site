@@ -16,6 +16,15 @@ import {
 import { weaponIdToDisplayName } from "@/lib/inventory/weapon-display-name";
 import type { StickerFinishVariant } from "@/lib/inventory/sticker-finish-variant";
 import { toast } from "@/lib/toast";
+import {
+  readWeaponStickersClientCache,
+  writeWeaponStickersClientCache,
+} from "@/lib/inventory/weapon-stickers-client-cache";
+import {
+  readStickerPickerClientCache,
+  writeStickerPickerClientCache,
+} from "@/lib/inventory/sticker-picker-client-cache";
+import { preloadStickerImages } from "@/lib/inventory/preload-economy-images";
 
 export type PickerSticker = {
   id: string;
@@ -139,11 +148,27 @@ export function useWeaponStickerState(
   const loadAllTeams = useCallback(async () => {
     if (!weaponId || !enabled) return;
     const generation = ++loadGenerationRef.current;
-    setLoading(true);
+
+    // Always load both teams so switching T/CT never shows empty slots.
+    const teamsToLoad: LoadoutTeam[] = ["T", "CT"];
+
+    // Apply client cache immediately — stickers appear instantly on re-open.
+    let hadCache = false;
+    for (const team of teamsToLoad) {
+      const cached = readWeaponStickersClientCache(weaponId, team);
+      if (cached) {
+        hadCache = true;
+        setByTeam((prev) => ({ ...prev, [team]: cached }));
+        preloadStickerImages(cached.slotImageUrls);
+      }
+    }
+    if (!hadCache) {
+      setLoading(true);
+    }
+
     try {
-      const teams: LoadoutTeam[] = ["T", "CT"];
       const results = await Promise.all(
-        teams.map(async (team) => {
+        teamsToLoad.map(async (team) => {
           const params = new URLSearchParams({ weaponId, team });
           const res = await fetch(`/api/inventory/weapon-stickers?${params}`, {
             credentials: "same-origin",
@@ -152,13 +177,13 @@ export function useWeaponStickerState(
           if (!res.ok) {
             throw new Error(data.error ?? t("stickersLoadFailed"));
           }
-          return {
-            team,
-            cache: teamCacheFromResponse(
-              (data.slots ?? []) as number[],
-              data.slotDetails as SlotDetail[] | undefined,
-            ),
-          };
+          const cache = teamCacheFromResponse(
+            (data.slots ?? []) as number[],
+            data.slotDetails as SlotDetail[] | undefined,
+          );
+          writeWeaponStickersClientCache(weaponId, team, cache);
+          preloadStickerImages(cache.slotImageUrls);
+          return { team, cache };
         }),
       );
 
@@ -166,14 +191,13 @@ export function useWeaponStickerState(
         return;
       }
 
-      const next: Record<LoadoutTeam, TeamStickerCache> = {
-        T: emptyTeamCache(),
-        CT: emptyTeamCache(),
-      };
-      for (const { team, cache } of results) {
-        next[team] = cache;
-      }
-      setByTeam(next);
+      setByTeam((prev) => {
+        const next = { ...prev };
+        for (const { team, cache } of results) {
+          next[team] = cache;
+        }
+        return next;
+      });
     } catch (err) {
       if (generation === loadGenerationRef.current) {
         toast.error(err instanceof Error ? err.message : t("stickersLoadFailed"));
@@ -215,7 +239,23 @@ export function useWeaponStickerState(
     const key = `${weaponId}:${query}:${safePage}:${pickerFinishVariant}`;
     if (!force && lastPickerKeyRef.current === key) return;
     lastPickerKeyRef.current = key;
-    setPickerLoading(true);
+
+    const cached = readStickerPickerClientCache(
+      weaponId,
+      safePage,
+      query,
+      pickerFinishVariant,
+    );
+    if (cached) {
+      setPickerItems(cached.items);
+      setPickerPage(cached.page);
+      setPickerTotalPages(cached.totalPages);
+      setPickerTotal(cached.total);
+      preloadStickerImages(cached.items.map((i) => i.imageUrl));
+    } else {
+      setPickerLoading(true);
+    }
+
     try {
       const params = new URLSearchParams({
         picker: "1",
@@ -229,14 +269,30 @@ export function useWeaponStickerState(
         credentials: "same-origin",
       });
       const data = await res.json();
-      setPickerItems(data.items ?? []);
+      const items = data.items ?? [];
+      setPickerItems(items);
       setPickerPage(data.page ?? safePage);
       setPickerTotalPages(data.totalPages ?? 1);
       setPickerTotal(data.total ?? 0);
+      writeStickerPickerClientCache(
+        weaponId,
+        safePage,
+        query,
+        pickerFinishVariant,
+        {
+          items,
+          page: data.page ?? safePage,
+          totalPages: data.totalPages ?? 1,
+          total: data.total ?? 0,
+        },
+      );
+      preloadStickerImages(items.map((i: PickerSticker) => i.imageUrl));
     } catch {
-      setPickerItems([]);
-      setPickerTotalPages(1);
-      setPickerTotal(0);
+      if (!cached) {
+        setPickerItems([]);
+        setPickerTotalPages(1);
+        setPickerTotal(0);
+      }
     } finally {
       setPickerLoading(false);
     }
@@ -398,6 +454,11 @@ export function useWeaponStickerState(
       if (data.gameSync?.ok) {
         toast.success(t("stickersGameSyncOk"));
       }
+      writeWeaponStickersClientCache(weaponId, teamToSave, {
+        slots: [...slotsToSave],
+        slotLabels: [...byTeam[teamToSave].slotLabels],
+        slotImageUrls: [...byTeam[teamToSave].slotImageUrls],
+      });
       return true;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("stickersSaveFailed"));

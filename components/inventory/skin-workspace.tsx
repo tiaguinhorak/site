@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { motion } from "motion/react";
 import { Loader2, Lock, Palette, Search, Sticker, X } from "lucide-react";
@@ -22,6 +22,10 @@ import {
   skinSupportsStickers,
 } from "@/lib/inventory/weapon-sticker-support";
 import { skinGridImageUrl, skinPreviewImageUrl } from "@/lib/inventory/skin-images";
+import {
+  preloadEconomyImages,
+  preloadSkinPreviewImage,
+} from "@/lib/inventory/preload-economy-images";
 import {
   prefetchSkinPickerPage,
   readSkinPickerCache,
@@ -150,16 +154,18 @@ export function SkinWorkspace({
   const [skinPickerQuery, setSkinPickerQuery] = useState("");
   const [skinPickerPage, setSkinPickerPage] = useState(1);
   const [skinPickerTotalPages, setSkinPickerTotalPages] = useState(1);
-  const [stickerLoadEnabled, setStickerLoadEnabled] = useState(false);
 
-  const displaySkin = activeSkin ?? skin;
+  // Never show a variant from a different weapon (fixes phantom preview on open).
+  const displaySkin = useMemo(() => {
+    if (!skin) return activeSkin;
+    if (!activeSkin || activeSkin.weaponId !== skin.weaponId) return skin;
+    return activeSkin;
+  }, [skin, activeSkin]);
+
   const previewImageUrl = useMemo(() => {
     if (!displaySkin?.imageUrl) return null;
-    if (tab === "skins") {
-      return skinGridImageUrl(displaySkin.imageUrl) ?? displaySkin.imageUrl;
-    }
     return skinPreviewImageUrl(displaySkin.imageUrl) ?? displaySkin.imageUrl;
-  }, [displaySkin?.imageUrl, tab]);
+  }, [displaySkin?.imageUrl]);
 
   const stickerViewTeam: LoadoutTeam =
     stickerScope === "CT"
@@ -182,23 +188,12 @@ export function SkinWorkspace({
   const stickersEnabled = supportsStickers && canUseStickers;
   const anyEquipped = displaySkin ? displaySkin.equippedT || displaySkin.equippedCT : false;
 
+  // Load stickers as soon as the workspace opens so the slot grid in the preview is populated.
+  // The picker is only active on the stickers tab (controls whether picker list fetches).
   const stickerHookEnabled =
-    open && Boolean(displaySkin) && stickersEnabled && stickerLoadEnabled;
+    open && Boolean(displaySkin) && stickersEnabled;
   const pickerActive = open && tab === "stickers";
 
-  useEffect(() => {
-    if (!open) {
-      setStickerLoadEnabled(false);
-      return;
-    }
-    if (tab === "stickers") {
-      setStickerLoadEnabled(true);
-      return;
-    }
-    if (!stickersEnabled) return;
-    const timer = setTimeout(() => setStickerLoadEnabled(true), 500);
-    return () => clearTimeout(timer);
-  }, [open, tab, stickersEnabled]);
 
   useEffect(() => {
     if (!open || !displaySkin?.weaponId) return;
@@ -219,9 +214,36 @@ export function SkinWorkspace({
     },
   );
 
+  const prevWeaponIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (skin) setActiveSkin(skin);
-  }, [skin?.catalogSkinId, skin]);
+  }, [skin?.catalogSkinId, skin?.weaponId]);
+
+  useEffect(() => {
+    if (!open) {
+      setActiveSkin(null);
+      setSkinPickerItems([]);
+      setSkinPickerLoading(false);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !displaySkin?.imageUrl) return;
+    preloadSkinPreviewImage(displaySkin.imageUrl);
+  }, [open, displaySkin?.imageUrl]);
+
+  // Reset picker pagination/search whenever the weapon changes so we never land
+  // on a non-existent page (e.g. gloves only have 1 page).
+  useEffect(() => {
+    if (!displaySkin?.weaponId) return;
+    if (prevWeaponIdRef.current === displaySkin.weaponId) return;
+    prevWeaponIdRef.current = displaySkin.weaponId;
+    setSkinPickerPage(1);
+    setSkinPickerSearch("");
+    setSkinPickerQuery("");
+    setSkinPickerItems([]);
+  }, [displaySkin?.weaponId]);
 
   useEffect(() => {
     if (!open) return;
@@ -242,6 +264,8 @@ export function SkinWorkspace({
       setSkinPickerItems(cached.items);
       setSkinPickerTotalPages(cached.totalPages);
       setSkinPickerLoading(false);
+      preloadEconomyImages(cached.items.map((i) => i.imageUrl), "skin-grid", SKIN_PICKER_PAGE_SIZE);
+      preloadEconomyImages(cached.items.map((i) => i.imageUrl), "skin-preview", SKIN_PICKER_PAGE_SIZE);
     } else {
       setSkinPickerLoading(true);
     }
@@ -255,6 +279,14 @@ export function SkinWorkspace({
     });
     const query = skinPickerQuery.trim();
     if (query) params.set("search", query);
+
+    const shouldFetch = !cached;
+    if (!shouldFetch) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
     void fetch(`/api/inventory/skins?${params}`, { credentials: "same-origin" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -289,6 +321,16 @@ export function SkinWorkspace({
           items,
           data.totalPages ?? 1,
         );
+        preloadEconomyImages(
+          items.map((i: SkinPickerItem) => i.imageUrl),
+          "skin-grid",
+          SKIN_PICKER_PAGE_SIZE,
+        );
+        preloadEconomyImages(
+          items.map((i: SkinPickerItem) => i.imageUrl),
+          "skin-preview",
+          SKIN_PICKER_PAGE_SIZE,
+        );
       })
       .finally(() => {
         if (!cancelled) setSkinPickerLoading(false);
@@ -308,6 +350,7 @@ export function SkinWorkspace({
 
   function selectSkinVariant(item: SkinPickerItem) {
     if (!displaySkin) return;
+    preloadSkinPreviewImage(item.imageUrl);
     const next: SkinWorkspaceData = {
       ...displaySkin,
       catalogSkinId: item.catalogSkinId,
@@ -327,9 +370,6 @@ export function SkinWorkspace({
     if (!open || !skin) return;
     const equipT = weaponAllowedOnTeam(skin.weaponId, "T");
     const equipCT = weaponAllowedOnTeam(skin.weaponId, "CT");
-    const both = equipT && equipCT;
-    const singleOnly = !both && (equipT || equipCT);
-    const hasStickers = skinSupportsStickers(skin.weaponId, maxStickerSlots, skin.categoryKey) && canUseStickers;
     setTab(resolveInitialTab(initialTab));
     const side = defaultPendingSide(skin, equipT, equipCT);
     setPendingSide(side);
@@ -347,10 +387,6 @@ export function SkinWorkspace({
     setStickerScope((prev) => (prev === nextScope ? prev : nextScope));
     if (nextScope === "T") setLastSingleTeam("T");
     if (nextScope === "CT") setLastSingleTeam("CT");
-
-    if (singleOnly && hasStickers && stickersEnabled && resolveInitialTab(initialTab) === "skins") {
-      setTab("stickers");
-    }
   }, [
     open,
     initialTab,
@@ -359,7 +395,6 @@ export function SkinWorkspace({
     skin?.equippedCT,
     skin?.equippedT,
     skin?.weaponId,
-    stickersEnabled,
     maxStickerSlots,
   ]);
 
@@ -497,7 +532,7 @@ export function SkinWorkspace({
         role="dialog"
         aria-modal
         aria-labelledby="skin-workspace-title"
-        initial={{ opacity: 0, y: 12 }}
+        initial={false}
         animate={{ opacity: 1, y: 0 }}
         className="relative z-10 flex h-full w-full flex-col overflow-hidden glass-modal"
       >
@@ -561,8 +596,7 @@ export function SkinWorkspace({
                       fill
                       sizes="(max-width: 1024px) 90vw, 640px"
                       priority
-                      quality={95}
-                      unoptimized
+                      quality={90}
                       className="object-contain p-2 sm:p-3"
                     />
                   ) : null}
@@ -683,8 +717,7 @@ export function SkinWorkspace({
                               alt=""
                               fill
                               sizes="(max-width: 640px) 25vw, 128px"
-                              quality={95}
-                              unoptimized
+                              quality={85}
                               className="object-contain p-1"
                             />
                           ) : (

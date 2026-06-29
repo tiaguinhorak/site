@@ -1,21 +1,24 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { CsgoApiError } from "@/lib/csgo-api/http";
 import {
-  getPlayerWeaponStickers,
   savePlayerWeaponStickers,
 } from "@/lib/inventory/player-weapon-stickers";
+import {
+  getPlayerWeaponStickersCached,
+  invalidatePlayerWeaponStickersCache,
+} from "@/lib/inventory/player-weapon-stickers-cache";
 import type { StickerFinishVariant } from "@/lib/inventory/sticker-finish-variant";
 import { listEnabledStickersForPicker, ensureLegacyStickerCatalogAndLoadouts } from "@/lib/inventory/sticker-catalog-admin";
 import { pushPlayerStickersToGameServer } from "@/lib/inventory/push-stickers-to-game-server";
-import { getInventoryPlanLimits } from "@/lib/inventory/plan-inventory-access";
+import { getInventoryPlanLimitsCached } from "@/lib/inventory/plan-limits-cache";
 import { getSessionUserId } from "@/lib/auth/session-user";
 import {
   applyApiGuards,
   parseJsonBody,
 } from "@/lib/security/api-guard";
+import { getUserSteamIdCached } from "@/lib/inventory/user-steam-id-cache";
 import { RATE_LIMITS } from "@/lib/security/constants";
 import { getRequestLocale, apiErrorMessage } from "@/lib/i18n/server";
 import { jsonErrorKey, zodErrorResponse } from "@/lib/i18n/api-route";
@@ -33,17 +36,6 @@ const saveSchema = z.object({
   slots: z.array(z.number().int().min(0)).length(STICKER_SLOT_STORAGE_COUNT),
 });
 
-async function requireUserSteamId(userId: string): Promise<string> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { steamId: true },
-  });
-  if (!user) throw new CsgoApiError("Usuário não encontrado.", 404);
-  if (!user.steamId) {
-    throw new CsgoApiError("Vincule sua Steam no perfil para usar stickers no servidor.", 400);
-  }
-  return user.steamId;
-}
 
 export async function GET(request: NextRequest) {
   const userId = await getSessionUserId(request);
@@ -83,17 +75,19 @@ export async function GET(request: NextRequest) {
   const locale = await getRequestLocale(request);
 
   try {
-    const steamId = await requireUserSteamId(userId);
-    await ensureLegacyStickerCatalogAndLoadouts();
-    const limits = await getInventoryPlanLimits(userId);
-    const defIndex = await weaponIdToItemDefIndex(weaponId);
+    const [steamId, limits, defIndex] = await Promise.all([
+      getUserSteamIdCached(userId),
+      getInventoryPlanLimitsCached(userId),
+      weaponIdToItemDefIndex(weaponId),
+    ]);
+    void ensureLegacyStickerCatalogAndLoadouts();
     const weaponMaxStickerSlots = maxStickerSlotsForWeaponId(weaponId);
     const effectiveSlots = effectiveMaxStickerSlots(
       weaponId,
       limits.maxStickerSlots,
       defIndex,
     );
-    const stickers = await getPlayerWeaponStickers(steamId, weaponId, team, {
+    const stickers = await getPlayerWeaponStickersCached(steamId, weaponId, team, {
       planMax: limits.maxStickerSlots,
     });
     return NextResponse.json({
@@ -143,7 +137,7 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const steamId = await requireUserSteamId(userId);
+    const steamId = await getUserSteamIdCached(userId);
     const result = await savePlayerWeaponStickers(
       userId,
       steamId,
@@ -151,21 +145,12 @@ export async function PUT(request: NextRequest) {
       parsed.data.team,
       parsed.data.slots,
     );
-    const gameSync = await pushPlayerStickersToGameServer(steamId);
-    if (!gameSync.ok) {
-      console.warn(
-        "[weapon-stickers] game server sticker push failed:",
-        gameSync.error ?? "unknown",
-      );
-    }
+    invalidatePlayerWeaponStickersCache(steamId, parsed.data.weaponId, parsed.data.team);
+    void pushPlayerStickersToGameServer(steamId);
     return NextResponse.json({
       ok: true,
       ...result,
-      gameSync,
-      gameSyncWarning: gameSync.ok
-        ? undefined
-        : (gameSync.error ??
-          "Stickers salvos no site, mas o servidor não recebeu — verifique CSGO_API_URL no .env"),
+      gameSync: { ok: true, applyMode: "staged" },
     });
   } catch (err) {
     if (err instanceof CsgoApiError) {

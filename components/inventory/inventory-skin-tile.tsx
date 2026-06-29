@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 import { Lock } from "lucide-react";
 import { InventoryItemArt } from "@/components/dashboard/inventory-item-art";
 import { TeamEquipBadge } from "@/components/inventory/team-equip-badge";
@@ -16,12 +16,15 @@ type InventorySkinTileProps = {
   equippedCT?: boolean;
   locked?: boolean;
   onClick?: () => void;
+  onMouseEnter?: () => void;
   className?: string;
   artClassName?: string;
+  imagePreset?: "skin-grid" | "agent-grid" | "agent-preview" | "skin-preview";
+  priority?: boolean;
   children?: ReactNode;
 };
 
-export function InventorySkinTile({
+export const InventorySkinTile = memo(function InventorySkinTile({
   name,
   imageUrl,
   accent,
@@ -30,8 +33,11 @@ export function InventorySkinTile({
   equippedCT = false,
   locked = false,
   onClick,
+  onMouseEnter,
   className,
   artClassName = "h-20 w-full",
+  imagePreset = "skin-grid",
+  priority,
   children,
 }: InventorySkinTileProps) {
   const interactive = Boolean(onClick);
@@ -41,6 +47,7 @@ export function InventorySkinTile({
       role={interactive ? "button" : undefined}
       tabIndex={interactive ? 0 : undefined}
       onClick={onClick}
+      onMouseEnter={onMouseEnter}
       onKeyDown={
         interactive
           ? (e) => {
@@ -71,7 +78,13 @@ export function InventorySkinTile({
           equippedCT={equippedCT}
           className="absolute right-2 top-2 z-10"
         />
-        <InventoryItemArt imageUrl={imageUrl} accent={accent} className={artClassName} />
+        <InventoryItemArt
+          imageUrl={imageUrl}
+          accent={accent}
+          className={artClassName}
+          imagePreset={imagePreset}
+          priority={priority}
+        />
       </div>
       <div className="px-2.5 pb-2.5">
         <p className="line-clamp-2 text-center text-[11px] font-semibold leading-snug text-foreground">
@@ -82,4 +95,4 @@ export function InventorySkinTile({
       <SkinRarityLine rarity={rarity} accent={accent} position="bottom" />
     </article>
   );
-}
+});

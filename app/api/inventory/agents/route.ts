@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { CsgoApiError } from "@/lib/csgo-api/http";
 import {
   getPlayerAgents,
@@ -13,7 +12,8 @@ import {
   listEnabledAgentsForPicker,
 } from "@/lib/inventory/agent-catalog-admin";
 import { pushPlayerAgentsToGameServer } from "@/lib/inventory/push-agents-to-game-server";
-import { getInventoryPlanLimits } from "@/lib/inventory/plan-inventory-access";
+import { getInventoryPlanLimitsCached } from "@/lib/inventory/plan-limits-cache";
+import { getUserSteamIdCached } from "@/lib/inventory/user-steam-id-cache";
 import { getSessionUserId } from "@/lib/auth/session-user";
 import { applyApiGuards, parseJsonBody } from "@/lib/security/api-guard";
 import { RATE_LIMITS } from "@/lib/security/constants";
@@ -26,17 +26,6 @@ const saveSchema = z.object({
   defIndex: z.number().int().min(0),
 });
 
-async function requireUserSteamId(userId: string): Promise<string> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { steamId: true },
-  });
-  if (!user) throw new CsgoApiError("Usuário não encontrado.", 404);
-  if (!user.steamId) {
-    throw new CsgoApiError("Vincule sua Steam no perfil para equipar agentes.", 400);
-  }
-  return user.steamId;
-}
 
 export async function GET(request: NextRequest) {
   const userId = await getSessionUserId(request);
@@ -65,9 +54,11 @@ export async function GET(request: NextRequest) {
   const locale = await getRequestLocale(request);
 
   try {
-    const steamId = await requireUserSteamId(userId);
-    await ensureLegacyAgentCatalogAndLoadouts();
-    const limits = await getInventoryPlanLimits(userId);
+    const [steamId, limits] = await Promise.all([
+      getUserSteamIdCached(userId),
+      getInventoryPlanLimitsCached(userId),
+    ]);
+    void ensureLegacyAgentCatalogAndLoadouts();
     const loadout = await getPlayerAgents(steamId);
     return NextResponse.json({
       ...loadout,
@@ -109,19 +100,18 @@ export async function POST(request: NextRequest) {
   const locale = await getRequestLocale(request);
 
   try {
-    await ensureLegacyAgentCatalogAndLoadouts();
     const { loadout, steamId } = await savePlayerAgentsForUser(
       userId,
       parsed.data.team as LoadoutTeam,
       parsed.data.defIndex,
     );
 
-    const gameSync = await pushPlayerAgentsToGameServer(steamId);
+    void pushPlayerAgentsToGameServer(steamId);
 
     return NextResponse.json({
       ok: true,
       loadout,
-      gameSync,
+      gameSync: { ok: true, applyMode: "staged" },
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Falha ao salvar agente.";
@@ -149,10 +139,14 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
-    const steamId = await requireUserSteamId(userId);
+    const steamId = await getUserSteamIdCached(userId);
     const loadout = await clearPlayerAgent(steamId, teamParam);
-    const gameSync = await pushPlayerAgentsToGameServer(steamId);
-    return NextResponse.json({ ok: true, loadout, gameSync });
+    void pushPlayerAgentsToGameServer(steamId);
+    return NextResponse.json({
+      ok: true,
+      loadout,
+      gameSync: { ok: true, applyMode: "staged" },
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Falha ao remover agente.";
     return NextResponse.json({ error: message }, { status: 400 });

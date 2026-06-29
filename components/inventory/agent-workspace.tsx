@@ -15,6 +15,11 @@ import {
 } from "@/lib/ui/theme-surfaces";
 import { toast } from "@/lib/toast";
 import { API_REQUEST_HEADER } from "@/lib/brand";
+import { agentGridImageUrl, agentPreviewImageUrl } from "@/lib/inventory/skin-images";
+import {
+  readAgentPickerCache,
+  writeAgentPickerCache,
+} from "@/lib/inventory/agent-picker-cache";
 
 const inventoryWriteHeaders = {
   "Content-Type": "application/json",
@@ -48,6 +53,8 @@ type AgentSaveResponse = {
 type AgentWorkspaceProps = {
   open: boolean;
   canUseAgents?: boolean;
+  initialLoadout?: AgentLoadout | null;
+  initialTeam?: LoadoutTeam;
   onClose: () => void;
   onSaved?: () => void;
 };
@@ -66,13 +73,15 @@ function notifyGameSync(
         : t("gameSyncStaged"),
     );
   } else {
-    toast.warning(t("gameSyncPartial"));
+    toast.error(t("gameSyncPartial"));
   }
 }
 
 export function AgentWorkspace({
   open,
   canUseAgents = true,
+  initialLoadout = null,
+  initialTeam,
   onClose,
   onSaved,
 }: AgentWorkspaceProps) {
@@ -113,7 +122,17 @@ export function AgentWorkspace({
   }, [t]);
 
   const loadPicker = useCallback(async () => {
-    setPickerLoading(true);
+    const cached = readAgentPickerCache(editTeam, pickerPage, pickerQuery);
+    if (cached) {
+      setPickerItems(cached.items);
+      setPickerTotalPages(cached.totalPages);
+      setPickerLoading(false);
+    } else {
+      setPickerLoading(true);
+    }
+
+    if (cached) return;
+
     try {
       const params = new URLSearchParams({
         picker: "1",
@@ -127,8 +146,16 @@ export function AgentWorkspace({
       });
       if (!res.ok) throw new Error("Falha ao carregar catálogo.");
       const data = await res.json();
-      setPickerItems(data.items ?? []);
+      const items = data.items ?? [];
+      setPickerItems(items);
       setPickerTotalPages(data.totalPages ?? 1);
+      writeAgentPickerCache(
+        editTeam,
+        pickerPage,
+        pickerQuery,
+        items,
+        data.totalPages ?? 1,
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("genericError"));
     } finally {
@@ -138,8 +165,18 @@ export function AgentWorkspace({
 
   useEffect(() => {
     if (!open) return;
+    if (initialLoadout) {
+      setLoadout(initialLoadout);
+      setLoading(false);
+      return;
+    }
     void loadLoadout();
-  }, [open, loadLoadout]);
+  }, [open, initialLoadout, loadLoadout]);
+
+  useEffect(() => {
+    if (!open || !initialTeam) return;
+    setScope(initialTeam);
+  }, [open, initialTeam]);
 
   useEffect(() => {
     if (!open) return;
@@ -165,6 +202,27 @@ export function AgentWorkspace({
       toast.error(t("agentsPlanRequired"));
       return;
     }
+    const prevLoadout = loadout;
+    // Optimistic update: apply immediately before API responds
+    const picked = pickerItems.find((item) => item.defIndex === defIndex);
+    setLoadout((prev) => {
+      if (!prev) return prev;
+      if (editTeam === "T") {
+        return {
+          ...prev,
+          agentT: defIndex,
+          agentTName: picked?.name ?? prev.agentTName,
+          agentTImage: picked?.imageUrl ?? prev.agentTImage,
+        };
+      }
+      return {
+        ...prev,
+        agentCT: defIndex,
+        agentCTName: picked?.name ?? prev.agentCTName,
+        agentCTImage: picked?.imageUrl ?? prev.agentCTImage,
+      };
+    });
+    setSelectedDefIndex(defIndex);
     setSaving(true);
     try {
       const res = await fetch("/api/inventory/agents", {
@@ -180,6 +238,14 @@ export function AgentWorkspace({
       notifyGameSync(data.gameSync, t);
       onSaved?.();
     } catch (err) {
+      // Revert optimistic update on error
+      setLoadout(prevLoadout);
+      setSelectedDefIndex(prevLoadout
+        ? editTeam === "T"
+          ? prevLoadout.agentT > 0 ? prevLoadout.agentT : null
+          : prevLoadout.agentCT > 0 ? prevLoadout.agentCT : null
+        : null,
+      );
       toast.error(err instanceof Error ? err.message : t("genericError"));
     } finally {
       setSaving(false);
@@ -187,6 +253,14 @@ export function AgentWorkspace({
   }
 
   async function clearAgent() {
+    const prevLoadout = loadout;
+    // Optimistic update: remove immediately
+    setLoadout((prev) => {
+      if (!prev) return prev;
+      if (editTeam === "T") return { ...prev, agentT: 0, agentTName: null, agentTImage: null };
+      return { ...prev, agentCT: 0, agentCTName: null, agentCTImage: null };
+    });
+    setSelectedDefIndex(null);
     setSaving(true);
     try {
       const res = await fetch(`/api/inventory/agents?team=${editTeam}`, {
@@ -197,11 +271,18 @@ export function AgentWorkspace({
       const data = (await res.json()) as AgentSaveResponse;
       if (!res.ok) throw new Error(data.error ?? "Falha ao remover.");
       setLoadout(data.loadout);
-      setSelectedDefIndex(null);
       toast.success(t("agentsCleared"));
       notifyGameSync(data.gameSync, t);
       onSaved?.();
     } catch (err) {
+      // Revert optimistic update on error
+      setLoadout(prevLoadout);
+      setSelectedDefIndex(prevLoadout
+        ? editTeam === "T"
+          ? prevLoadout.agentT > 0 ? prevLoadout.agentT : null
+          : prevLoadout.agentCT > 0 ? prevLoadout.agentCT : null
+        : null,
+      );
       toast.error(err instanceof Error ? err.message : t("genericError"));
     } finally {
       setSaving(false);
@@ -209,11 +290,13 @@ export function AgentWorkspace({
   }
 
   const previewImage = useMemo(() => {
+    let raw: string | null = null;
     if (selectedDefIndex) {
       const picked = pickerItems.find((item) => item.defIndex === selectedDefIndex);
-      if (picked?.imageUrl) return picked.imageUrl;
+      raw = picked?.imageUrl ?? null;
     }
-    return currentImage;
+    if (!raw) raw = currentImage ?? null;
+    return raw ? agentPreviewImageUrl(raw) ?? raw : null;
   }, [selectedDefIndex, pickerItems, currentImage]);
 
   if (!open) return null;
@@ -251,9 +334,10 @@ export function AgentWorkspace({
                 {loadout.agentTImage ? (
                   <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-black/20">
                     <RemoteImage
-                      src={loadout.agentTImage}
+                      src={agentGridImageUrl(loadout.agentTImage) ?? loadout.agentTImage}
                       alt={loadout.agentTName}
                       fill
+                      sizes="48px"
                       className="object-contain p-0.5"
                     />
                   </div>
@@ -273,9 +357,10 @@ export function AgentWorkspace({
                 {loadout.agentCTImage ? (
                   <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-black/20">
                     <RemoteImage
-                      src={loadout.agentCTImage}
+                      src={agentGridImageUrl(loadout.agentCTImage) ?? loadout.agentCTImage}
                       alt={loadout.agentCTName}
                       fill
+                      sizes="48px"
                       className="object-contain p-0.5"
                     />
                   </div>
@@ -309,53 +394,60 @@ export function AgentWorkspace({
             />
 
             <div className={cn("rounded-xl p-4", surfaceSubtleClass)}>
-              {loading ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-6 w-6 motion-safe-spin text-primary" />
-                </div>
-              ) : (
-                <>
-                  <div className="relative mx-auto aspect-square w-full max-w-[220px] overflow-hidden rounded-xl bg-black/20">
-                    {previewImage ? (
-                      <RemoteImage
-                        src={previewImage}
-                        alt={currentName ?? t("catAgent")}
-                        fill
-                        className="object-contain p-2"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-muted">
-                        <UserRound className="h-12 w-12 opacity-40" />
-                      </div>
-                    )}
+              <div className="relative mx-auto aspect-square w-full max-w-[280px] overflow-hidden rounded-xl bg-black/20">
+                {previewImage ? (
+                  <RemoteImage
+                    src={previewImage}
+                    alt={currentName ?? t("catAgent")}
+                    fill
+                    sizes="(max-width: 640px) 80vw, 440px"
+                    priority
+                    className="object-contain p-2"
+                  />
+                ) : (
+                  <div className="flex h-full min-h-[200px] items-center justify-center text-muted">
+                    <UserRound className="h-12 w-12 opacity-40" />
                   </div>
-                  <p className="mt-3 text-center text-sm font-medium">
-                    {selectedDefIndex
-                      ? pickerItems.find((i) => i.defIndex === selectedDefIndex)?.name ??
-                        currentName ??
-                        t("agentsPickOne")
-                      : currentName ?? t("agentsPickOne")}
-                  </p>
-                </>
-              )}
+                )}
+                {loading && !previewImage && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                    <Loader2 className="h-6 w-6 motion-safe-spin text-primary" />
+                  </div>
+                )}
+              </div>
+              <p className="mt-3 text-center text-sm font-medium">
+                {selectedDefIndex
+                  ? pickerItems.find((i) => i.defIndex === selectedDefIndex)?.name ??
+                    currentName ??
+                    t("agentsPickOne")
+                  : currentName ?? t("agentsPickOne")}
+              </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                disabled={!canUseAgents || saving || !selectedDefIndex}
-                onClick={() => void saveAgent(selectedDefIndex ?? 0)}
-              >
-                {saving ? <Loader2 className="h-4 w-4 motion-safe-spin" /> : t("agentsEquip")}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={saving || currentDefIndex <= 0}
-                onClick={() => void clearAgent()}
-              >
-                {t("agentsClear")}
-              </Button>
+              {/* Show equip only when selection differs from what's already equipped */}
+              {selectedDefIndex !== currentDefIndex && (
+                <Button
+                  type="button"
+                  disabled={!canUseAgents || saving || !selectedDefIndex}
+                  onClick={() => void saveAgent(selectedDefIndex ?? 0)}
+                >
+                  {saving ? <Loader2 className="h-4 w-4 motion-safe-spin" /> : t("agentsEquip")}
+                </Button>
+              )}
+              {currentDefIndex > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={saving}
+                  onClick={() => void clearAgent()}
+                >
+                  {saving ? <Loader2 className="h-4 w-4 motion-safe-spin" /> : t("agentsClear")}
+                </Button>
+              )}
+              {(!selectedDefIndex || selectedDefIndex === currentDefIndex) && currentDefIndex <= 0 && (
+                <p className="text-xs text-muted self-center">{t("agentsPickOne")}</p>
+              )}
             </div>
           </div>
 
@@ -411,9 +503,10 @@ export function AgentWorkspace({
                       <div className="relative aspect-square overflow-hidden rounded-lg bg-black/20">
                         {item.imageUrl ? (
                           <RemoteImage
-                            src={item.imageUrl}
+                            src={agentGridImageUrl(item.imageUrl) ?? item.imageUrl}
                             alt={item.name}
                             fill
+                            sizes="120px"
                             className="object-contain p-1"
                           />
                         ) : (

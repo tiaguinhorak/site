@@ -43,6 +43,26 @@ import {
 } from "@/components/inventory/skin-workspace";
 import { AgentWorkspace } from "@/components/inventory/agent-workspace";
 import { prefetchSkinPickerPage } from "@/lib/inventory/skin-picker-cache";
+import {
+  readCatalogGridCache,
+  writeCatalogGridCache,
+  patchCatalogGridCacheEquipState,
+  prefetchCatalogGrid,
+  type CatalogGridCacheParams,
+} from "@/lib/inventory/catalog-grid-cache";
+import {
+  readLoadoutClientCache,
+  writeLoadoutClientCache,
+} from "@/lib/inventory/loadout-client-cache";
+import {
+  applyOptimisticEquipToLoadout,
+  applyOptimisticUnequipToLoadout,
+} from "@/lib/inventory/optimistic-loadout-equip";
+import { agentLoadoutFromEquippedItems } from "@/lib/inventory/agent-loadout-from-items";
+import {
+  applyOptimisticEquipToCatalog,
+  applyOptimisticUnequipToCatalog,
+} from "@/lib/inventory/optimistic-catalog-equip";
 import { mapCatalogCategoryToUi } from "@/lib/inventory/catalog-categories";
 import { loadoutItemToPreview } from "@/lib/inventory/skin-preview-mappers";
 import { useSkinPreview } from "@/lib/use-skin-preview";
@@ -53,9 +73,10 @@ import {
   maxStickerSlotsForPlan,
 } from "@/lib/inventory/plan-inventory-client";
 import { toast } from "@/lib/toast";
-import { InventoryPageSkeleton } from "@/components/loading/page-skeletons";
 import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
 import { SkinPreviewModal } from "@/components/skins/skin-preview-modal";
+import { preloadSkinGridImages, preloadSkinPreviewImage } from "@/lib/inventory/preload-skin-images";
+import type { InventoryBootstrapData } from "@/lib/inventory/inventory-bootstrap";
 
 type AgentLoadoutState = {
   agentT: number;
@@ -98,6 +119,55 @@ type LoadoutResponse = {
   steamId2?: string | null;
   items: EquippedLoadoutEntry[];
 };
+
+function catalogGridCacheParams(
+  category: string,
+  page: number,
+  search: string,
+  weaponId: string,
+  dualTeamOnly: boolean,
+  rarityTier: string,
+): CatalogGridCacheParams {
+  return {
+    category,
+    page,
+    search,
+    weaponId,
+    dualTeamOnly,
+    rarityTier,
+  };
+}
+
+function resolveInitialInventoryState(bootstrap: InventoryBootstrapData | null) {
+  const gridParams = catalogGridCacheParams("all", 1, "", "", false, "all");
+  // Never read sessionStorage here — it is empty on the server but may hold data on
+  // the client, which produces different initial HTML and triggers hydration recovery
+  // (in dev: cascades of GET /dashboard/inventario and a frozen UI).
+  if (bootstrap?.catalog != null) {
+    return {
+      gridParams,
+      catalogCache: {
+        items: bootstrap.catalog.items,
+        page: bootstrap.catalog.page,
+        totalPages: bootstrap.catalog.totalPages,
+        resultTotal: bootstrap.catalog.total,
+        catalogTotal: bootstrap.catalog.catalogTotal,
+        weaponOptions: bootstrap.catalog.weaponOptions,
+        availableRarityTiers: bootstrap.catalog.availableRarityTiers,
+        at: Number.MAX_SAFE_INTEGER,
+      },
+      loadoutCache: bootstrap.loadout ?? null,
+    };
+  }
+  return { gridParams, catalogCache: null, loadoutCache: null };
+}
+
+function scheduleSkinGridPreload(urls: Array<string | null | undefined>): void {
+  if (typeof window === "undefined") return;
+  requestAnimationFrame(() => {
+    preloadSkinGridImages(urls);
+  });
+}
 
 function unequipSideForItem(item: { equippedT: boolean; equippedCT: boolean }): EquipSide {
   if (item.equippedT && item.equippedCT) return "both";
@@ -168,7 +238,12 @@ function mergeWorkspaceFromSources(
 
 function applyLoadoutToCatalogItems(
   items: CatalogSkin[],
-  loadoutItems: EquippedLoadoutEntry[],
+  loadoutItems: Array<{
+    weaponId: string;
+    catalogSkinId: string;
+    equippedT: boolean;
+    equippedCT: boolean;
+  }>,
 ): CatalogSkin[] {
   const weaponT = new Map<string, string>();
   const weaponCT = new Map<string, string>();
@@ -227,7 +302,16 @@ async function postJson(
   return payload;
 }
 
-export function InventorySection() {
+export function InventorySection({
+  bootstrap = null,
+}: {
+  bootstrap?: InventoryBootstrapData | null;
+}) {
+  const initialState = useMemo(() => resolveInitialInventoryState(bootstrap), [bootstrap]);
+  const { catalogCache: initialCatalogCache, loadoutCache: initialLoadoutCache } =
+    initialState;
+  const hasInitialGridItems = (initialCatalogCache?.items?.length ?? 0) > 0;
+
   const t = useTranslations("inventory");
   const { user } = useUser();
   const maxStickerSlots = maxStickerSlotsForPlan(
@@ -268,27 +352,37 @@ export function InventorySection() {
     [t],
   );
 
-  const [items, setItems] = useState<CatalogSkin[]>([]);
+  const [items, setItems] = useState<CatalogSkin[]>(() => {
+    const base = initialCatalogCache?.items ?? [];
+    if (initialLoadoutCache && base.length > 0) {
+      return applyLoadoutToCatalogItems(base, initialLoadoutCache.items);
+    }
+    return base;
+  });
   const [agentItems, setAgentItems] = useState<AgentCatalogItem[]>([]);
-  const [agentLoadout, setAgentLoadout] = useState<AgentLoadoutState | null>(null);
+  const [agentLoadout, setAgentLoadout] = useState<AgentLoadoutState | null>(
+    initialLoadoutCache
+      ? agentLoadoutFromEquippedItems(initialLoadoutCache.items)
+      : null,
+  );
   const [agentTeamBrowse, setAgentTeamBrowse] = useState<LoadoutTeam>("T");
   const [agentWorkspaceOpen, setAgentWorkspaceOpen] = useState(false);
-  const [loadout, setLoadout] = useState<LoadoutResponse | null>(null);
+  const [loadout, setLoadout] = useState<LoadoutResponse | null>(initialLoadoutCache);
   const [dualTeamOnly, setDualTeamOnly] = useState(false);
   const [rarityFilter, setRarityFilter] = useState<RarityKey | "all">("all");
   const [filter, setFilter] = useState<"all" | InventoryCategoryKey>("all");
   const [weaponFilter, setWeaponFilter] = useState("");
   const [weaponOptions, setWeaponOptions] = useState<
     Array<{ weaponId: string; weaponName: string }>
-  >([]);
+  >(initialCatalogCache?.weaponOptions ?? []);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [resultTotal, setResultTotal] = useState(0);
-  const [catalogTotal, setCatalogTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [bootstrapped, setBootstrapped] = useState(false);
+  const [totalPages, setTotalPages] = useState(initialCatalogCache?.totalPages ?? 1);
+  const [resultTotal, setResultTotal] = useState(initialCatalogCache?.resultTotal ?? 0);
+  const [catalogTotal, setCatalogTotal] = useState(initialCatalogCache?.catalogTotal ?? 0);
+  const [loading, setLoading] = useState(!hasInitialGridItems);
+  const [bootstrapped, setBootstrapped] = useState(hasInitialGridItems);
   const [loadError, setLoadError] = useState(false);
   const [equippingId, setEquippingId] = useState<string | null>(null);
   const [unequippingId, setUnequippingId] = useState<string | null>(null);
@@ -298,27 +392,43 @@ export function InventorySection() {
     tab: "skins" | "stickers";
     stickerTeam?: LoadoutTeam;
   } | null>(null);
-  const [availableRarityTiers, setAvailableRarityTiers] = useState<RarityKey[]>([]);
-  const [mounted, setMounted] = useState(false);
-
+  const [availableRarityTiers, setAvailableRarityTiers] = useState<RarityKey[]>(
+    initialCatalogCache?.availableRarityTiers ?? [],
+  );
   const reqIdRef = useRef(0);
+  const skinsFetchInFlightRef = useRef<string | null>(null);
+  const bootstrapFetchInFlightRef = useRef(false);
+  const clientBootstrapRefreshDoneRef = useRef(false);
+  const filterMountRef = useRef(true);
+  const [uiReady, setUiReady] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    setUiReady(true);
   }, []);
 
-  const canGoPrev = mounted && page > 1 && !loading;
-  const canGoNext = mounted && page < totalPages && !loading;
+  const canGoPrev = !loading && !refreshing && page > 1;
+  const canGoNext = !loading && !refreshing && page < totalPages;
 
   const fetchLoadout = useCallback(async (options?: { silent?: boolean }) => {
+    const cached = readLoadoutClientCache();
+    if (cached && !options?.silent) {
+      setLoadout(cached);
+      setAgentLoadout(agentLoadoutFromEquippedItems(cached.items));
+      setItems((prev) =>
+        prev.length > 0 ? applyLoadoutToCatalogItems(prev, cached.items) : prev,
+      );
+    }
+
     if (!options?.silent) setRefreshing(true);
     try {
       const response = await fetch("/api/inventory/loadout", {
         credentials: "same-origin",
       });
-      if (!response.ok) return null;
+      if (!response.ok) return cached ?? null;
       const data = (await response.json()) as LoadoutResponse;
+      writeLoadoutClientCache(data);
       setLoadout(data);
+      setAgentLoadout(agentLoadoutFromEquippedItems(data.items));
       setItems((prev) =>
         prev.length > 0 ? applyLoadoutToCatalogItems(prev, data.items) : prev,
       );
@@ -368,7 +478,9 @@ export function InventorySection() {
       });
       if (response.ok) {
         const data = (await response.json()) as LoadoutResponse;
+        writeLoadoutClientCache(data);
         setLoadout(data);
+        setAgentLoadout(agentLoadoutFromEquippedItems(data.items));
         setItems((prev) =>
           prev.length > 0 ? applyLoadoutToCatalogItems(prev, data.items) : prev,
         );
@@ -392,9 +504,8 @@ export function InventorySection() {
         search,
       });
 
-      const [pickerResponse, loadoutResponse] = await Promise.all([
+      const [pickerResponse] = await Promise.all([
         fetch(`/api/inventory/agents?${params}`, { credentials: "same-origin" }),
-        fetch("/api/inventory/agents", { credentials: "same-origin" }),
       ]);
 
       if (reqId !== reqIdRef.current) return;
@@ -404,10 +515,6 @@ export function InventorySection() {
       }
 
       const data = await pickerResponse.json();
-      if (loadoutResponse.ok) {
-        const loadoutData = (await loadoutResponse.json()) as AgentLoadoutState;
-        setAgentLoadout(loadoutData);
-      }
       if (reqId !== reqIdRef.current) return;
 
       setAgentItems(data.items ?? []);
@@ -424,10 +531,42 @@ export function InventorySection() {
     }
   }, [page, search, agentTeamBrowse]);
 
-  const fetchSkins = useCallback(async () => {
+  const fetchSkins = useCallback(async (options?: { silent?: boolean }) => {
+    const cacheParams = catalogGridCacheParams(
+      filter,
+      page,
+      search,
+      weaponFilter,
+      dualTeamOnly,
+      rarityFilter,
+    );
+    const fetchKey = JSON.stringify(cacheParams) + (options?.silent ? ":silent" : "");
+    if (skinsFetchInFlightRef.current === fetchKey) return;
+    skinsFetchInFlightRef.current = fetchKey;
+
+    const cached = readCatalogGridCache(cacheParams);
     const reqId = ++reqIdRef.current;
-    setLoading(true);
-    setLoadError(false);
+
+    if (!options?.silent) {
+      if (cached?.items.length) {
+        setItems(cached.items);
+        setTotalPages(cached.totalPages);
+        setResultTotal(cached.resultTotal);
+        setCatalogTotal(cached.catalogTotal);
+        if (page === 1 && cached.weaponOptions.length > 0) {
+          setWeaponOptions(cached.weaponOptions);
+        }
+        if (cached.availableRarityTiers.length > 0) {
+          setAvailableRarityTiers(cached.availableRarityTiers);
+        }
+        setLoadError(false);
+        setLoading(false);
+        setBootstrapped(true);
+      } else {
+        setLoading(true);
+        setLoadError(false);
+      }
+    }
 
     try {
       const params = new URLSearchParams({
@@ -447,14 +586,17 @@ export function InventorySection() {
       if (reqId !== reqIdRef.current) return;
 
       if (!response.ok) {
-        setLoadError(true);
+        if (!options?.silent && !cached?.items.length) setLoadError(true);
         return;
       }
 
       const data = await response.json();
       if (reqId !== reqIdRef.current) return;
 
-      setItems(data.items ?? []);
+      const nextItems = data.items ?? [];
+      if (nextItems.length > 0 || !options?.silent) {
+        setItems(nextItems);
+      }
       setTotalPages(data.totalPages ?? 1);
       setResultTotal(data.total ?? 0);
       setCatalogTotal(data.catalogTotal ?? 0);
@@ -473,15 +615,101 @@ export function InventorySection() {
           return tiers;
         });
       }
+
+      writeCatalogGridCache(cacheParams, {
+        items: nextItems,
+        page: data.page ?? page,
+        totalPages: data.totalPages ?? 1,
+        resultTotal: data.total ?? 0,
+        catalogTotal: data.catalogTotal ?? 0,
+        weaponOptions: data.weaponOptions ?? [],
+        availableRarityTiers: data.availableRarityTiers ?? [],
+      });
+      scheduleSkinGridPreload(nextItems.map((item: CatalogSkin) => item.imageUrl));
+
+      const totalP = data.totalPages ?? 1;
+      if (page < totalP && !options?.silent) {
+        prefetchCatalogGrid({ ...cacheParams, page: page + 1 });
+      }
+      if (filter !== "all" && page === 1 && !options?.silent) {
+        prefetchCatalogGrid(catalogGridCacheParams("all", 1, "", "", false, "all"));
+      }
     } catch {
-      if (reqId === reqIdRef.current) setLoadError(true);
+      if (!options?.silent && !cached?.items.length) setLoadError(true);
     } finally {
-      if (reqId === reqIdRef.current) {
+      if (skinsFetchInFlightRef.current === fetchKey) {
+        skinsFetchInFlightRef.current = null;
+      }
+      if (!options?.silent && reqId === reqIdRef.current) {
         setLoading(false);
         setBootstrapped(true);
       }
     }
   }, [filter, page, search, weaponFilter, dualTeamOnly, rarityFilter]);
+
+  const applyBootstrapData = useCallback(
+    (data: InventoryBootstrapData, options?: { silent?: boolean }) => {
+      writeLoadoutClientCache(data.loadout);
+      setLoadout(data.loadout);
+      setAgentLoadout(agentLoadoutFromEquippedItems(data.loadout.items));
+
+      const gridParams = catalogGridCacheParams("all", 1, "", "", false, "all");
+      writeCatalogGridCache(gridParams, {
+        items: data.catalog.items,
+        page: data.catalog.page,
+        totalPages: data.catalog.totalPages,
+        resultTotal: data.catalog.total,
+        catalogTotal: data.catalog.catalogTotal,
+        weaponOptions: data.catalog.weaponOptions,
+        availableRarityTiers: data.catalog.availableRarityTiers,
+      });
+
+      const mergedItems = applyLoadoutToCatalogItems(
+        data.catalog.items,
+        data.loadout.items,
+      );
+      if (mergedItems.length > 0 || !options?.silent) {
+        setItems(mergedItems);
+      }
+      setTotalPages(data.catalog.totalPages);
+      setResultTotal(data.catalog.total);
+      setCatalogTotal(data.catalog.catalogTotal);
+      if (data.catalog.weaponOptions.length > 0) {
+        setWeaponOptions(data.catalog.weaponOptions);
+      }
+      if (data.catalog.availableRarityTiers.length > 0) {
+        setAvailableRarityTiers(data.catalog.availableRarityTiers);
+      }
+      setLoadError(false);
+      setLoading(false);
+      setBootstrapped(true);
+      scheduleSkinGridPreload(mergedItems.map((item) => item.imageUrl));
+    },
+    [],
+  );
+
+  const refreshBootstrap = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (bootstrapFetchInFlightRef.current) return;
+      bootstrapFetchInFlightRef.current = true;
+      try {
+        const response = await fetch("/api/inventory/bootstrap", {
+          credentials: "same-origin",
+        });
+        if (!response.ok) {
+          if (!options?.silent) setLoadError(true);
+          return;
+        }
+        const data = (await response.json()) as InventoryBootstrapData;
+        applyBootstrapData(data, options);
+      } catch {
+        if (!options?.silent) setLoadError(true);
+      } finally {
+        bootstrapFetchInFlightRef.current = false;
+      }
+    },
+    [applyBootstrapData],
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => setSearch(searchInput.trim()), 350);
@@ -489,10 +717,13 @@ export function InventorySection() {
   }, [searchInput]);
 
   useEffect(() => {
+    if (filterMountRef.current) {
+      filterMountRef.current = false;
+      return;
+    }
     setPage(1);
     setWeaponFilter("");
     reqIdRef.current += 1;
-    setItems([]);
   }, [filter, search, dualTeamOnly, rarityFilter]);
 
   useEffect(() => {
@@ -522,20 +753,119 @@ export function InventorySection() {
   }, [items, loadout, workspace?.skin.catalogSkinId]);
 
   useEffect(() => {
-    fetchLoadout();
-  }, [fetchLoadout]);
+    if (clientBootstrapRefreshDoneRef.current) return;
+    clientBootstrapRefreshDoneRef.current = true;
+
+    const gridParams = catalogGridCacheParams("all", 1, "", "", false, "all");
+    const catalogCache = readCatalogGridCache(gridParams);
+    const loadoutCache = readLoadoutClientCache();
+
+    if (catalogCache?.items.length || loadoutCache) {
+      if (loadoutCache) {
+        setLoadout(loadoutCache);
+        setAgentLoadout(agentLoadoutFromEquippedItems(loadoutCache.items));
+      }
+      if (catalogCache?.items.length) {
+        const merged = loadoutCache
+          ? applyLoadoutToCatalogItems(catalogCache.items, loadoutCache.items)
+          : catalogCache.items;
+        setItems(merged);
+        setTotalPages(catalogCache.totalPages);
+        setResultTotal(catalogCache.resultTotal);
+        setCatalogTotal(catalogCache.catalogTotal);
+        if (catalogCache.weaponOptions.length > 0) {
+          setWeaponOptions(catalogCache.weaponOptions);
+        }
+        if (catalogCache.availableRarityTiers.length > 0) {
+          setAvailableRarityTiers(catalogCache.availableRarityTiers);
+        }
+        scheduleSkinGridPreload(merged.map((item) => item.imageUrl));
+      }
+      setLoadError(false);
+      setLoading(false);
+      setBootstrapped(true);
+    }
+
+    void refreshBootstrap({ silent: Boolean(catalogCache?.items.length || loadoutCache) });
+  }, [refreshBootstrap]);
 
   useEffect(() => {
     if (filter === "agent") {
       fetchAgents();
       return;
     }
+
+    const isDefaultGrid =
+      filter === "all" &&
+      page === 1 &&
+      !search &&
+      !weaponFilter &&
+      !dualTeamOnly &&
+      rarityFilter === "all";
+
+    if (clientBootstrapRefreshDoneRef.current && isDefaultGrid) {
+      return;
+    }
+
     fetchSkins();
-  }, [filter, fetchAgents, fetchSkins]);
+  }, [
+    filter,
+    fetchAgents,
+    fetchSkins,
+    page,
+    search,
+    weaponFilter,
+    dualTeamOnly,
+    rarityFilter,
+  ]);
 
   const handleEquip = async (item: CatalogSkin, side: EquipSide) => {
     if (!item.owned) return;
     setEquippingId(item.id);
+    const eqT = side === "T" || side === "both";
+    const eqCT = side === "CT" || side === "both";
+    patchCatalogGridCacheEquipState(item.id, item.weaponId, eqT, eqCT);
+    setItems((prev) => applyOptimisticEquipToCatalog(prev, item.id, item.weaponId, side));
+    setLoadout((prev) => {
+      if (!prev) return prev;
+      const nextItems = applyOptimisticEquipToLoadout(prev.items, {
+        catalogSkinId: item.id,
+        weaponId: item.weaponId,
+        name: item.name,
+        imageUrl: item.imageUrl ?? null,
+        accent: item.accent,
+        rarity: item.rarity,
+        category: item.category,
+        side,
+      });
+      const next = { ...prev, items: nextItems };
+      writeLoadoutClientCache(next);
+      return next;
+    });
+    setAgentLoadout((prev) =>
+      prev
+        ? {
+            ...prev,
+            agentT:
+              item.category === "agent" && (side === "T" || side === "both")
+                ? item.paintkit
+                : prev.agentT,
+            agentCT:
+              item.category === "agent" && (side === "CT" || side === "both")
+                ? item.paintkit
+                : prev.agentCT,
+          }
+        : prev,
+    );
+    setWorkspace((prev) => {
+      if (!prev || prev.skin.catalogSkinId !== item.id) return prev;
+      const equippedT = side === "T" || side === "both";
+      const equippedCT = side === "CT" || side === "both";
+      return {
+        ...prev,
+        skin: { ...prev.skin, equippedT, equippedCT },
+      };
+    });
     try {
       const payload = await postJson(
         "/api/inventory/equip",
@@ -552,9 +882,10 @@ export function InventorySection() {
             : t("gameSyncStaged"),
         );
       }
-      await fetchLoadout({ silent: true });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("equipFailed"));
+      void fetchLoadout({ silent: true });
+      void fetchSkins();
     } finally {
       setEquippingId(null);
     }
@@ -564,7 +895,30 @@ export function InventorySection() {
     catalogSkinId: string,
     side: EquipSide,
   ) => {
+    const catalogItem = items.find((i) => i.id === catalogSkinId);
+    const newT = side === "both" || side === "T" ? false : catalogItem?.equippedT ?? false;
+    const newCT = side === "both" || side === "CT" ? false : catalogItem?.equippedCT ?? false;
+    if (catalogItem) {
+      patchCatalogGridCacheEquipState(catalogSkinId, catalogItem.weaponId, newT, newCT);
+    }
     setUnequippingId(catalogSkinId);
+    setItems((prev) => applyOptimisticUnequipToCatalog(prev, catalogSkinId, side));
+    setLoadout((prev) => {
+      if (!prev) return prev;
+      const nextItems = applyOptimisticUnequipToLoadout(prev.items, catalogSkinId, side);
+      const next = { ...prev, items: nextItems };
+      writeLoadoutClientCache(next);
+      return next;
+    });
+    setWorkspace((prev) => {
+      if (!prev || prev.skin.catalogSkinId !== catalogSkinId) return prev;
+      const equippedT = side === "both" || side === "T" ? false : prev.skin.equippedT;
+      const equippedCT = side === "both" || side === "CT" ? false : prev.skin.equippedCT;
+      return {
+        ...prev,
+        skin: { ...prev.skin, equippedT, equippedCT },
+      };
+    });
     try {
       const payload = await postJson(
         "/api/inventory/unequip",
@@ -581,9 +935,10 @@ export function InventorySection() {
             : t("gameSyncStaged"),
         );
       }
-      await fetchLoadout({ silent: true });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("unequipFailed"));
+      void fetchLoadout({ silent: true });
+      void fetchSkins();
     } finally {
       setUnequippingId(null);
     }
@@ -595,11 +950,17 @@ export function InventorySection() {
     stickerTeam?: LoadoutTeam,
   ) => {
     prefetchSkinPickerPage(item.weaponId, 1, "", 12);
+    preloadSkinPreviewImage(item.imageUrl);
     setWorkspace({
       skin: catalogToWorkspace(item, categoryLabels[item.category]),
       tab,
       stickerTeam,
     });
+  };
+
+  const prefetchCatalogTile = (item: CatalogSkin) => {
+    prefetchSkinPickerPage(item.weaponId, 1, "", 12);
+    preloadSkinPreviewImage(item.imageUrl);
   };
 
   const openLoadoutWorkspace = (
@@ -611,6 +972,7 @@ export function InventorySection() {
       setAgentWorkspaceOpen(true);
       return;
     }
+    preloadSkinPreviewImage(item.imageUrl);
     setWorkspace({ skin: loadoutToWorkspace(item), tab, stickerTeam });
   };
 
@@ -646,10 +1008,6 @@ export function InventorySection() {
     catalogTotal > 0 &&
     (isAgentView ? agentItems.length === 0 : items.length === 0);
   const catalogGridLoading = loading && (isAgentView ? agentItems.length === 0 : items.length === 0);
-
-  if (!bootstrapped) {
-    return <InventoryPageSkeleton />;
-  }
 
   return (
     <section className="space-y-6">
@@ -687,7 +1045,19 @@ export function InventorySection() {
                 <button
                   key={f.id}
                   type="button"
-                  onClick={() => setFilter(f.id)}
+                  onClick={() => {
+                    prefetchCatalogGrid(
+                      catalogGridCacheParams(
+                        f.id,
+                        1,
+                        search,
+                        "",
+                        dualTeamOnly,
+                        rarityFilter,
+                      ),
+                    );
+                    setFilter(f.id);
+                  }}
                   className={cn(
                     "inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
                     active
@@ -819,6 +1189,7 @@ export function InventorySection() {
                     name={agentLoadout.agentTName}
                     imageUrl={agentLoadout.agentTImage}
                     accent="from-violet-600 to-fuchsia-600"
+                    imagePreset="agent-grid"
                     equippedT
                     className="pointer-events-none w-20 shrink-0 border-0 bg-transparent p-0 shadow-none"
                     artClassName="h-14 w-14"
@@ -847,6 +1218,7 @@ export function InventorySection() {
                     name={agentLoadout.agentCTName}
                     imageUrl={agentLoadout.agentCTImage}
                     accent="from-violet-600 to-fuchsia-600"
+                    imagePreset="agent-grid"
                     equippedCT
                     className="pointer-events-none w-20 shrink-0 border-0 bg-transparent p-0 shadow-none"
                     artClassName="h-14 w-14"
@@ -888,7 +1260,7 @@ export function InventorySection() {
             <div className="flex flex-col items-center gap-3 rounded-card glass py-16 text-center">
               <AlertTriangle className="h-8 w-8 text-amber-400" />
               <p className="text-sm text-muted">{t("loadError")}</p>
-              <Button type="button" variant="outline" size="sm" onClick={isAgentView ? fetchAgents : fetchSkins}>
+              <Button type="button" variant="outline" size="sm" onClick={isAgentView ? fetchAgents : () => fetchSkins()}>
                 <RefreshCw className="h-3.5 w-3.5" />
                 {t("retry")}
               </Button>
@@ -921,6 +1293,7 @@ export function InventorySection() {
                   name={item.name}
                   imageUrl={item.imageUrl}
                   accent="from-violet-600 to-fuchsia-600"
+                  imagePreset="agent-grid"
                   rarity={item.rarity}
                   equippedT={equippedT}
                   equippedCT={equippedCT}
@@ -944,7 +1317,7 @@ export function InventorySection() {
                 loading && "opacity-60",
               )}
             >
-              {items.map((item) => {
+              {items.map((item, index) => {
                 const anyEquipped = item.equippedT || item.equippedCT;
 
                 return (
@@ -958,6 +1331,8 @@ export function InventorySection() {
                     equippedCT={item.equippedCT}
                     locked={!item.owned}
                     onClick={() => openCatalogWorkspace(item)}
+                    onMouseEnter={() => prefetchCatalogTile(item)}
+                    priority={index < 8}
                     className={cn(anyEquipped && "ring-1 ring-emerald-400/35")}
                   >
                     <div className="mt-2 flex flex-wrap items-center justify-center gap-1">
@@ -969,7 +1344,7 @@ export function InventorySection() {
             </div>
           )}
 
-          {totalPages > 1 && (
+          {uiReady && totalPages > 1 && (
             <div className="mt-6 flex items-center justify-center gap-3">
               <Button
                 type="button"
@@ -1001,6 +1376,8 @@ export function InventorySection() {
       <AgentWorkspace
         open={agentWorkspaceOpen}
         canUseAgents={canUseAgents}
+        initialLoadout={agentLoadout}
+        initialTeam={agentTeamBrowse}
         onClose={() => setAgentWorkspaceOpen(false)}
         onSaved={() => {
           void fetchLoadout({ silent: true });
@@ -1009,6 +1386,7 @@ export function InventorySection() {
       />
 
       <SkinWorkspace
+        key={workspace ? workspace.skin.weaponId : "closed"}
         open={workspace !== null}
         skin={workspace?.skin ?? null}
         initialTab={workspace?.tab}

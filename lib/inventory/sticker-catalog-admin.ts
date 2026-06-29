@@ -327,6 +327,51 @@ function legacyPickerWhere(search?: string) {
   };
 }
 
+// Full sticker base list cached in memory — the sticker catalog is static.
+// Using a large TTL avoids repeated full-table scans on every picker page change.
+const PICKER_BASE_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 h
+let pickerBaseCache: {
+  items: StickerCatalogAdminRow[];
+  at: number;
+} | null = null;
+
+async function getPickerBaseItems(): Promise<StickerCatalogAdminRow[]> {
+  const now = Date.now();
+  if (pickerBaseCache && now - pickerBaseCache.at < PICKER_BASE_CACHE_TTL_MS) {
+    return pickerBaseCache.items;
+  }
+
+  const where = {
+    enabled: true,
+    imageUrl: { not: null },
+    defIndex: { lte: LEGACY_MAX_STICKER_DEFINDEX },
+    NOT: {
+      OR: [
+        { effect: { in: ["Lenticular", "Embroidered"] } },
+        { tournament: { contains: "Austin 2025", mode: "insensitive" as const } },
+        { tournament: { contains: "Budapest 2025", mode: "insensitive" as const } },
+        { tournament: { contains: "CS2 Major", mode: "insensitive" as const } },
+      ],
+    },
+  };
+
+  const rows = await prisma.csgoStickerCatalog.findMany({
+    where,
+    orderBy: { name: "asc" },
+  });
+
+  const items = rows
+    .filter((row) => stickerHasImage(row.imageUrl))
+    .map((row) => serializeRow(row));
+
+  pickerBaseCache = { items, at: now };
+  return items;
+}
+
+export function invalidateStickerPickerBaseCache(): void {
+  pickerBaseCache = null;
+}
+
 export async function listEnabledStickersForPicker(options?: {
   search?: string;
   page?: number;
@@ -338,19 +383,20 @@ export async function listEnabledStickersForPicker(options?: {
 
   const page = Math.max(1, options?.page ?? 1);
   const limit = Math.min(48, Math.max(1, options?.limit ?? 24));
-  const trimmed = options?.search?.trim() ?? "";
+  const trimmed = options?.search?.trim().toLowerCase() ?? "";
   const weaponId = options?.weaponId?.trim() ?? "";
   const finishFilter = options?.finishVariant ?? "";
-  const where = legacyPickerWhere(trimmed || undefined);
 
-  const rows = await prisma.csgoStickerCatalog.findMany({
-    where,
-    orderBy: { name: "asc" },
-  });
+  // Use the in-memory base list — no DB hit after first load.
+  const base = await getPickerBaseItems();
 
-  const withImage = rows.filter((row) => stickerHasImage(row.imageUrl));
-  let items = withImage
-    .map((row) => enrichPickerItem(serializeRow(row), weaponId))
+  let filtered = base;
+  if (trimmed) {
+    filtered = filtered.filter((row) => row.name.toLowerCase().includes(trimmed));
+  }
+
+  let items = filtered
+    .map((row) => enrichPickerItem(row, weaponId))
     .filter((row) => stickerMatchesFinishFilter(row.name, row.effect, finishFilter));
 
   if (weaponId) {

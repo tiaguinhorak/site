@@ -26,7 +26,7 @@ const securityHeaders = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://cdn.steamstatic.com https://avatars.steamstatic.com https://steamcdn-a.akamaihd.net https://community.akamai.steamstatic.com https://community.cloudflare.steamstatic.com",
+      "img-src 'self' data: blob: https://cdn.steamstatic.com https://avatars.steamstatic.com https://steamcdn-a.akamaihd.net https://community.akamai.steamstatic.com https://community.cloudflare.steamstatic.com https://raw.githubusercontent.com",
       "font-src 'self'",
       "connect-src 'self' https://api.steampowered.com https://steamcommunity.com",
       "frame-ancestors 'none'",
@@ -52,7 +52,9 @@ const nextConfig: NextConfig = {
   },
   allowedDevOrigins: ["*.ngrok-free.dev", "*.ngrok.io", "*.ngrok.app"],
   images: {
-    qualities: [75, 85, 95],
+    qualities: [75, 85, 90, 95],
+    // Steam skin/agent images never change — cache them aggressively (30 days)
+    minimumCacheTTL: 60 * 60 * 24 * 30,
     remotePatterns: [
       { protocol: "https", hostname: "cdn.steamstatic.com", pathname: "/**" },
       { protocol: "https", hostname: "avatars.steamstatic.com", pathname: "/**" },
