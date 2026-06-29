@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { surfaceSubtleClass } from "@/lib/ui/theme-surfaces";
 import { RemoteImage } from "@/components/ui/remote-image";
+import { skinGridImageUrl } from "@/lib/inventory/skin-images";
 
 type InventoryItemArtProps = {
   imageUrl?: string | null;
@@ -17,14 +18,17 @@ export function InventoryItemArt({
   onClick,
   priority,
 }: InventoryItemArtProps) {
-  const inner = imageUrl ? (
+  const src = skinGridImageUrl(imageUrl) ?? imageUrl;
+  const inner = src ? (
     <RemoteImage
-      src={imageUrl}
+      src={src}
       alt=""
       fill
       sizes="(max-width: 640px) 50vw, 160px"
       className="object-contain object-center p-2"
       priority={priority}
+      quality={95}
+      unoptimized
     />
   ) : (
     <div className={cn("h-full w-full bg-linear-to-br opacity-90", accent)} />

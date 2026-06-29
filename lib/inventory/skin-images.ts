@@ -25,13 +25,26 @@ export function catalogSkinImageUrl(catalogId: string | null | undefined): strin
   return CATALOG_SKIN_IMAGE_URLS[catalogId] ?? null;
 }
 
-/** Request full-resolution Steam economy preview (512px) for workspace/modal heroes. */
+/** Request full-resolution Steam economy preview for workspace/modal heroes. */
 export function skinPreviewImageUrl(url: string | null | undefined): string | null {
+  return steamEconomyImageUrl(url, 512);
+}
+
+/** Smaller but crisp tile URL for grids (256px). */
+export function skinGridImageUrl(url: string | null | undefined): string | null {
+  return steamEconomyImageUrl(url, 256);
+}
+
+function steamEconomyImageUrl(
+  url: string | null | undefined,
+  size: number,
+): string | null {
   if (!url?.trim()) return null;
   const trimmed = url.trim();
   if (!trimmed.includes("/economy/image/")) return trimmed;
 
+  const suffix = `${size}fx${size}f`;
   const withoutSize = trimmed.replace(/\/(\d+fx\d+f(?:[^/]*)?|\d+x\d+(?:[^/]*)?)$/i, "");
-  if (withoutSize.endsWith("/512fx512f")) return withoutSize;
-  return `${withoutSize}/512fx512f`;
+  if (withoutSize.endsWith(`/${suffix}`)) return withoutSize;
+  return `${withoutSize}/${suffix}`;
 }

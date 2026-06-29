@@ -21,7 +21,7 @@ import {
   getSkinStickerLimitState,
   skinSupportsStickers,
 } from "@/lib/inventory/weapon-sticker-support";
-import { skinPreviewImageUrl } from "@/lib/inventory/skin-images";
+import { skinGridImageUrl, skinPreviewImageUrl } from "@/lib/inventory/skin-images";
 import { cn } from "@/lib/utils";
 import {
   chipInactiveHoverClass,
@@ -500,6 +500,7 @@ export function SkinWorkspace({
                       sizes="(max-width: 1024px) 90vw, 640px"
                       priority
                       quality={95}
+                      unoptimized
                       className="object-contain p-2 sm:p-3"
                     />
                   ) : null}
@@ -616,10 +617,12 @@ export function SkinWorkspace({
                         >
                           {item.imageUrl ? (
                             <RemoteImage
-                              src={item.imageUrl}
+                              src={skinGridImageUrl(item.imageUrl) ?? item.imageUrl}
                               alt=""
                               fill
-                              sizes="80px"
+                              sizes="(max-width: 640px) 25vw, 128px"
+                              quality={95}
+                              unoptimized
                               className="object-contain p-1"
                             />
                           ) : (

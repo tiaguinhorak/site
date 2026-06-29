@@ -9,6 +9,7 @@ import { RemoteImage } from "@/components/ui/remote-image";
 import { SkinRarityBadge } from "@/components/skins/skin-rarity-badge";
 import { SkinRarityLine } from "@/components/skins/skin-rarity-line";
 import { skinPreviewImageUrl } from "@/lib/inventory/skin-images";
+import { cn } from "@/lib/utils";
 
 export type SkinPreviewData = {
   id?: string;
@@ -100,6 +101,7 @@ export function SkinPreviewModal({
                 sizes="(max-width: 768px) 100vw, 640px"
                 priority
                 quality={95}
+                unoptimized
                 className="object-contain p-4"
               />
             ) : null}
