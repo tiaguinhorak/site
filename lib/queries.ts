@@ -63,8 +63,25 @@ export async function getNewsArticleBySlug(slug: string) {
   });
 }
 
-export async function getStoreItems() {
-  return prisma.storeItem.findMany({ orderBy: { sortOrder: "asc" } });
+export async function getStoreItems(enabledOnly = true) {
+  return prisma.storeItem.findMany({
+    where: enabledOnly ? { enabled: true } : undefined,
+    orderBy: { sortOrder: "asc" },
+    include: {
+      rewards: {
+        orderBy: { sortOrder: "asc" },
+        include: {
+          catalogSkin: {
+            select: {
+              weaponName: true,
+              paintkitName: true,
+              imageUrl: true,
+            },
+          },
+        },
+      },
+    },
+  });
 }
 
 export async function getUserInventory(userId: string) {

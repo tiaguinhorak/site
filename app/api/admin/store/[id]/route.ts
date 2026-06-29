@@ -14,6 +14,7 @@ import {
 } from "@/lib/security/schemas";
 import { logAdminAction } from "@/lib/admin/audit";
 import { adminStoreUpdateSchema } from "@/lib/admin/schemas";
+import { storeItemWithRewardsInclude } from "@/lib/store/serialize";
 
 export async function PATCH(
   request: NextRequest,
@@ -47,7 +48,19 @@ export async function PATCH(
 
   const item = await prisma.storeItem.update({
     where: { id },
-    data: parsed.data,
+    data: {
+      ...parsed.data,
+      ...(parsed.data.originalCents !== undefined
+        ? { originalCents: parsed.data.originalCents ?? null }
+        : {}),
+      ...(parsed.data.imageUrl !== undefined
+        ? { imageUrl: parsed.data.imageUrl ?? null }
+        : {}),
+      ...(parsed.data.maxPerUser !== undefined
+        ? { maxPerUser: parsed.data.maxPerUser ?? null }
+        : {}),
+    },
+    include: storeItemWithRewardsInclude,
   });
 
   await logAdminAction({

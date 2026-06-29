@@ -175,17 +175,39 @@ export const adminNewsUpdateSchema = adminNewsCreateSchema.partial().extend({
 export const adminStoreCreateSchema = z.object({
   name: z.string().min(2).max(80).transform((v) => sanitizeText(v, 80)),
   type: z.string().min(2).max(40).transform((v) => sanitizeText(v, 40)),
+  productKind: z.enum(["SKIN", "PACKAGE", "CASE", "AGENT"]).default("SKIN"),
   priceCents: z.number().int().min(0).max(99999999),
   originalCents: z.number().int().min(0).max(99999999).optional().nullable(),
   badge: z.string().min(1).max(40).transform((v) => sanitizeText(v, 40)),
   description: z.string().min(4).max(300).transform((v) => sanitizeText(v, 300)),
   accent: z.string().min(3).max(120).transform((v) => sanitizeText(v, 120)),
+  imageUrl: z
+    .string()
+    .max(500)
+    .optional()
+    .nullable()
+    .transform((v) => (v && v.trim() ? v.trim() : null)),
+  enabled: z.boolean().default(true),
   trending: z.boolean().default(false),
   featured: z.boolean().default(false),
   sortOrder: z.number().int().min(0).max(9999).default(0),
+  maxPerUser: z.number().int().min(1).max(9999).optional().nullable(),
 });
 
 export const adminStoreUpdateSchema = adminStoreCreateSchema.partial();
+
+export const adminStoreRewardSchema = z.object({
+  kind: z.enum(["CATALOG_SKIN", "AGENT"]),
+  catalogSkinId: z.string().min(1).optional().nullable(),
+  agentDefIndex: z.number().int().min(1).optional().nullable(),
+  weight: z.number().int().min(1).max(100000).default(100),
+  quantity: z.number().int().min(1).max(99).default(1),
+  sortOrder: z.number().int().min(0).max(9999).default(0),
+});
+
+export const adminStoreRewardsPutSchema = z.object({
+  rewards: z.array(adminStoreRewardSchema).max(50),
+});
 
 export const adminGameModeCreateSchema = z.object({
   slug: z

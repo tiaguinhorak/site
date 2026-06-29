@@ -838,6 +838,16 @@
         "body": "{skinName} foi removida do seu inventário."
       }
     },
+    "store": {
+      "purchase": {
+        "title": "Compra concluída",
+        "body": "Compra de {storeItemName} concluída. Você recebeu: {summary}."
+      },
+      "caseOpened": {
+        "title": "Caixa aberta!",
+        "body": "Você abriu {storeItemName} e recebeu: {summary}. Equipe no inventário."
+      }
+    },
     "match": {
       "ready": {
         "title": "Partida rankeada encontrada",
@@ -859,7 +869,25 @@
   },
   "store": {
     "empty": "Nenhum item na loja no momento.",
-    "buyNow": "Comprar agora"
+    "buyNow": "Comprar agora",
+    "openCase": "Abrir caixa",
+    "free": "Grátis",
+    "owned": "Você já possui este item",
+    "limitReached": "Limite de compras atingido",
+    "unavailable": "Indisponível",
+    "kindSkin": "Skin",
+    "kindCase": "Caixa",
+    "kindPackage": "Pacote",
+    "kindAgent": "Agente",
+    "casePool": "Pool com {count} skins",
+    "purchaseSuccessTitle": "Compra concluída!",
+    "caseOpenedTitle": "Caixa aberta!",
+    "purchaseSuccessToast": "Compra concluída — confira seu inventário.",
+    "caseOpenedToast": "Caixa aberta — veja o que você ganhou!",
+    "goToInventory": "Ir ao inventário",
+    "continueShopping": "Continuar na loja",
+    "close": "Fechar",
+    "alreadyOwned": "Você já tinha este item"
   },
   "inventory": {
     "catAll": "Todos",

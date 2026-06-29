@@ -50,6 +50,24 @@ enum PunishmentScope {
   SERVER
 }
 
+enum StoreProductKind {
+  SKIN
+  PACKAGE
+  CASE
+  AGENT
+}
+
+enum StoreRewardKind {
+  CATALOG_SKIN
+  AGENT
+}
+
+enum StorePurchaseStatus {
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
 model User {
   id                 String   @id @default(cuid())
   email              String?  @unique
@@ -109,6 +127,7 @@ model User {
   rankedQueueEntries   RankedQueueEntry[] @relation("RankedQueueLeader")
   notificationPreferences UserNotificationPreferences?
   newsArticlesAuthored NewsArticle[] @relation("NewsAuthor")
+  storePurchases       StorePurchase[]
 
   @@index([rank])
   @@index([elo])
@@ -507,17 +526,64 @@ model NewsArticle {
 }
 
 model StoreItem {
-  id            String  @id @default(cuid())
+  id            String           @id @default(cuid())
   name          String
   type          String
+  productKind   StoreProductKind @default(SKIN)
   priceCents    Int
   originalCents Int?
   badge         String
   description   String
   accent        String
-  trending      Boolean @default(false)
-  featured      Boolean @default(false)
-  sortOrder     Int     @default(0)
+  imageUrl      String?
+  enabled       Boolean          @default(true)
+  trending      Boolean          @default(false)
+  featured      Boolean          @default(false)
+  sortOrder     Int              @default(0)
+  maxPerUser    Int?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  rewards   StoreItemReward[]
+  purchases StorePurchase[]
+
+  @@index([enabled, sortOrder])
+}
+
+model StoreItemReward {
+  id            String          @id @default(cuid())
+  storeItemId   String
+  kind          StoreRewardKind
+  catalogSkinId String?
+  agentDefIndex Int?
+  weight        Int             @default(100)
+  quantity      Int             @default(1)
+  sortOrder     Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  storeItem   StoreItem        @relation(fields: [storeItemId], references: [id], onDelete: Cascade)
+  catalogSkin CsgoSkinCatalog? @relation(fields: [catalogSkinId], references: [id], onDelete: SetNull)
+
+  @@index([storeItemId])
+  @@index([catalogSkinId])
+}
+
+model StorePurchase {
+  id             String              @id @default(cuid())
+  userId         String
+  storeItemId    String
+  priceCents     Int
+  status         StorePurchaseStatus @default(COMPLETED)
+  grantedRewards Json?
+  createdAt      DateTime            @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storeItem StoreItem @relation(fields: [storeItemId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([storeItemId])
+  @@index([userId, storeItemId])
 }
 
 model InventoryItem {
@@ -682,6 +748,7 @@ model CsgoSkinCatalog {
 
   playerSkins     CsgoPlayerSkin[]
   inventoryItems  InventoryItem[]
+  storeRewards    StoreItemReward[]
 
   @@unique([weaponId, paintkit])
   @@index([weaponId])

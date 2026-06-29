@@ -838,6 +838,16 @@
         "body": "{skinName} was removed from your inventory."
       }
     },
+    "store": {
+      "purchase": {
+        "title": "Purchase complete",
+        "body": "Purchase of {storeItemName} complete. You received: {summary}."
+      },
+      "caseOpened": {
+        "title": "Case opened!",
+        "body": "You opened {storeItemName} and received: {summary}. Equip in inventory."
+      }
+    },
     "match": {
       "ready": {
         "title": "Ranked match found",
@@ -859,7 +869,25 @@
   },
   "store": {
     "empty": "No items in the store right now.",
-    "buyNow": "Buy now"
+    "buyNow": "Buy now",
+    "openCase": "Open case",
+    "free": "Free",
+    "owned": "You already own this item",
+    "limitReached": "Purchase limit reached",
+    "unavailable": "Unavailable",
+    "kindSkin": "Skin",
+    "kindCase": "Case",
+    "kindPackage": "Bundle",
+    "kindAgent": "Agent",
+    "casePool": "Pool of {count} skins",
+    "purchaseSuccessTitle": "Purchase complete!",
+    "caseOpenedTitle": "Case opened!",
+    "purchaseSuccessToast": "Purchase complete — check your inventory.",
+    "caseOpenedToast": "Case opened — see what you got!",
+    "goToInventory": "Go to inventory",
+    "continueShopping": "Continue shopping",
+    "close": "Close",
+    "alreadyOwned": "You already had this item"
   },
   "inventory": {
     "catAll": "All",

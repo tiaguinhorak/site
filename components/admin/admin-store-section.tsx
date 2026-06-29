@@ -15,43 +15,82 @@ import {
 } from "@/lib/admin/content-presets";
 import { GradientPicker } from "@/components/admin/pickers/gradient-picker";
 import { PresetSelect } from "@/components/admin/pickers/preset-select";
+import { AdminStoreRewardsEditor } from "@/components/admin/admin-store-rewards-editor";
+
+type StoreProductKind = "SKIN" | "PACKAGE" | "CASE" | "AGENT";
+
+type StoreReward = {
+  id: string;
+  kind: "CATALOG_SKIN" | "AGENT";
+  catalogSkinId: string | null;
+  agentDefIndex: number | null;
+  weight: number;
+  quantity: number;
+  sortOrder: number;
+  label?: string | null;
+  catalogSkin?: { weaponName: string; paintkitName: string } | null;
+};
+
+function rewardLabel(row: StoreReward): string | null {
+  if (row.label) return row.label;
+  if (row.catalogSkin) {
+    return `${row.catalogSkin.weaponName} | ${row.catalogSkin.paintkitName}`;
+  }
+  if (row.agentDefIndex) return `Agente #${row.agentDefIndex}`;
+  return null;
+}
 
 type StoreItem = {
   id: string;
   name: string;
   type: string;
+  productKind: StoreProductKind;
   priceCents: number;
   originalCents: number | null;
   badge: string;
   description: string;
   accent: string;
+  imageUrl: string | null;
+  enabled: boolean;
   trending: boolean;
   featured: boolean;
   sortOrder: number;
+  maxPerUser: number | null;
+  rewards?: StoreReward[];
 };
+
+const PRODUCT_KIND_OPTIONS: StoreProductKind[] = ["SKIN", "PACKAGE", "CASE", "AGENT"];
 
 const emptyForm: {
   name: string;
   type: string;
+  productKind: StoreProductKind;
   priceCents: string;
   originalCents: string;
   badge: string;
   description: string;
   accent: string;
+  imageUrl: string;
+  enabled: boolean;
   trending: boolean;
   featured: boolean;
   sortOrder: string;
+  maxPerUser: string;
 } = {
   name: "",
   type: STORE_TYPE_PRESETS[0],
-  priceCents: "1990",
+  productKind: "SKIN" as StoreProductKind,
+  priceCents: "0",
   originalCents: "",
   badge: STORE_BADGE_PRESETS[0],
   description: "",
   accent: DEFAULT_GRADIENT.classes,
+  imageUrl: "",
+  enabled: true,
   trending: false,
   featured: false,
   sortOrder: "0",
+  maxPerUser: "",
 };
 
 export function AdminStoreSection() {
@@ -61,6 +100,7 @@ export function AdminStoreSection() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   function load() {
     fetch("/api/admin/store", { credentials: "same-origin" })
@@ -72,12 +112,15 @@ export function AdminStoreSection() {
       .catch(() => setLoading(false));
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   function openCreate() {
     setEditing(null);
     setForm(emptyForm);
     setError(null);
+    setSuccess(null);
   }
 
   function openEdit(item: StoreItem) {
@@ -85,55 +128,80 @@ export function AdminStoreSection() {
     setForm({
       name: item.name,
       type: item.type,
+      productKind: item.productKind,
       priceCents: String(item.priceCents),
       originalCents: item.originalCents ? String(item.originalCents) : "",
       badge: item.badge,
       description: item.description,
       accent: item.accent,
+      imageUrl: item.imageUrl ?? "",
+      enabled: item.enabled,
       trending: item.trending,
       featured: item.featured,
       sortOrder: String(item.sortOrder),
+      maxPerUser: item.maxPerUser != null ? String(item.maxPerUser) : "",
     });
     setError(null);
+    setSuccess(null);
   }
 
   async function save() {
     setSaving(true);
     setError(null);
+    setSuccess(null);
     const payload = {
       name: form.name,
       type: form.type,
+      productKind: form.productKind,
       priceCents: Number(form.priceCents),
       originalCents: form.originalCents ? Number(form.originalCents) : null,
       badge: form.badge,
       description: form.description,
       accent: form.accent,
+      imageUrl: form.imageUrl.trim() || null,
+      enabled: form.enabled,
       trending: form.trending,
       featured: form.featured,
       sortOrder: Number(form.sortOrder),
+      maxPerUser: form.maxPerUser ? Number(form.maxPerUser) : null,
     };
     const result = editing
-      ? await secureApi(`/api/admin/store/${editing.id}`, { method: "PATCH", json: payload })
-      : await secureApi("/api/admin/store", { method: "POST", json: payload });
+      ? await secureApi<{ ok: true; item: StoreItem }>(`/api/admin/store/${editing.id}`, {
+          method: "PATCH",
+          json: payload,
+        })
+      : await secureApi<{ ok: true; item: StoreItem }>("/api/admin/store", {
+          method: "POST",
+          json: payload,
+        });
     setSaving(false);
     if (!result.ok) {
       setError(result.error);
       return;
     }
-    openCreate();
+    if (!editing) {
+      setEditing(result.data.item);
+      setSuccess("Item criado. Configure as recompensas abaixo.");
+    } else {
+      setSuccess("Item salvo.");
+    }
     load();
   }
 
   async function remove(id: string) {
     const result = await secureApi(`/api/admin/store/${id}`, { method: "DELETE" });
-    if (result.ok) load();
+    if (result.ok) {
+      if (editing?.id === id) openCreate();
+      load();
+    }
   }
 
   const previewGradient = findGradientByClasses(form.accent);
+  const editingRewards = editing?.rewards ?? [];
 
   return (
     <div className="grid gap-8 lg:grid-cols-3">
-      <section className="rounded-card glass-strong p-6 space-y-5">
+      <section className="rounded-card glass-strong space-y-5 p-6">
         <h2 className="flex items-center gap-2 font-display text-lg font-bold">
           {editing ? <Pencil className="h-5 w-5 text-primary" /> : <Plus className="h-5 w-5 text-primary" />}
           {editing ? "Editar item" : "Novo item"}
@@ -149,21 +217,48 @@ export function AdminStoreSection() {
         >
           <p className="text-xs uppercase text-muted">Preview</p>
           <p className="mt-1 font-display text-lg font-bold">{form.name || "Nome do item"}</p>
-          <p className="text-xs text-primary">{form.badge}</p>
+          <p className="text-xs text-primary">{form.badge} · {form.productKind}</p>
         </div>
 
         <Input label="Nome" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
 
         <PresetSelect
-          label="Tipo"
+          label="Tipo (rótulo)"
           value={form.type}
           onChange={(type) => setForm({ ...form, type })}
           options={STORE_TYPE_PRESETS}
         />
 
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted">
+            Comportamento
+          </label>
+          <select
+            value={form.productKind}
+            onChange={(e) => setForm({ ...form, productKind: e.target.value as StoreProductKind })}
+            className="w-full rounded-xl border border-border bg-transparent px-3 py-2.5 text-sm"
+          >
+            {PRODUCT_KIND_OPTIONS.map((kind) => (
+              <option key={kind} value={kind}>
+                {kind}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Preço (centavos)" type="number" value={form.priceCents} onChange={(e) => setForm({ ...form, priceCents: e.target.value })} />
-          <Input label="Preço original" type="number" value={form.originalCents} onChange={(e) => setForm({ ...form, originalCents: e.target.value })} />
+          <Input
+            label="Preço (centavos)"
+            type="number"
+            value={form.priceCents}
+            onChange={(e) => setForm({ ...form, priceCents: e.target.value })}
+          />
+          <Input
+            label="Preço original"
+            type="number"
+            value={form.originalCents}
+            onChange={(e) => setForm({ ...form, originalCents: e.target.value })}
+          />
         </div>
 
         <PresetSelect
@@ -174,7 +269,9 @@ export function AdminStoreSection() {
         />
 
         <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted">Descrição</label>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted">
+            Descrição
+          </label>
           <textarea
             value={form.description}
             rows={3}
@@ -183,30 +280,96 @@ export function AdminStoreSection() {
           />
         </div>
 
-        <GradientPicker
-          value={form.accent}
-          onChange={(accent) => setForm({ ...form, accent })}
+        <Input
+          label="URL da imagem (opcional)"
+          value={form.imageUrl}
+          onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
         />
 
-        <Input label="Ordem" type="number" value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: e.target.value })} />
+        <GradientPicker value={form.accent} onChange={(accent) => setForm({ ...form, accent })} />
+
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            label="Ordem"
+            type="number"
+            value={form.sortOrder}
+            onChange={(e) => setForm({ ...form, sortOrder: e.target.value })}
+          />
+          <Input
+            label="Máx. por usuário"
+            type="number"
+            value={form.maxPerUser}
+            onChange={(e) => setForm({ ...form, maxPerUser: e.target.value })}
+            placeholder="Ilimitado"
+          />
+        </div>
 
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={form.trending} onChange={(e) => setForm({ ...form, trending: e.target.checked })} />
+          <input
+            type="checkbox"
+            checked={form.enabled}
+            onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
+          />
+          Ativo na loja
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.trending}
+            onChange={(e) => setForm({ ...form, trending: e.target.checked })}
+          />
           Em alta
         </label>
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={form.featured} onChange={(e) => setForm({ ...form, featured: e.target.checked })} />
+          <input
+            type="checkbox"
+            checked={form.featured}
+            onChange={(e) => setForm({ ...form, featured: e.target.checked })}
+          />
           Destaque
         </label>
 
         {error && <p className="text-sm text-rose-400">{error}</p>}
+        {success && <p className="text-sm text-emerald-400">{success}</p>}
 
         <div className="flex gap-2">
-          <Button type="button" className="flex-1" disabled={saving} onClick={save}>
-            {saving ? <Loader2 className="h-5 w-5 motion-safe-spin" /> : "Salvar"}
+          <Button type="button" className="flex-1" disabled={saving} onClick={() => void save()}>
+            {saving ? <Loader2 className="h-5 w-5 motion-safe-spin" /> : "Salvar item"}
           </Button>
-          {editing && <Button type="button" variant="outline" onClick={openCreate}>Cancelar</Button>}
+          {editing && (
+            <Button type="button" variant="outline" onClick={openCreate}>
+              Cancelar
+            </Button>
+          )}
         </div>
+
+        {editing && (
+          <AdminStoreRewardsEditor
+            storeItemId={editing.id}
+            productKind={form.productKind}
+            initialRewards={editingRewards.map((row) => ({
+              kind: row.kind,
+              catalogSkinId: row.catalogSkinId,
+              agentDefIndex: row.agentDefIndex,
+              weight: row.weight,
+              quantity: row.quantity,
+              sortOrder: row.sortOrder,
+              label: rewardLabel(row),
+            }))}
+            onSaved={() => {
+              setSuccess("Recompensas salvas.");
+              load();
+              fetch(`/api/admin/store`, { credentials: "same-origin" })
+                .then((r) => r.json())
+                .then((data) => {
+                  const updated = (data.items as StoreItem[]).find((i) => i.id === editing.id);
+                  if (updated) setEditing(updated);
+                })
+                .catch(() => undefined);
+            }}
+            onError={(message) => setError(message)}
+          />
+        )}
       </section>
 
       <section className="rounded-card glass-strong p-6 lg:col-span-2">
@@ -218,24 +381,29 @@ export function AdminStoreSection() {
           <p className="mt-6 text-center text-muted">Carregando...</p>
         ) : (
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[720px] text-sm">
               <thead className="border-b border-border text-xs uppercase text-muted">
                 <tr>
                   <th className="py-2 pr-4">Item</th>
                   <th className="py-2 pr-4">Preço</th>
                   <th className="py-2 pr-4">Tipo</th>
+                  <th className="py-2 pr-4">Recomp.</th>
                   <th className="py-2" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {items.map((item) => (
-                  <tr key={item.id}>
+                  <tr key={item.id} className={!item.enabled ? "opacity-60" : undefined}>
                     <td className="py-3 pr-4">
                       <p className="font-medium">{item.name}</p>
-                      <p className="text-xs text-muted">{item.badge}</p>
+                      <p className="text-xs text-muted">
+                        {item.badge} · {item.productKind}
+                        {!item.enabled ? " · inativo" : ""}
+                      </p>
                     </td>
                     <td className="py-3 pr-4 text-muted">{formatPriceCents(item.priceCents)}</td>
                     <td className="py-3 pr-4 text-muted">{item.type}</td>
+                    <td className="py-3 pr-4 text-muted">{item.rewards?.length ?? 0}</td>
                     <td className="py-3 text-right">
                       <div className="flex justify-end gap-1">
                         <Button type="button" variant="ghost" size="sm" onClick={() => openEdit(item)}>
@@ -246,7 +414,7 @@ export function AdminStoreSection() {
                           variant="ghost"
                           size="sm"
                           confirm={confirmPresets.deleteAction(item.name)}
-                          onClick={() => remove(item.id)}
+                          onClick={() => void remove(item.id)}
                         >
                           <Trash2 className="h-4 w-4 text-rose-400" />
                         </Button>

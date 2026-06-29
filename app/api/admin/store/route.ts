@@ -13,12 +13,16 @@ import {
 } from "@/lib/security/schemas";
 import { logAdminAction } from "@/lib/admin/audit";
 import { adminStoreCreateSchema } from "@/lib/admin/schemas";
+import { storeItemWithRewardsInclude } from "@/lib/store/serialize";
 
 export async function GET(request: NextRequest) {
   const { error } = await requireAdmin(request);
   if (error) return error;
 
-  const items = await prisma.storeItem.findMany({ orderBy: { sortOrder: "asc" } });
+  const items = await prisma.storeItem.findMany({
+    orderBy: { sortOrder: "asc" },
+    include: storeItemWithRewardsInclude,
+  });
   return NextResponse.json({ items });
 }
 
@@ -49,7 +53,10 @@ export async function POST(request: NextRequest) {
     data: {
       ...parsed.data,
       originalCents: parsed.data.originalCents ?? null,
+      imageUrl: parsed.data.imageUrl ?? null,
+      maxPerUser: parsed.data.maxPerUser ?? null,
     },
+    include: storeItemWithRewardsInclude,
   });
 
   await logAdminAction({
