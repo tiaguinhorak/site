@@ -15,7 +15,13 @@ export function agentModelPlayerToGamePath(modelPlayer: string | null | undefine
   if (!modelPlayer?.trim()) return null;
   let path = modelPlayer.trim().replace(/\.vmdl$/i, ".mdl");
   if (path.startsWith("agents/models/")) {
-    path = `models/player/custom_player/${path.slice("agents/models/".length)}`;
+    const tail = path.slice("agents/models/".length);
+    const fileName = tail.includes("/") ? tail.slice(tail.lastIndexOf("/") + 1) : tail;
+    if (fileName) {
+      // Legacy CS:GO packs playermodels under custom_player/legacy/{variant}.mdl
+      return `models/player/custom_player/legacy/${fileName}`;
+    }
+    path = `models/player/custom_player/${tail}`;
   }
   return path;
 }
