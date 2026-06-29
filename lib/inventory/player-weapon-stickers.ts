@@ -15,7 +15,7 @@ import {
   STICKER_SLOT_STORAGE_COUNT,
   weaponSupportsStickersById,
 } from "@/lib/inventory/weapon-sticker-slot-limits";
-import { getStickerWeaponCompatibility } from "@/lib/inventory/sticker-weapon-compatibility";
+import { getStickerWeaponCompatibility, isLegacyCompatibleSticker } from "@/lib/inventory/sticker-weapon-compatibility";
 import { weaponIdToDisplayName } from "@/lib/inventory/weapon-display-name";
 import {
   getInventoryPlanLimits,
@@ -56,7 +56,37 @@ function normalizeSlots(slots: number[]): WeaponStickerSlots {
 function zeroIncompatibleStickerSlots(slots: number[], weaponId: string): number[] {
   return slots.map((defIndex) => {
     if (defIndex <= 0) return 0;
+    if (!isLegacyCompatibleSticker({ defIndex })) return 0;
     const compat = getStickerWeaponCompatibility({ defIndex }, weaponId);
+    return compat.compatible ? defIndex : 0;
+  });
+}
+
+async function zeroIncompatibleStickerSlotsWithCatalog(
+  slots: number[],
+  weaponId: string,
+): Promise<number[]> {
+  const defIndices = slots.filter((defIndex) => defIndex > 0);
+  const catalogRows =
+    defIndices.length > 0
+      ? await prisma.csgoStickerCatalog.findMany({
+          where: { defIndex: { in: defIndices } },
+        })
+      : [];
+  const catalogByDef = new Map(catalogRows.map((row) => [row.defIndex, row]));
+
+  return slots.map((defIndex) => {
+    if (defIndex <= 0) return 0;
+    const catalog = catalogByDef.get(defIndex);
+    const compat = getStickerWeaponCompatibility(
+      {
+        defIndex,
+        effect: catalog?.effect,
+        tournament: catalog?.tournament,
+        stickerType: catalog?.stickerType,
+      },
+      weaponId,
+    );
     return compat.compatible ? defIndex : 0;
   });
 }
@@ -94,9 +124,17 @@ export async function getPlayerWeaponStickers(
   const slots = row
     ? [row.slot0, row.slot1, row.slot2, row.slot3]
     : [];
-  const { slots: normalizedSlots, wears } = normalizeSlots(
-    sanitizeStickerSlotsForWeapon(slots, normalizedWeaponId, planMax, defIndex),
+  const clamped = clampStickerSlotsToWeapon(
+    slots,
+    normalizedWeaponId,
+    planMax,
+    defIndex,
   );
+  const sanitized = await zeroIncompatibleStickerSlotsWithCatalog(
+    clamped,
+    normalizedWeaponId,
+  );
+  const { slots: normalizedSlots, wears } = normalizeSlots(sanitized);
 
   const defIndices = normalizedSlots.filter((defIndex) => defIndex > 0);
   const catalogStickers =

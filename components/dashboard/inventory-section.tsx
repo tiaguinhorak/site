@@ -41,6 +41,7 @@ import {
   SkinWorkspace,
   type SkinWorkspaceData,
 } from "@/components/inventory/skin-workspace";
+import { prefetchSkinPickerPage } from "@/lib/inventory/skin-picker-cache";
 import { mapCatalogCategoryToUi } from "@/lib/inventory/catalog-categories";
 import { loadoutItemToPreview } from "@/lib/inventory/skin-preview-mappers";
 import { useSkinPreview } from "@/lib/use-skin-preview";
@@ -514,6 +515,7 @@ export function InventorySection() {
     tab: "skins" | "stickers" = "skins",
     stickerTeam?: LoadoutTeam,
   ) => {
+    prefetchSkinPickerPage(item.weaponId, 1, "", 12);
     setWorkspace({
       skin: catalogToWorkspace(item, categoryLabels[item.category]),
       tab,

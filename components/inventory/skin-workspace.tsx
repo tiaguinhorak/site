@@ -22,6 +22,11 @@ import {
   skinSupportsStickers,
 } from "@/lib/inventory/weapon-sticker-support";
 import { skinGridImageUrl, skinPreviewImageUrl } from "@/lib/inventory/skin-images";
+import {
+  prefetchSkinPickerPage,
+  readSkinPickerCache,
+  writeSkinPickerCache,
+} from "@/lib/inventory/skin-picker-cache";
 import { cn } from "@/lib/utils";
 import {
   chipInactiveHoverClass,
@@ -141,12 +146,18 @@ export function SkinWorkspace({
   const [skinPickerQuery, setSkinPickerQuery] = useState("");
   const [skinPickerPage, setSkinPickerPage] = useState(1);
   const [skinPickerTotalPages, setSkinPickerTotalPages] = useState(1);
+  const [stickerPickerType, setStickerPickerType] = useState("");
+  const [stickerCompatOnly, setStickerCompatOnly] = useState(true);
+  const [stickerLoadEnabled, setStickerLoadEnabled] = useState(false);
 
   const displaySkin = activeSkin ?? skin;
-  const previewImageUrl = useMemo(
-    () => skinPreviewImageUrl(displaySkin?.imageUrl ?? null),
-    [displaySkin?.imageUrl],
-  );
+  const previewImageUrl = useMemo(() => {
+    if (!displaySkin?.imageUrl) return null;
+    if (tab === "skins") {
+      return skinGridImageUrl(displaySkin.imageUrl) ?? displaySkin.imageUrl;
+    }
+    return skinPreviewImageUrl(displaySkin.imageUrl) ?? displaySkin.imageUrl;
+  }, [displaySkin?.imageUrl, tab]);
 
   const stickerViewTeam: LoadoutTeam = stickerScope === "CT" ? "CT" : "T";
 
@@ -164,8 +175,28 @@ export function SkinWorkspace({
   const stickersEnabled = supportsStickers && canUseStickers;
   const anyEquipped = displaySkin ? displaySkin.equippedT || displaySkin.equippedCT : false;
 
-  const stickerHookEnabled = open && Boolean(displaySkin) && stickersEnabled;
+  const stickerHookEnabled =
+    open && Boolean(displaySkin) && stickersEnabled && stickerLoadEnabled;
   const pickerActive = open && tab === "stickers";
+
+  useEffect(() => {
+    if (!open) {
+      setStickerLoadEnabled(false);
+      return;
+    }
+    if (tab === "stickers") {
+      setStickerLoadEnabled(true);
+      return;
+    }
+    if (!stickersEnabled) return;
+    const timer = setTimeout(() => setStickerLoadEnabled(true), 500);
+    return () => clearTimeout(timer);
+  }, [open, tab, stickersEnabled]);
+
+  useEffect(() => {
+    if (!open || !displaySkin?.weaponId) return;
+    prefetchSkinPickerPage(displaySkin.weaponId, 1, "", SKIN_PICKER_PAGE_SIZE);
+  }, [open, displaySkin?.weaponId]);
 
   const stickerState = useWeaponStickerState(
     displaySkin?.weaponId ?? "",
@@ -177,6 +208,8 @@ export function SkinWorkspace({
       planMaxStickerSlots: maxStickerSlots,
       pickerPageSize: 12,
       categoryKey: displaySkin?.categoryKey,
+      pickerCompatibleOnly: stickerCompatOnly,
+      pickerStickerType: stickerPickerType,
     },
   );
 
@@ -191,11 +224,23 @@ export function SkinWorkspace({
   }, [open, skinPickerSearch]);
 
   useEffect(() => {
-    if (!open || !displaySkin?.weaponId || tab !== "skins") {
+    if (!open || !displaySkin?.weaponId) {
       return;
     }
+    const cached = readSkinPickerCache(
+      displaySkin.weaponId,
+      skinPickerPage,
+      skinPickerQuery,
+    );
+    if (cached) {
+      setSkinPickerItems(cached.items);
+      setSkinPickerTotalPages(cached.totalPages);
+      setSkinPickerLoading(false);
+    } else {
+      setSkinPickerLoading(true);
+    }
+
     let cancelled = false;
-    setSkinPickerLoading(true);
     const params = new URLSearchParams({
       weaponId: displaySkin.weaponId,
       limit: String(SKIN_PICKER_PAGE_SIZE),
@@ -208,30 +253,36 @@ export function SkinWorkspace({
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (cancelled || !data?.items) return;
-        setSkinPickerItems(
-          data.items.map(
-            (item: {
-              id: string;
-              name: string;
-              imageUrl?: string | null;
-              accent: string;
-              rarity: string;
-              owned: boolean;
-              equippedT: boolean;
-              equippedCT: boolean;
-            }) => ({
-              catalogSkinId: item.id,
-              name: item.name,
-              imageUrl: item.imageUrl ?? null,
-              accent: item.accent,
-              rarity: item.rarity,
-              owned: item.owned,
-              equippedT: item.equippedT,
-              equippedCT: item.equippedCT,
-            }),
-          ),
+        const items = data.items.map(
+          (item: {
+            id: string;
+            name: string;
+            imageUrl?: string | null;
+            accent: string;
+            rarity: string;
+            owned: boolean;
+            equippedT: boolean;
+            equippedCT: boolean;
+          }) => ({
+            catalogSkinId: item.id,
+            name: item.name,
+            imageUrl: item.imageUrl ?? null,
+            accent: item.accent,
+            rarity: item.rarity,
+            owned: item.owned,
+            equippedT: item.equippedT,
+            equippedCT: item.equippedCT,
+          }),
         );
+        setSkinPickerItems(items);
         setSkinPickerTotalPages(data.totalPages ?? 1);
+        writeSkinPickerCache(
+          displaySkin.weaponId,
+          skinPickerPage,
+          skinPickerQuery,
+          items,
+          data.totalPages ?? 1,
+        );
       })
       .finally(() => {
         if (!cancelled) setSkinPickerLoading(false);
@@ -239,7 +290,7 @@ export function SkinWorkspace({
     return () => {
       cancelled = true;
     };
-  }, [open, displaySkin?.weaponId, tab, skinPickerPage, skinPickerQuery]);
+  }, [open, displaySkin?.weaponId, skinPickerPage, skinPickerQuery]);
 
   function handleStickerScopeChange(scope: StickerEditScope) {
     if (scope === "both" && canBoth) {
@@ -737,6 +788,49 @@ export function SkinWorkspace({
                       value={stickerState.pickerSearch}
                       onChange={(e) => stickerState.setPickerSearch(e.target.value)}
                     />
+                  </div>
+
+                  <div className="flex shrink-0 flex-wrap items-center gap-2 pb-2">
+                    <button
+                      type="button"
+                      onClick={() => setStickerCompatOnly(true)}
+                      className={cn(
+                        "rounded-lg px-2.5 py-1.5 text-xs font-semibold",
+                        stickerCompatOnly
+                          ? "bg-primary text-primary-foreground"
+                          : chipInactiveHoverClass,
+                      )}
+                    >
+                      {t("stickersFilterLegacy")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStickerCompatOnly(false)}
+                      className={cn(
+                        "rounded-lg px-2.5 py-1.5 text-xs font-semibold",
+                        !stickerCompatOnly
+                          ? "bg-primary text-primary-foreground"
+                          : chipInactiveHoverClass,
+                      )}
+                    >
+                      {t("stickersFilterAll")}
+                    </button>
+                    {stickerState.pickerStickerTypes.length > 0 && (
+                      <select
+                        value={stickerPickerType}
+                        onChange={(e) => setStickerPickerType(e.target.value)}
+                        className={cn(
+                          "rounded-lg px-2 py-1.5 text-xs font-medium",
+                          surfaceInputClass,
+                        )}
+                        aria-label={t("stickersFilterType")}
+                      >
+                        <option value="">{t("stickersFilterTypeAll")}</option>
+                        {stickerState.pickerStickerTypes.map((type) => (
+                          <option key={type} value={type}>{type}</option>
+                        ))}
+                      </select>
+                    )}
                   </div>
 
                   {stickerState.activeSlot !== null && (

@@ -58,11 +58,15 @@ export async function GET(request: NextRequest) {
     const page = Number(params.get("page") ?? "1");
     const limit = Number(params.get("limit") ?? "24");
     const weaponId = params.get("weaponId")?.trim() ?? "";
+    const compatibleOnly = params.get("compatibleOnly") !== "0";
+    const stickerType = params.get("stickerType")?.trim() ?? "";
     const result = await listEnabledStickersForPicker({
       search,
       page: Number.isFinite(page) ? page : 1,
       limit: Number.isFinite(limit) ? limit : 24,
       weaponId: weaponId || undefined,
+      compatibleOnly,
+      stickerType: stickerType || undefined,
     });
     return NextResponse.json(result);
   }

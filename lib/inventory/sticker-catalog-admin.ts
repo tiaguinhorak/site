@@ -271,7 +271,14 @@ function legacyPickerWhere(search?: string) {
     enabled: true,
     imageUrl: { not: null },
     defIndex: { lte: LEGACY_MAX_STICKER_DEFINDEX },
-    effect: { notIn: ["Lenticular", "Embroidered"] },
+    NOT: {
+      OR: [
+        { effect: { in: ["Lenticular", "Embroidered"] } },
+        { tournament: { contains: "Austin 2025", mode: "insensitive" as const } },
+        { tournament: { contains: "Budapest 2025", mode: "insensitive" as const } },
+        { tournament: { contains: "CS2 Major", mode: "insensitive" as const } },
+      ],
+    },
     ...(search
       ? { name: { contains: search, mode: "insensitive" as const } }
       : {}),
@@ -283,12 +290,19 @@ export async function listEnabledStickersForPicker(options?: {
   page?: number;
   limit?: number;
   weaponId?: string;
+  compatibleOnly?: boolean;
+  stickerType?: string;
 }) {
   const page = Math.max(1, options?.page ?? 1);
   const limit = Math.min(48, Math.max(1, options?.limit ?? 24));
   const trimmed = options?.search?.trim() ?? "";
   const weaponId = options?.weaponId?.trim() ?? "";
-  const where = legacyPickerWhere(trimmed || undefined);
+  const compatibleOnly = options?.compatibleOnly ?? true;
+  const stickerType = options?.stickerType?.trim() ?? "";
+  const where = {
+    ...legacyPickerWhere(trimmed || undefined),
+    ...(stickerType ? { stickerType: { equals: stickerType, mode: "insensitive" as const } } : {}),
+  };
 
   const [total, rows] = await Promise.all([
     prisma.csgoStickerCatalog.count({ where }),
@@ -301,10 +315,24 @@ export async function listEnabledStickersForPicker(options?: {
   ]);
 
   const withImage = rows.filter((row) => stickerHasImage(row.imageUrl));
+  let items = withImage.map((row) => enrichPickerItem(serializeRow(row), weaponId));
+  if (compatibleOnly && weaponId) {
+    items = items.filter((row) => row.compatible);
+  }
+
+  const stickerTypes = await prisma.csgoStickerCatalog.findMany({
+    where: legacyPickerWhere(),
+    select: { stickerType: true },
+    distinct: ["stickerType"],
+    orderBy: { stickerType: "asc" },
+  });
 
   if (withImage.length > 0 || total > 0) {
     return {
-      items: withImage.map((row) => enrichPickerItem(serializeRow(row), weaponId)),
+      items,
+      stickerTypes: stickerTypes
+        .map((row) => row.stickerType)
+        .filter((value): value is string => Boolean(value?.trim())),
       page,
       limit,
       total,
@@ -326,26 +354,42 @@ export async function listEnabledStickersForPicker(options?: {
 
   const apiTotal = filtered.length;
   const slice = filtered.slice((page - 1) * limit, page * limit);
+  let apiItems = slice.map((row) =>
+    enrichPickerItem(
+      {
+        id: row.id,
+        defIndex: row.defIndex,
+        name: row.name,
+        imageUrl: row.imageUrl,
+        rarity: row.rarity,
+        stickerType: row.stickerType,
+        effect: row.effect,
+        tournament: row.tournament,
+        enabled: true,
+        source: "api-fallback",
+        updatedAt: new Date().toISOString(),
+      },
+      weaponId,
+    ),
+  );
+  if (compatibleOnly && weaponId) {
+    apiItems = apiItems.filter((row) => row.compatible);
+  }
+  if (stickerType) {
+    apiItems = apiItems.filter(
+      (row) => row.stickerType?.toLowerCase() === stickerType.toLowerCase(),
+    );
+  }
 
   return {
-    items: slice.map((row) =>
-      enrichPickerItem(
-        {
-          id: row.id,
-          defIndex: row.defIndex,
-          name: row.name,
-          imageUrl: row.imageUrl,
-          rarity: row.rarity,
-          stickerType: row.stickerType,
-          effect: row.effect,
-          tournament: row.tournament,
-          enabled: true,
-          source: "api-fallback",
-          updatedAt: new Date().toISOString(),
-        },
-        weaponId,
+    items: apiItems,
+    stickerTypes: Array.from(
+      new Set(
+        apiWithImage
+          .map((row) => row.stickerType)
+          .filter((value): value is string => Boolean(value?.trim())),
       ),
-    ),
+    ).sort(),
     page,
     limit,
     total: apiTotal,
