@@ -17,6 +17,7 @@ import {
   serializeStoreReward,
   storeItemWithRewardsInclude,
 } from "@/lib/store/serialize";
+import { loadAgentPreviewMap, collectAgentDefIndexesFromStoreItems } from "@/lib/store/agent-preview-map";
 
 function validateRewardRows(
   productKind: string,
@@ -76,8 +77,10 @@ export async function GET(
     return NextResponse.json({ error: "Item não encontrado." }, { status: 404 });
   }
 
+  const agentByDef = await loadAgentPreviewMap(collectAgentDefIndexesFromStoreItems([item]));
+
   return NextResponse.json({
-    rewards: item.rewards.map(serializeStoreReward),
+    rewards: item.rewards.map((reward) => serializeStoreReward(reward, { agentByDef })),
   });
 }
 
@@ -146,8 +149,12 @@ export async function PUT(
     summary: `Atualizou recompensas: ${existing.name} (${rewards.length})`,
   });
 
+  const agentByDef = await loadAgentPreviewMap(
+    collectAgentDefIndexesFromStoreItems([{ rewards }]),
+  );
+
   return NextResponse.json({
     ok: true,
-    rewards: rewards.map(serializeStoreReward),
+    rewards: rewards.map((reward) => serializeStoreReward(reward, { agentByDef })),
   });
 }

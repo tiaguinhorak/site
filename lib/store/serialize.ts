@@ -4,6 +4,7 @@ import type { Prisma, StoreItem, StoreItemReward } from "@/lib/generated/prisma/
 import { formatPriceCents } from "@/lib/serializers";
 import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
 import type { StoreRewardPreview } from "@/lib/store/types";
+import type { AgentPreviewMeta } from "@/lib/store/agent-preview-map";
 
 type StoreItemRow = StoreItem & {
   rewards?: (StoreItemReward & {
@@ -43,8 +44,31 @@ export function rewardPreviewLabel(
 
 export function serializeStoreReward(
   reward: NonNullable<StoreItemRow["rewards"]>[number],
+  context?: { agentByDef?: Map<number, AgentPreviewMeta> },
 ): StoreRewardPreview {
   const { label, imageUrl } = rewardPreviewLabel(reward);
+
+  if (reward.kind === "AGENT" && reward.agentDefIndex) {
+    const agent = context?.agentByDef?.get(reward.agentDefIndex);
+    return {
+      id: reward.id,
+      kind: reward.kind,
+      catalogSkinId: reward.catalogSkinId,
+      agentDefIndex: reward.agentDefIndex,
+      weight: reward.weight,
+      quantity: reward.quantity,
+      sortOrder: reward.sortOrder,
+      label: agent?.name ?? label,
+      imageUrl: agent?.imageUrl ?? imageUrl,
+      subLabel: agent?.team ?? null,
+    };
+  }
+
+  const subLabel =
+    reward.kind === "CATALOG_SKIN" && reward.catalogSkin?.rarity
+      ? reward.catalogSkin.rarity
+      : null;
+
   return {
     id: reward.id,
     kind: reward.kind,
@@ -55,6 +79,7 @@ export function serializeStoreReward(
     sortOrder: reward.sortOrder,
     label,
     imageUrl,
+    subLabel,
   };
 }
 
@@ -84,6 +109,7 @@ export function serializePublicStoreItem(
   context: {
     purchaseCount: number;
     ownedSkinIds: Set<string>;
+    agentByDef?: Map<number, AgentPreviewMeta>;
   },
 ): PublicStoreItem {
   const rewards = item.rewards ?? [];
@@ -118,7 +144,7 @@ export function serializePublicStoreItem(
     purchaseCount: context.purchaseCount,
     canPurchase,
     ownedSkin,
-    rewardsPreview: rewards.map(serializeStoreReward),
+    rewardsPreview: rewards.map((row) => serializeStoreReward(row, context)),
   };
 }
 

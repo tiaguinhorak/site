@@ -887,7 +887,18 @@
     "goToInventory": "Go to inventory",
     "continueShopping": "Continue shopping",
     "close": "Close",
-    "alreadyOwned": "You already had this item"
+    "alreadyOwned": "You already had this item",
+    "rewardsTitleSkin": "You receive",
+    "rewardsTitlePackage": "Bundle contents",
+    "rewardsTitleCase": "Possible drops",
+    "rewardsTitleAgent": "Included agent",
+    "rewardsNotConfigured": "Rewards not configured yet.",
+    "unknownReward": "Item",
+    "packageItemsCount": "{count} items included",
+    "casePoolHint": "Random from {count} skins — one per opening",
+    "dropChance": "~{percent}% chance",
+    "skinInventoryHint": "Goes to inventory — equip in dashboard.",
+    "agentEquipHint": "Equipped on your team (Steam linked)."
   },
   "inventory": {
     "catAll": "All",

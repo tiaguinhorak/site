@@ -27,4 +27,6 @@ export type StoreRewardPreview = {
   sortOrder: number;
   label: string | null;
   imageUrl: string | null;
+  /** Rarity (skins) or team (agents). */
+  subLabel: string | null;
 };

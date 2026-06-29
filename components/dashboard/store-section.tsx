@@ -10,15 +10,19 @@ import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { secureApi } from "@/lib/api/client";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import { StoreRewardsPreview } from "@/components/dashboard/store-rewards-preview";
 
 type StoreProductKind = "SKIN" | "PACKAGE" | "CASE" | "AGENT";
 
 type StoreRewardPreview = {
   id: string;
   kind: string;
+  catalogSkinId: string | null;
   label: string | null;
   imageUrl: string | null;
+  subLabel: string | null;
   weight: number;
+  quantity: number;
 };
 
 type StoreItem = {
@@ -182,85 +186,93 @@ function StoreItemCard({
         )}
         aria-hidden
       />
-      <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex gap-4">
-          {item.imageUrl && (
-            <div className="hidden h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-black/20 sm:block">
-              <RemoteImage
-                src={item.imageUrl}
-                alt={item.name}
-                width={80}
-                height={80}
-                className="h-full w-full object-cover"
-              />
-            </div>
-          )}
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/20 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-primary">
-                {featured && <Flame className="h-3.5 w-3.5" />}
-                {item.badge}
-              </span>
-              <span className="text-xs uppercase tracking-wider text-muted">
-                {productKindLabel(item.productKind, t)}
-              </span>
-            </div>
-            <p className="mt-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-              {item.type}
-            </p>
-            <h2
-              className={cn(
-                "mt-1 font-display font-bold text-foreground",
-                featured ? "text-3xl sm:text-4xl" : "text-xl",
-              )}
-            >
-              {item.name}
-            </h2>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">{item.description}</p>
-            {item.productKind === "CASE" && item.rewardsPreview.length > 0 && (
-              <p className="mt-2 text-xs text-muted">
-                {t("casePool", { count: item.rewardsPreview.length })}
-              </p>
-            )}
-            <div className="mt-3 flex items-baseline gap-3">
-              {item.originalPrice && (
-                <span className="text-lg text-muted line-through">{item.originalPrice}</span>
-              )}
-              <span
+      <div className="relative flex flex-col gap-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex gap-4 min-w-0 flex-1">
+            {(item.imageUrl || item.rewardsPreview[0]?.imageUrl) && (
+              <div
                 className={cn(
-                  "font-display font-bold text-foreground",
-                  featured ? "text-3xl" : "text-xl",
+                  "hidden shrink-0 overflow-hidden rounded-xl border border-border/50 bg-black/20 sm:block",
+                  featured ? "h-28 w-28" : "h-20 w-20",
                 )}
               >
-                {item.priceCents === 0 ? t("free") : item.price}
-              </span>
-            </div>
-            {statusLabel && (
-              <p className="mt-2 text-sm font-medium text-amber-400">{statusLabel}</p>
+                <RemoteImage
+                  src={item.imageUrl ?? item.rewardsPreview[0]?.imageUrl ?? ""}
+                  alt={item.name}
+                  width={featured ? 112 : 80}
+                  height={featured ? 112 : 80}
+                  className="h-full w-full object-cover"
+                />
+              </div>
             )}
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/20 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-primary">
+                  {featured && <Flame className="h-3.5 w-3.5" />}
+                  {item.badge}
+                </span>
+                <span className="text-xs uppercase tracking-wider text-muted">
+                  {productKindLabel(item.productKind, t)}
+                </span>
+              </div>
+              <p className="mt-2 font-display text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+                {item.type}
+              </p>
+              <h2
+                className={cn(
+                  "mt-1 font-display font-bold text-foreground",
+                  featured ? "text-3xl sm:text-4xl" : "text-xl",
+                )}
+              >
+                {item.name}
+              </h2>
+              <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">{item.description}</p>
+              <div className="mt-3 flex flex-wrap items-baseline gap-3">
+                {item.originalPrice && (
+                  <span className="text-lg text-muted line-through">{item.originalPrice}</span>
+                )}
+                <span
+                  className={cn(
+                    "font-display font-bold text-foreground",
+                    featured ? "text-3xl" : "text-xl",
+                  )}
+                >
+                  {item.priceCents === 0 ? t("free") : item.price}
+                </span>
+              </div>
+              {statusLabel && (
+                <p className="mt-2 text-sm font-medium text-amber-400">{statusLabel}</p>
+              )}
+            </div>
           </div>
+          <Button
+            type="button"
+            variant="primary"
+            size={featured ? "lg" : "md"}
+            className="shrink-0 self-start lg:self-center"
+            disabled={!item.canPurchase || isPurchasing}
+            confirm={
+              item.canPurchase
+                ? confirmPresets.purchaseItem(item.name, item.priceCents === 0 ? t("free") : item.price)
+                : undefined
+            }
+            onClick={() => onPurchase(item)}
+          >
+            {isPurchasing ? (
+              <Loader2 className="h-5 w-5 motion-safe-spin" />
+            ) : item.productKind === "CASE" ? (
+              t("openCase")
+            ) : (
+              t("buyNow")
+            )}
+          </Button>
         </div>
-        <Button
-          type="button"
-          variant="primary"
-          size={featured ? "lg" : "md"}
-          className="shrink-0"
-          disabled={!item.canPurchase || isPurchasing}
-          confirm={
-            item.canPurchase
-              ? confirmPresets.purchaseItem(item.name, item.priceCents === 0 ? t("free") : item.price)
-              : undefined
-          }
-          onClick={() => onPurchase(item)}
-        >
-          {isPurchasing ? (
-            <Loader2 className="h-5 w-5 motion-safe-spin" />
-          ) : item.productKind === "CASE" ? (
-            t("openCase")
-          ) : (
-            t("buyNow")
-          )}
-        </Button>
+
+        <StoreRewardsPreview
+          productKind={item.productKind}
+          rewards={item.rewardsPreview}
+          featured={featured}
+        />
       </div>
     </motion.article>
   );
@@ -341,7 +353,7 @@ export function StoreSection() {
         )}
 
         {others.length > 0 && (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2">
             {others.map((item) => (
               <StoreItemCard
                 key={item.id}

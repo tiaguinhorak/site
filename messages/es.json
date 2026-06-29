@@ -887,7 +887,18 @@
     "goToInventory": "Ir al inventario",
     "continueShopping": "Seguir en la tienda",
     "close": "Cerrar",
-    "alreadyOwned": "Ya tenías este artículo"
+    "alreadyOwned": "Ya tenías este artículo",
+    "rewardsTitleSkin": "Recibes",
+    "rewardsTitlePackage": "Contenido del paquete",
+    "rewardsTitleCase": "Posibles recompensas",
+    "rewardsTitleAgent": "Agente incluido",
+    "rewardsNotConfigured": "Recompensas aún no configuradas.",
+    "unknownReward": "Artículo",
+    "packageItemsCount": "{count} artículos incluidos",
+    "casePoolHint": "Sorteo entre {count} skins — una por apertura",
+    "dropChance": "~{percent}% de probabilidad",
+    "skinInventoryHint": "Va al inventario — equípala en el dashboard.",
+    "agentEquipHint": "Equipado en tu equipo (Steam vinculada)."
   },
   "inventory": {
     "catAll": "Todos",

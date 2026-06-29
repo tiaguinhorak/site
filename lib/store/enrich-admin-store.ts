@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import { loadAgentPreviewMap, collectAgentDefIndexesFromStoreItems } from "@/lib/store/agent-preview-map";
 import { serializeStoreReward, storeItemWithRewardsInclude } from "@/lib/store/serialize";
 
 type StoreItemWithRewards = Awaited<
@@ -10,41 +11,11 @@ type StoreItemWithRewards = Awaited<
 >[number];
 
 export async function enrichStoreItemsForAdmin(items: StoreItemWithRewards[]) {
-  const agentDefIndexes = new Set<number>();
-  for (const item of items) {
-    for (const reward of item.rewards) {
-      if (reward.kind === "AGENT" && reward.agentDefIndex) {
-        agentDefIndexes.add(reward.agentDefIndex);
-      }
-    }
-  }
-
-  const agents =
-    agentDefIndexes.size > 0
-      ? await prisma.csgoAgentCatalog.findMany({
-          where: { defIndex: { in: [...agentDefIndexes] } },
-          select: { defIndex: true, name: true, imageUrl: true, team: true },
-        })
-      : [];
-  const agentByDef = new Map(agents.map((row) => [row.defIndex, row]));
+  const agentByDef = await loadAgentPreviewMap(collectAgentDefIndexesFromStoreItems(items));
 
   return items.map((item) => ({
     ...item,
-    rewards: item.rewards.map((reward) => {
-      const base = serializeStoreReward(reward);
-      if (reward.kind === "AGENT" && reward.agentDefIndex) {
-        const agent = agentByDef.get(reward.agentDefIndex);
-        if (agent) {
-          return {
-            ...base,
-            label: agent.name,
-            imageUrl: agent.imageUrl,
-            agentTeam: agent.team,
-          };
-        }
-      }
-      return base;
-    }),
+    rewards: item.rewards.map((reward) => serializeStoreReward(reward, { agentByDef })),
   }));
 }
 
