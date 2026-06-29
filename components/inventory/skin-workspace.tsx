@@ -502,7 +502,6 @@ export function SkinWorkspace({
                       quality={95}
                       className="object-contain p-2 sm:p-3"
                     />
-                    />
                   ) : null}
                 </div>
                 <SkinRarityLine accent={displaySkin.accent} rarity={displaySkin.rarity} position="bottom" />
