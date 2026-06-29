@@ -1,12 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
+import { InventoryItemArt } from "@/components/dashboard/inventory-item-art";
+import { RemoteImage } from "@/components/ui/remote-image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { secureApi } from "@/lib/api/client";
+import {
+  AgentCatalogPicker,
+  type AgentPickerItem,
+} from "@/components/admin/pickers/agent-catalog-picker";
+import {
+  CatalogSkinPicker,
+  skinDisplayName,
+  type CatalogSkinPickerItem,
+} from "@/components/admin/pickers/catalog-skin-picker";
+import { rarityAccent } from "@/lib/inventory/catalog-categories";
+import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
 
-type RewardDraft = {
+export type RewardDraft = {
   kind: "CATALOG_SKIN" | "AGENT";
   catalogSkinId?: string | null;
   agentDefIndex?: number | null;
@@ -14,16 +27,38 @@ type RewardDraft = {
   quantity: number;
   sortOrder: number;
   label?: string | null;
+  imageUrl?: string | null;
+  rarity?: string | null;
+  category?: string | null;
 };
 
-type CatalogSearchItem = {
-  id: string;
-  weaponName: string;
-  paintkitName: string;
-};
+function RewardRowPreview({ reward }: { reward: RewardDraft }) {
+  if (reward.kind === "CATALOG_SKIN") {
+    const image = reward.imageUrl ?? (reward.catalogSkinId ? catalogSkinImageUrl(reward.catalogSkinId) : null);
+    return (
+      <InventoryItemArt
+        imageUrl={image}
+        accent={rarityAccent(reward.rarity ?? "common")}
+        className="h-14 w-16 shrink-0"
+      />
+    );
+  }
 
-function skinLabel(item: CatalogSearchItem): string {
-  return `${item.weaponName} | ${item.paintkitName}`;
+  return (
+    <div className="flex h-14 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-black/30">
+      {reward.imageUrl ? (
+        <RemoteImage
+          src={reward.imageUrl}
+          alt={reward.label ?? "Agente"}
+          width={64}
+          height={56}
+          className="h-full w-full object-cover object-top"
+        />
+      ) : (
+        <span className="text-[10px] text-muted">#{reward.agentDefIndex}</span>
+      )}
+    </div>
+  );
 }
 
 export function AdminStoreRewardsEditor({
@@ -40,92 +75,45 @@ export function AdminStoreRewardsEditor({
   onError: (message: string) => void;
 }) {
   const [rewards, setRewards] = useState<RewardDraft[]>(initialRewards);
-  const [skinSearch, setSkinSearch] = useState("");
-  const [skinResults, setSkinResults] = useState<CatalogSearchItem[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [agentDefIndex, setAgentDefIndex] = useState("");
   const [saving, setSaving] = useState(false);
 
-  async function searchSkins() {
-    const q = skinSearch.trim();
-    if (q.length < 2) {
-      setSkinResults([]);
-      return;
-    }
-    setSearching(true);
-    const res = await fetch(
-      `/api/admin/catalog-skins?search=${encodeURIComponent(q)}&limit=15&enabledOnly=1`,
-      { credentials: "same-origin" },
-    );
-    setSearching(false);
-    if (!res.ok) {
-      onError("Busca no catálogo falhou.");
-      return;
-    }
-    const data = (await res.json()) as { items?: CatalogSearchItem[] };
-    setSkinResults(data.items ?? []);
-  }
+  function addSkinReward(item: CatalogSkinPickerItem) {
+    const draft: RewardDraft = {
+      kind: "CATALOG_SKIN",
+      catalogSkinId: item.id,
+      weight: 100,
+      quantity: 1,
+      sortOrder: productKind === "SKIN" ? 0 : rewards.length,
+      label: skinDisplayName(item),
+      imageUrl: item.imageUrl ?? catalogSkinImageUrl(item.id),
+      rarity: item.rarity,
+      category: item.category,
+    };
 
-  function addSkinReward(item: CatalogSearchItem) {
-    if (productKind === "SKIN" && rewards.length >= 1) {
-      setRewards([
-        {
-          kind: "CATALOG_SKIN",
-          catalogSkinId: item.id,
-          weight: 100,
-          quantity: 1,
-          sortOrder: 0,
-          label: skinLabel(item),
-        },
-      ]);
+    if (productKind === "SKIN") {
+      setRewards([draft]);
     } else {
-      setRewards((prev) => [
-        ...prev,
-        {
-          kind: "CATALOG_SKIN",
-          catalogSkinId: item.id,
-          weight: 100,
-          quantity: 1,
-          sortOrder: prev.length,
-          label: skinLabel(item),
-        },
-      ]);
+      setRewards((prev) => [...prev, { ...draft, sortOrder: prev.length }]);
     }
-    setSkinResults([]);
-    setSkinSearch("");
   }
 
-  function addAgentReward() {
-    const defIndex = Number(agentDefIndex);
-    if (!Number.isFinite(defIndex) || defIndex <= 0) {
-      onError("Def index do agente inválido.");
-      return;
-    }
+  function addAgentReward(item: AgentPickerItem) {
+    const draft: RewardDraft = {
+      kind: "AGENT",
+      agentDefIndex: item.defIndex,
+      weight: 100,
+      quantity: 1,
+      sortOrder: productKind === "AGENT" ? 0 : rewards.length,
+      label: item.name,
+      imageUrl: item.imageUrl,
+      category: item.team,
+    };
+
     if (productKind === "AGENT") {
-      setRewards([
-        {
-          kind: "AGENT",
-          agentDefIndex: defIndex,
-          weight: 100,
-          quantity: 1,
-          sortOrder: 0,
-          label: `Agente #${defIndex}`,
-        },
-      ]);
+      setRewards([draft]);
     } else {
-      setRewards((prev) => [
-        ...prev,
-        {
-          kind: "AGENT",
-          agentDefIndex: defIndex,
-          weight: 100,
-          quantity: 1,
-          sortOrder: prev.length,
-          label: `Agente #${defIndex}`,
-        },
-      ]);
+      setRewards((prev) => [...prev, { ...draft, sortOrder: prev.length }]);
     }
-    setAgentDefIndex("");
   }
 
   function removeReward(index: number) {
@@ -168,6 +156,9 @@ export function AdminStoreRewardsEditor({
   const showQuantity = productKind === "PACKAGE";
   const canAddSkin = productKind !== "AGENT";
   const canAddAgent = productKind === "AGENT" || productKind === "PACKAGE";
+  const skinExcludeIds = rewards
+    .filter((r) => r.kind === "CATALOG_SKIN" && r.catalogSkinId)
+    .map((r) => r.catalogSkinId!);
 
   return (
     <div className="space-y-4 rounded-xl border border-border p-4">
@@ -188,14 +179,15 @@ export function AdminStoreRewardsEditor({
           {rewards.map((reward, index) => (
             <li
               key={`${reward.kind}-${reward.catalogSkinId ?? reward.agentDefIndex}-${index}`}
-              className="flex flex-wrap items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm"
+              className="flex flex-wrap items-center gap-3 rounded-lg border border-border px-3 py-2"
             >
-              <span className="flex-1 font-medium">
-                {reward.label ??
-                  (reward.kind === "CATALOG_SKIN"
-                    ? reward.catalogSkinId
-                    : `Agente #${reward.agentDefIndex}`)}
-              </span>
+              <RewardRowPreview reward={reward} />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">{reward.label ?? "Recompensa"}</p>
+                {reward.category && (
+                  <p className="text-[11px] text-muted">{reward.category}</p>
+                )}
+              </div>
               {showWeight && (
                 <Input
                   label="Peso"
@@ -227,65 +219,18 @@ export function AdminStoreRewardsEditor({
       )}
 
       {canAddSkin && (
-        <div className="space-y-2">
-          <div className="flex gap-2">
-            <Input
-              label="Buscar skin no catálogo"
-              value={skinSearch}
-              onChange={(e) => setSkinSearch(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void searchSkins();
-              }}
-            />
-            <Button type="button" variant="outline" className="mt-6" onClick={() => void searchSkins()}>
-              {searching ? <Loader2 className="h-4 w-4 motion-safe-spin" /> : "Buscar"}
-            </Button>
-          </div>
-          {skinResults.length > 0 && (
-            <ul className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-border p-2">
-              {skinResults.map((item) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-white/5"
-                    onClick={() => addSkinReward(item)}
-                  >
-                    <Plus className="h-3.5 w-3.5 shrink-0 text-primary" />
-                    {skinLabel(item)}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <CatalogSkinPicker
+          onSelect={addSkinReward}
+          excludeIds={skinExcludeIds}
+          singleSelect={productKind === "SKIN"}
+        />
       )}
 
-      {canAddAgent && productKind === "PACKAGE" && (
-        <div className="flex gap-2">
-          <Input
-            label="Def index do agente"
-            type="number"
-            value={agentDefIndex}
-            onChange={(e) => setAgentDefIndex(e.target.value)}
-          />
-          <Button type="button" variant="outline" className="mt-6" onClick={addAgentReward}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-
-      {productKind === "AGENT" && (
-        <div className="flex gap-2">
-          <Input
-            label="Def index do agente"
-            type="number"
-            value={agentDefIndex}
-            onChange={(e) => setAgentDefIndex(e.target.value)}
-          />
-          <Button type="button" variant="outline" className="mt-6" onClick={addAgentReward}>
-            Definir agente
-          </Button>
-        </div>
+      {canAddAgent && (
+        <AgentCatalogPicker
+          onSelect={addAgentReward}
+          singleSelect={productKind === "AGENT"}
+        />
       )}
 
       <Button type="button" disabled={saving} onClick={() => void saveRewards()}>

@@ -20,7 +20,9 @@ export function ImagePicker({
   label?: string;
 }) {
   const [tab, setTab] = useState<Tab>("url");
-  const [urlInput, setUrlInput] = useState(value.startsWith("http") ? value : "");
+  const [urlInput, setUrlInput] = useState(
+    value.startsWith("http") || value.startsWith("/") ? value : "",
+  );
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);

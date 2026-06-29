@@ -136,3 +136,67 @@ export function rarityLabelFromId(rarityId: string): string {
   };
   return map[rarityId] ?? rarityId.replace(/^rarity_/, "").replace(/_/g, " ");
 }
+
+export type CatalogPickerCategory = "all" | "knife" | "gloves" | "rifle" | "pistol" | "smg";
+
+const PICKER_CATEGORY_LABELS: Record<CatalogPickerCategory, string> = {
+  all: "Todas",
+  knife: "Facas",
+  gloves: "Luvas",
+  rifle: "Rifles",
+  pistol: "Pistolas",
+  smg: "SMGs",
+};
+
+export function catalogPickerCategoryOptions(): { value: CatalogPickerCategory; label: string }[] {
+  return (Object.keys(PICKER_CATEGORY_LABELS) as CatalogPickerCategory[]).map((value) => ({
+    value,
+    label: PICKER_CATEGORY_LABELS[value],
+  }));
+}
+
+/** Prisma `where` fragment for admin catalog skin picker filters. */
+export function catalogPickerCategoryPrismaFilter(category: CatalogPickerCategory) {
+  if (category === "all") return {};
+  if (category === "knife") {
+    return {
+      OR: [
+        { category: { contains: "melee", mode: "insensitive" as const } },
+        { weaponId: { contains: "knife", mode: "insensitive" as const } },
+        { weaponId: { contains: "bayonet", mode: "insensitive" as const } },
+      ],
+    };
+  }
+  if (category === "gloves") {
+    return {
+      OR: [
+        { category: { contains: "gloves", mode: "insensitive" as const } },
+        { weaponId: { contains: "gloves", mode: "insensitive" as const } },
+        { weaponId: { contains: "handwraps", mode: "insensitive" as const } },
+      ],
+    };
+  }
+  if (category === "pistol") {
+    return {
+      OR: [
+        { category: { contains: "pistol", mode: "insensitive" as const } },
+        ...[...PISTOL_WEAPON_IDS].map((weaponId) => ({ weaponId })),
+      ],
+    };
+  }
+  if (category === "smg") {
+    return {
+      OR: [
+        { category: { contains: "smg", mode: "insensitive" as const } },
+        ...[...SMG_WEAPON_IDS].map((weaponId) => ({ weaponId })),
+      ],
+    };
+  }
+  return {
+    OR: [
+      { category: { contains: "rifle", mode: "insensitive" as const } },
+      { category: { contains: "heavy", mode: "insensitive" as const } },
+      { category: { contains: "sniper", mode: "insensitive" as const } },
+    ],
+  };
+}

@@ -38,6 +38,15 @@ export async function GET(request: NextRequest) {
   const limit = Number(params.get("limit") ?? "40");
   const search = params.get("search") ?? "";
   const weaponId = params.get("weaponId") ?? "";
+  const categoryParam = params.get("category") ?? "all";
+  const category =
+    categoryParam === "knife" ||
+    categoryParam === "gloves" ||
+    categoryParam === "rifle" ||
+    categoryParam === "pistol" ||
+    categoryParam === "smg"
+      ? categoryParam
+      : "all";
   const enabledOnly = params.get("enabledOnly") === "1";
 
   const result = await listCatalogSkinsAdmin({
@@ -45,6 +54,7 @@ export async function GET(request: NextRequest) {
     limit: Number.isFinite(limit) ? limit : 40,
     search,
     weaponId: weaponId || undefined,
+    category,
     enabledOnly,
   });
 

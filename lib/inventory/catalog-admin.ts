@@ -203,13 +203,23 @@ export async function listCatalogSkinsAdmin(options: {
   limit?: number;
   search?: string;
   weaponId?: string;
+  category?: import("@/lib/inventory/catalog-categories").CatalogPickerCategory;
   enabledOnly?: boolean;
 }) {
   const page = Math.max(1, options.page ?? 1);
   const limit = Math.min(100, Math.max(1, options.limit ?? 40));
   const search = options.search?.trim() ?? "";
 
+  const { catalogPickerCategoryPrismaFilter } = await import(
+    "@/lib/inventory/catalog-categories"
+  );
+  const categoryFilter =
+    options.category && options.category !== "all"
+      ? catalogPickerCategoryPrismaFilter(options.category)
+      : {};
+
   const where = {
+    ...categoryFilter,
     ...(options.weaponId ? { weaponId: options.weaponId } : {}),
     ...(options.enabledOnly ? { enabled: true } : {}),
     ...(search

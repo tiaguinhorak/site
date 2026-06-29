@@ -14,15 +14,17 @@ import {
 import { logAdminAction } from "@/lib/admin/audit";
 import { adminStoreCreateSchema } from "@/lib/admin/schemas";
 import { storeItemWithRewardsInclude } from "@/lib/store/serialize";
+import { enrichStoreItemsForAdmin, enrichSingleStoreItemForAdmin } from "@/lib/store/enrich-admin-store";
 
 export async function GET(request: NextRequest) {
   const { error } = await requireAdmin(request);
   if (error) return error;
 
-  const items = await prisma.storeItem.findMany({
+  const rows = await prisma.storeItem.findMany({
     orderBy: { sortOrder: "asc" },
     include: storeItemWithRewardsInclude,
   });
+  const items = await enrichStoreItemsForAdmin(rows);
   return NextResponse.json({ items });
 }
 
@@ -49,15 +51,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const item = await prisma.storeItem.create({
-    data: {
-      ...parsed.data,
-      originalCents: parsed.data.originalCents ?? null,
-      imageUrl: parsed.data.imageUrl ?? null,
-      maxPerUser: parsed.data.maxPerUser ?? null,
-    },
-    include: storeItemWithRewardsInclude,
-  });
+  const item = await enrichSingleStoreItemForAdmin(
+    await prisma.storeItem.create({
+      data: {
+        ...parsed.data,
+        originalCents: parsed.data.originalCents ?? null,
+        imageUrl: parsed.data.imageUrl ?? null,
+        maxPerUser: parsed.data.maxPerUser ?? null,
+      },
+      include: storeItemWithRewardsInclude,
+    }),
+  );
 
   await logAdminAction({
     adminId: admin!.id,

@@ -11,6 +11,8 @@ type StoreItemRow = StoreItem & {
       weaponName: string;
       paintkitName: string;
       imageUrl: string | null;
+      category?: string;
+      rarity?: string;
     } | null;
   })[];
 };
@@ -129,6 +131,8 @@ export const storeItemWithRewardsInclude = {
           weaponName: true,
           paintkitName: true,
           imageUrl: true,
+          category: true,
+          rarity: true,
         },
       },
     },

@@ -15,6 +15,9 @@ import {
 } from "@/lib/admin/content-presets";
 import { GradientPicker } from "@/components/admin/pickers/gradient-picker";
 import { PresetSelect } from "@/components/admin/pickers/preset-select";
+import { ImagePicker } from "@/components/admin/pickers/image-picker";
+import { CurrencyInput } from "@/components/admin/pickers/currency-input";
+import { RemoteImage } from "@/components/ui/remote-image";
 import { AdminStoreRewardsEditor } from "@/components/admin/admin-store-rewards-editor";
 
 type StoreProductKind = "SKIN" | "PACKAGE" | "CASE" | "AGENT";
@@ -28,17 +31,9 @@ type StoreReward = {
   quantity: number;
   sortOrder: number;
   label?: string | null;
-  catalogSkin?: { weaponName: string; paintkitName: string } | null;
+  imageUrl?: string | null;
+  catalogSkin?: { weaponName: string; paintkitName: string; imageUrl?: string | null; category?: string; rarity?: string } | null;
 };
-
-function rewardLabel(row: StoreReward): string | null {
-  if (row.label) return row.label;
-  if (row.catalogSkin) {
-    return `${row.catalogSkin.weaponName} | ${row.catalogSkin.paintkitName}`;
-  }
-  if (row.agentDefIndex) return `Agente #${row.agentDefIndex}`;
-  return null;
-}
 
 type StoreItem = {
   id: string;
@@ -65,8 +60,8 @@ const emptyForm: {
   name: string;
   type: string;
   productKind: StoreProductKind;
-  priceCents: string;
-  originalCents: string;
+  priceCents: number;
+  originalCents: number;
   badge: string;
   description: string;
   accent: string;
@@ -80,8 +75,8 @@ const emptyForm: {
   name: "",
   type: STORE_TYPE_PRESETS[0],
   productKind: "SKIN" as StoreProductKind,
-  priceCents: "0",
-  originalCents: "",
+  priceCents: 0,
+  originalCents: 0,
   badge: STORE_BADGE_PRESETS[0],
   description: "",
   accent: DEFAULT_GRADIENT.classes,
@@ -129,8 +124,8 @@ export function AdminStoreSection() {
       name: item.name,
       type: item.type,
       productKind: item.productKind,
-      priceCents: String(item.priceCents),
-      originalCents: item.originalCents ? String(item.originalCents) : "",
+      priceCents: item.priceCents,
+      originalCents: item.originalCents ?? 0,
       badge: item.badge,
       description: item.description,
       accent: item.accent,
@@ -153,8 +148,8 @@ export function AdminStoreSection() {
       name: form.name,
       type: form.type,
       productKind: form.productKind,
-      priceCents: Number(form.priceCents),
-      originalCents: form.originalCents ? Number(form.originalCents) : null,
+      priceCents: form.priceCents,
+      originalCents: form.originalCents > 0 ? form.originalCents : null,
       badge: form.badge,
       description: form.description,
       accent: form.accent,
@@ -208,16 +203,37 @@ export function AdminStoreSection() {
         </h2>
 
         <div
-          className="rounded-xl border border-border p-4"
+          className="relative overflow-hidden rounded-xl border border-border p-4"
           style={{
             background: previewGradient
               ? `linear-gradient(135deg, ${previewGradient.from}22, ${previewGradient.to}33)`
               : undefined,
           }}
         >
-          <p className="text-xs uppercase text-muted">Preview</p>
+          {form.imageUrl ? (
+            <div className="mb-3 overflow-hidden rounded-lg border border-border/60">
+              <RemoteImage
+                src={form.imageUrl}
+                alt={form.name || "Preview"}
+                width={400}
+                height={160}
+                className="h-32 w-full object-cover sm:h-36"
+              />
+            </div>
+          ) : null}
+          <p className="text-xs uppercase text-muted">Preview do card</p>
           <p className="mt-1 font-display text-lg font-bold">{form.name || "Nome do item"}</p>
-          <p className="text-xs text-primary">{form.badge} · {form.productKind}</p>
+          <p className="text-xs text-primary">
+            {form.badge} · {form.productKind}
+          </p>
+          <p className="mt-2 font-display text-xl font-bold">
+            {form.priceCents === 0 ? "Grátis" : formatPriceCents(form.priceCents)}
+            {form.originalCents > form.priceCents && form.originalCents > 0 ? (
+              <span className="ml-2 text-sm font-normal text-muted line-through">
+                {formatPriceCents(form.originalCents)}
+              </span>
+            ) : null}
+          </p>
         </div>
 
         <Input label="Nome" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -246,18 +262,17 @@ export function AdminStoreSection() {
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Input
-            label="Preço (centavos)"
-            type="number"
-            value={form.priceCents}
-            onChange={(e) => setForm({ ...form, priceCents: e.target.value })}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <CurrencyInput
+            label="Preço"
+            valueCents={form.priceCents}
+            onChangeCents={(priceCents) => setForm({ ...form, priceCents })}
           />
-          <Input
+          <CurrencyInput
             label="Preço original"
-            type="number"
-            value={form.originalCents}
-            onChange={(e) => setForm({ ...form, originalCents: e.target.value })}
+            valueCents={form.originalCents}
+            onChangeCents={(originalCents) => setForm({ ...form, originalCents })}
+            optional
           />
         </div>
 
@@ -280,10 +295,11 @@ export function AdminStoreSection() {
           />
         </div>
 
-        <Input
-          label="URL da imagem (opcional)"
+        <ImagePicker
+          label="Imagem do card"
+          folder="store"
           value={form.imageUrl}
-          onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+          onChange={(imageUrl) => setForm({ ...form, imageUrl })}
         />
 
         <GradientPicker value={form.accent} onChange={(accent) => setForm({ ...form, accent })} />
@@ -345,6 +361,7 @@ export function AdminStoreSection() {
 
         {editing && (
           <AdminStoreRewardsEditor
+            key={`${editing.id}-${editingRewards.map((r) => r.id).join(",")}`}
             storeItemId={editing.id}
             productKind={form.productKind}
             initialRewards={editingRewards.map((row) => ({
@@ -354,7 +371,15 @@ export function AdminStoreSection() {
               weight: row.weight,
               quantity: row.quantity,
               sortOrder: row.sortOrder,
-              label: rewardLabel(row),
+              label: row.label ?? null,
+              imageUrl: row.imageUrl ?? row.catalogSkin?.imageUrl ?? null,
+              rarity: row.catalogSkin?.rarity ?? null,
+              category:
+                row.kind === "CATALOG_SKIN"
+                  ? (row.catalogSkin?.category ?? null)
+                  : row.kind === "AGENT"
+                    ? "Agente"
+                    : null,
             }))}
             onSaved={() => {
               setSuccess("Recompensas salvas.");
@@ -384,6 +409,7 @@ export function AdminStoreSection() {
             <table className="w-full min-w-[720px] text-sm">
               <thead className="border-b border-border text-xs uppercase text-muted">
                 <tr>
+                  <th className="py-2 pr-4">Capa</th>
                   <th className="py-2 pr-4">Item</th>
                   <th className="py-2 pr-4">Preço</th>
                   <th className="py-2 pr-4">Tipo</th>
@@ -394,6 +420,21 @@ export function AdminStoreSection() {
               <tbody className="divide-y divide-border">
                 {items.map((item) => (
                   <tr key={item.id} className={!item.enabled ? "opacity-60" : undefined}>
+                    <td className="py-3 pr-4">
+                      {item.imageUrl ? (
+                        <div className="h-10 w-14 overflow-hidden rounded-md border border-border/60">
+                          <RemoteImage
+                            src={item.imageUrl}
+                            alt=""
+                            width={56}
+                            height={40}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted">—</span>
+                      )}
+                    </td>
                     <td className="py-3 pr-4">
                       <p className="font-medium">{item.name}</p>
                       <p className="text-xs text-muted">

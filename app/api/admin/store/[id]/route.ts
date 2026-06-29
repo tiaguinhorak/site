@@ -15,6 +15,7 @@ import {
 import { logAdminAction } from "@/lib/admin/audit";
 import { adminStoreUpdateSchema } from "@/lib/admin/schemas";
 import { storeItemWithRewardsInclude } from "@/lib/store/serialize";
+import { enrichSingleStoreItemForAdmin } from "@/lib/store/enrich-admin-store";
 
 export async function PATCH(
   request: NextRequest,
@@ -46,22 +47,24 @@ export async function PATCH(
     );
   }
 
-  const item = await prisma.storeItem.update({
-    where: { id },
-    data: {
-      ...parsed.data,
-      ...(parsed.data.originalCents !== undefined
-        ? { originalCents: parsed.data.originalCents ?? null }
-        : {}),
-      ...(parsed.data.imageUrl !== undefined
-        ? { imageUrl: parsed.data.imageUrl ?? null }
-        : {}),
-      ...(parsed.data.maxPerUser !== undefined
-        ? { maxPerUser: parsed.data.maxPerUser ?? null }
-        : {}),
-    },
-    include: storeItemWithRewardsInclude,
-  });
+  const item = await enrichSingleStoreItemForAdmin(
+    await prisma.storeItem.update({
+      where: { id },
+      data: {
+        ...parsed.data,
+        ...(parsed.data.originalCents !== undefined
+          ? { originalCents: parsed.data.originalCents ?? null }
+          : {}),
+        ...(parsed.data.imageUrl !== undefined
+          ? { imageUrl: parsed.data.imageUrl ?? null }
+          : {}),
+        ...(parsed.data.maxPerUser !== undefined
+          ? { maxPerUser: parsed.data.maxPerUser ?? null }
+          : {}),
+      },
+      include: storeItemWithRewardsInclude,
+    }),
+  );
 
   await logAdminAction({
     adminId: admin!.id,
