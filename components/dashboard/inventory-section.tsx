@@ -57,6 +57,15 @@ import { InventoryPageSkeleton } from "@/components/loading/page-skeletons";
 import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
 import { SkinPreviewModal } from "@/components/skins/skin-preview-modal";
 
+type AgentLoadoutState = {
+  agentT: number;
+  agentCT: number;
+  agentTName: string | null;
+  agentCTName: string | null;
+  agentTImage: string | null;
+  agentCTImage: string | null;
+};
+
 type AgentCatalogItem = {
   id: string;
   defIndex: number;
@@ -261,6 +270,7 @@ export function InventorySection() {
 
   const [items, setItems] = useState<CatalogSkin[]>([]);
   const [agentItems, setAgentItems] = useState<AgentCatalogItem[]>([]);
+  const [agentLoadout, setAgentLoadout] = useState<AgentLoadoutState | null>(null);
   const [agentTeamBrowse, setAgentTeamBrowse] = useState<LoadoutTeam>("T");
   const [agentWorkspaceOpen, setAgentWorkspaceOpen] = useState(false);
   const [loadout, setLoadout] = useState<LoadoutResponse | null>(null);
@@ -382,17 +392,22 @@ export function InventorySection() {
         search,
       });
 
-      const response = await fetch(`/api/inventory/agents?${params}`, {
-        credentials: "same-origin",
-      });
+      const [pickerResponse, loadoutResponse] = await Promise.all([
+        fetch(`/api/inventory/agents?${params}`, { credentials: "same-origin" }),
+        fetch("/api/inventory/agents", { credentials: "same-origin" }),
+      ]);
 
       if (reqId !== reqIdRef.current) return;
-      if (!response.ok) {
+      if (!pickerResponse.ok) {
         setLoadError(true);
         return;
       }
 
-      const data = await response.json();
+      const data = await pickerResponse.json();
+      if (loadoutResponse.ok) {
+        const loadoutData = (await loadoutResponse.json()) as AgentLoadoutState;
+        setAgentLoadout(loadoutData);
+      }
       if (reqId !== reqIdRef.current) return;
 
       setAgentItems(data.items ?? []);
@@ -786,6 +801,67 @@ export function InventorySection() {
           )}
         </div>
 
+          {isAgentView && agentLoadout && (agentLoadout.agentT > 0 || agentLoadout.agentCT > 0) && (
+            <div className="mb-4 grid gap-2 sm:grid-cols-2">
+              {agentLoadout.agentT > 0 && agentLoadout.agentTName ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAgentTeamBrowse("T");
+                    setAgentWorkspaceOpen(true);
+                  }}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-3 text-left transition hover:bg-emerald-500/15",
+                    chipInactiveHoverClass,
+                  )}
+                >
+                  <InventorySkinTile
+                    name={agentLoadout.agentTName}
+                    imageUrl={agentLoadout.agentTImage}
+                    accent="from-violet-600 to-fuchsia-600"
+                    equippedT
+                    className="pointer-events-none w-20 shrink-0 border-0 bg-transparent p-0 shadow-none"
+                    artClassName="h-14 w-14"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400">
+                      {t("teamTShort")} · {t("agentsEquippedBadge")}
+                    </p>
+                    <p className="truncate text-sm font-medium">{agentLoadout.agentTName}</p>
+                  </div>
+                </button>
+              ) : null}
+              {agentLoadout.agentCT > 0 && agentLoadout.agentCTName ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAgentTeamBrowse("CT");
+                    setAgentWorkspaceOpen(true);
+                  }}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-3 text-left transition hover:bg-emerald-500/15",
+                    chipInactiveHoverClass,
+                  )}
+                >
+                  <InventorySkinTile
+                    name={agentLoadout.agentCTName}
+                    imageUrl={agentLoadout.agentCTImage}
+                    accent="from-violet-600 to-fuchsia-600"
+                    equippedCT
+                    className="pointer-events-none w-20 shrink-0 border-0 bg-transparent p-0 shadow-none"
+                    artClassName="h-14 w-14"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400">
+                      {t("teamCTShort")} · {t("agentsEquippedBadge")}
+                    </p>
+                    <p className="truncate text-sm font-medium">{agentLoadout.agentCTName}</p>
+                  </div>
+                </button>
+              ) : null}
+            </div>
+          )}
+
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
             {catalogGridLoading ? (
               <Skeleton className="h-4 w-56" />
@@ -834,16 +910,22 @@ export function InventorySection() {
                 loading && "opacity-60",
               )}
             >
-              {agentItems.map((item) => (
+              {agentItems.map((item) => {
+                const equippedT = agentLoadout?.agentT === item.defIndex;
+                const equippedCT = agentLoadout?.agentCT === item.defIndex;
+                const anyEquipped = equippedT || equippedCT;
+
+                return (
                 <InventorySkinTile
                   key={item.id}
                   name={item.name}
                   imageUrl={item.imageUrl}
                   accent="from-violet-600 to-fuchsia-600"
                   rarity={item.rarity}
-                  equippedT={item.team === "T"}
-                  equippedCT={item.team === "CT"}
+                  equippedT={equippedT}
+                  equippedCT={equippedCT}
                   onClick={() => setAgentWorkspaceOpen(true)}
+                  className={cn(anyEquipped && "ring-1 ring-emerald-400/35")}
                 >
                   <div className="mt-2 flex flex-wrap items-center justify-center gap-1">
                     <SkinRarityBadge
@@ -852,7 +934,8 @@ export function InventorySection() {
                     />
                   </div>
                 </InventorySkinTile>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div
@@ -921,6 +1004,7 @@ export function InventorySection() {
         onClose={() => setAgentWorkspaceOpen(false)}
         onSaved={() => {
           void fetchLoadout({ silent: true });
+          if (filter === "agent") void fetchAgents();
         }}
       />
 

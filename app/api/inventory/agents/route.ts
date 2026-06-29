@@ -130,6 +130,14 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const guardError = await applyApiGuards(
+    request,
+    "inventory-agents-delete",
+    RATE_LIMITS.profile.limit,
+    RATE_LIMITS.profile.windowMs,
+  );
+  if (guardError) return guardError;
+
   const userId = await getSessionUserId(request);
   if (!userId) {
     return jsonErrorKey(request, 401, "unauthorized");

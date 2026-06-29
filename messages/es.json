@@ -954,6 +954,7 @@
     "agentsTeamCT": "Agentes CT",
     "agentsEmptyCatalog": "No hay agentes habilitados en el catálogo.",
     "agentsPlanRequired": "Los agentes requieren plan Premium o Elite.",
+    "agentsEquippedBadge": "Equipado",
     "teamTShort": "T",
     "teamCTShort": "CT",
     "workspaceSave": "Guardar configuración",

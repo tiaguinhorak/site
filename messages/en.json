@@ -954,6 +954,7 @@
     "agentsTeamCT": "Counter-Terrorist agents (CT)",
     "agentsEmptyCatalog": "No agents enabled in catalog.",
     "agentsPlanRequired": "Agents require Premium or Elite plan.",
+    "agentsEquippedBadge": "Equipped",
     "teamTShort": "T",
     "teamCTShort": "CT",
     "workspaceSave": "Save settings",

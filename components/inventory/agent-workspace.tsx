@@ -14,6 +14,12 @@ import {
   surfaceSubtleClass,
 } from "@/lib/ui/theme-surfaces";
 import { toast } from "@/lib/toast";
+import { API_REQUEST_HEADER } from "@/lib/brand";
+
+const inventoryWriteHeaders = {
+  "Content-Type": "application/json",
+  [API_REQUEST_HEADER]: "1",
+} as const;
 
 type AgentPickerItem = {
   id: string;
@@ -144,7 +150,7 @@ export function AgentWorkspace({
       const res = await fetch("/api/inventory/agents", {
         method: "POST",
         credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
+        headers: inventoryWriteHeaders,
         body: JSON.stringify({ team: editTeam, defIndex }),
       });
       const data = await res.json();
@@ -165,6 +171,7 @@ export function AgentWorkspace({
       const res = await fetch(`/api/inventory/agents?team=${editTeam}`, {
         method: "DELETE",
         credentials: "same-origin",
+        headers: { [API_REQUEST_HEADER]: "1" },
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Falha ao remover.");
@@ -201,7 +208,7 @@ export function AgentWorkspace({
         const res = await fetch("/api/inventory/agents", {
           method: "POST",
           credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
+          headers: inventoryWriteHeaders,
           body: JSON.stringify({ team, defIndex: selectedDefIndex }),
         });
         if (!res.ok) {
@@ -253,6 +260,55 @@ export function AgentWorkspace({
           <div className={cn("mx-4 mt-4 flex items-center gap-2 rounded-xl px-3 py-2 text-xs", surfaceSubtleClass)}>
             <Lock className="h-4 w-4 shrink-0" />
             {t("agentsPlanRequired")}
+          </div>
+        )}
+
+        {loadout && (loadout.agentT > 0 || loadout.agentCT > 0) && (
+          <div className={cn("mx-4 mt-4 grid gap-2 sm:grid-cols-2", !canUseAgents && "mt-2")}>
+            {loadout.agentT > 0 && loadout.agentTName ? (
+              <div className={cn("flex items-center gap-3 rounded-xl p-3", surfaceSubtleClass)}>
+                {loadout.agentTImage ? (
+                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-black/20">
+                    <RemoteImage
+                      src={loadout.agentTImage}
+                      alt={loadout.agentTName}
+                      fill
+                      className="object-contain p-0.5"
+                    />
+                  </div>
+                ) : (
+                  <UserRound className="h-8 w-8 text-muted" />
+                )}
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                    {t("teamTShort")} · {t("agentsEquippedBadge")}
+                  </p>
+                  <p className="truncate text-xs font-medium">{loadout.agentTName}</p>
+                </div>
+              </div>
+            ) : null}
+            {loadout.agentCT > 0 && loadout.agentCTName ? (
+              <div className={cn("flex items-center gap-3 rounded-xl p-3", surfaceSubtleClass)}>
+                {loadout.agentCTImage ? (
+                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-black/20">
+                    <RemoteImage
+                      src={loadout.agentCTImage}
+                      alt={loadout.agentCTName}
+                      fill
+                      className="object-contain p-0.5"
+                    />
+                  </div>
+                ) : (
+                  <UserRound className="h-8 w-8 text-muted" />
+                )}
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                    {t("teamCTShort")} · {t("agentsEquippedBadge")}
+                  </p>
+                  <p className="truncate text-xs font-medium">{loadout.agentCTName}</p>
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
 
@@ -354,18 +410,29 @@ export function AgentWorkspace({
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {pickerItems.map((item) => {
                   const active = selectedDefIndex === item.defIndex;
+                  const equippedOnTeam =
+                    editTeam === "T"
+                      ? loadout?.agentT === item.defIndex
+                      : loadout?.agentCT === item.defIndex;
                   return (
                     <button
                       key={item.id}
                       type="button"
                       onClick={() => setSelectedDefIndex(item.defIndex)}
                       className={cn(
-                        "rounded-xl border p-2 text-left transition",
+                        "relative rounded-xl border p-2 text-left transition",
                         active
                           ? "border-primary bg-primary/10"
-                          : cn("border-border/50", chipInactiveHoverClass),
+                          : equippedOnTeam
+                            ? "border-emerald-400/50 bg-emerald-500/10"
+                            : cn("border-border/50", chipInactiveHoverClass),
                       )}
                     >
+                      {equippedOnTeam && (
+                        <span className="absolute right-1.5 top-1.5 z-10 rounded bg-emerald-500/90 px-1.5 py-0.5 text-[9px] font-bold uppercase text-white">
+                          {t("agentsEquippedBadge")}
+                        </span>
+                      )}
                       <div className="relative aspect-square overflow-hidden rounded-lg bg-black/20">
                         {item.imageUrl ? (
                           <RemoteImage
