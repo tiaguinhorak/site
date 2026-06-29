@@ -318,8 +318,6 @@ export async function listEnabledStickersForPicker(options?: {
   page?: number;
   limit?: number;
   weaponId?: string;
-  compatibleOnly?: boolean;
-  stickerType?: string;
 }) {
   await ensureLegacyStickerCatalogAndLoadouts();
 
@@ -327,102 +325,27 @@ export async function listEnabledStickersForPicker(options?: {
   const limit = Math.min(48, Math.max(1, options?.limit ?? 24));
   const trimmed = options?.search?.trim() ?? "";
   const weaponId = options?.weaponId?.trim() ?? "";
-  const compatibleOnly = options?.compatibleOnly ?? true;
-  const stickerType = options?.stickerType?.trim() ?? "";
-  const where = {
-    ...legacyPickerWhere(trimmed || undefined),
-    ...(stickerType ? { stickerType: { equals: stickerType, mode: "insensitive" as const } } : {}),
-  };
+  const where = legacyPickerWhere(trimmed || undefined);
 
-  const [total, rows] = await Promise.all([
-    prisma.csgoStickerCatalog.count({ where }),
-    prisma.csgoStickerCatalog.findMany({
-      where,
-      orderBy: { name: "asc" },
-      skip: (page - 1) * limit,
-      take: limit,
-    }),
-  ]);
+  const rows = await prisma.csgoStickerCatalog.findMany({
+    where,
+    orderBy: { name: "asc" },
+  });
 
   const withImage = rows.filter((row) => stickerHasImage(row.imageUrl));
   let items = withImage.map((row) => enrichPickerItem(serializeRow(row), weaponId));
-  if (compatibleOnly && weaponId) {
+  if (weaponId) {
     items = items.filter((row) => row.compatible);
   }
 
-  const stickerTypes = await prisma.csgoStickerCatalog.findMany({
-    where: legacyPickerWhere(),
-    select: { stickerType: true },
-    distinct: ["stickerType"],
-    orderBy: { stickerType: "asc" },
-  });
-
-  if (withImage.length > 0 || total > 0) {
-    return {
-      items,
-      stickerTypes: stickerTypes
-        .map((row) => row.stickerType)
-        .filter((value): value is string => Boolean(value?.trim())),
-      page,
-      limit,
-      total,
-      totalPages: Math.max(1, Math.ceil(total / limit)),
-    };
-  }
-
-  const apiRows = await listAllStickersFromApi();
-  const apiWithImage = apiRows.filter(
-    (row) =>
-      stickerHasImage(row.imageUrl) &&
-      isLegacyCompatibleSticker(stickerCompatibilityMeta(row)),
-  );
-  const filtered = trimmed
-    ? apiWithImage.filter((row) =>
-        row.name.toLowerCase().includes(trimmed.toLowerCase()),
-      )
-    : apiWithImage;
-
-  const apiTotal = filtered.length;
-  const slice = filtered.slice((page - 1) * limit, page * limit);
-  let apiItems = slice.map((row) =>
-    enrichPickerItem(
-      {
-        id: row.id,
-        defIndex: row.defIndex,
-        name: row.name,
-        imageUrl: row.imageUrl,
-        rarity: row.rarity,
-        stickerType: row.stickerType,
-        effect: row.effect,
-        tournament: row.tournament,
-        enabled: true,
-        source: "api-fallback",
-        updatedAt: new Date().toISOString(),
-      },
-      weaponId,
-    ),
-  );
-  if (compatibleOnly && weaponId) {
-    apiItems = apiItems.filter((row) => row.compatible);
-  }
-  if (stickerType) {
-    apiItems = apiItems.filter(
-      (row) => row.stickerType?.toLowerCase() === stickerType.toLowerCase(),
-    );
-  }
+  const total = items.length;
+  const pageItems = items.slice((page - 1) * limit, page * limit);
 
   return {
-    items: apiItems,
-    stickerTypes: Array.from(
-      new Set(
-        apiWithImage
-          .map((row) => row.stickerType)
-          .filter((value): value is string => Boolean(value?.trim())),
-      ),
-    ).sort(),
+    items: pageItems,
     page,
     limit,
-    total: apiTotal,
-    totalPages: Math.max(1, Math.ceil(apiTotal / limit)),
+    total,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
   };
 }

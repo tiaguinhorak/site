@@ -146,8 +146,6 @@ export function SkinWorkspace({
   const [skinPickerQuery, setSkinPickerQuery] = useState("");
   const [skinPickerPage, setSkinPickerPage] = useState(1);
   const [skinPickerTotalPages, setSkinPickerTotalPages] = useState(1);
-  const [stickerPickerType, setStickerPickerType] = useState("");
-  const [stickerCompatOnly, setStickerCompatOnly] = useState(true);
   const [stickerLoadEnabled, setStickerLoadEnabled] = useState(false);
 
   const displaySkin = activeSkin ?? skin;
@@ -208,8 +206,6 @@ export function SkinWorkspace({
       planMaxStickerSlots: maxStickerSlots,
       pickerPageSize: 12,
       categoryKey: displaySkin?.categoryKey,
-      pickerCompatibleOnly: stickerCompatOnly,
-      pickerStickerType: stickerPickerType,
     },
   );
 
@@ -790,49 +786,6 @@ export function SkinWorkspace({
                     />
                   </div>
 
-                  <div className="flex shrink-0 flex-wrap items-center gap-2 pb-2">
-                    <button
-                      type="button"
-                      onClick={() => setStickerCompatOnly(true)}
-                      className={cn(
-                        "rounded-lg px-2.5 py-1.5 text-xs font-semibold",
-                        stickerCompatOnly
-                          ? "bg-primary text-primary-foreground"
-                          : chipInactiveHoverClass,
-                      )}
-                    >
-                      {t("stickersFilterLegacy")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setStickerCompatOnly(false)}
-                      className={cn(
-                        "rounded-lg px-2.5 py-1.5 text-xs font-semibold",
-                        !stickerCompatOnly
-                          ? "bg-primary text-primary-foreground"
-                          : chipInactiveHoverClass,
-                      )}
-                    >
-                      {t("stickersFilterAll")}
-                    </button>
-                    {stickerState.pickerStickerTypes.length > 0 && (
-                      <select
-                        value={stickerPickerType}
-                        onChange={(e) => setStickerPickerType(e.target.value)}
-                        className={cn(
-                          "rounded-lg px-2 py-1.5 text-xs font-medium",
-                          surfaceInputClass,
-                        )}
-                        aria-label={t("stickersFilterType")}
-                      >
-                        <option value="">{t("stickersFilterTypeAll")}</option>
-                        {stickerState.pickerStickerTypes.map((type) => (
-                          <option key={type} value={type}>{type}</option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-
                   {stickerState.activeSlot !== null && (
                     <div className="flex shrink-0 flex-wrap items-center gap-2 pb-2">
                       <p className="text-xs font-medium text-primary">
@@ -858,9 +811,7 @@ export function SkinWorkspace({
                     ) : (
                       <div className="grid grid-cols-4 gap-2 pb-2">
                         {stickerState.pickerItems.map((item) => {
-                          const compatible = stickerState.isPickerStickerCompatible(item);
                           const isSelected =
-                            compatible &&
                             item.defIndex > 0 &&
                             item.defIndex === selectedStickerDefIndex;
                           return (
@@ -869,8 +820,7 @@ export function SkinWorkspace({
                               name={item.name}
                               imageUrl={item.imageUrl}
                               selected={isSelected}
-                              compatible={compatible}
-                              lockTitle={stickerState.stickerLockLabel(item.incompatibleReason)}
+                              compatible
                               sizeClass="max-h-14 max-w-14"
                               onSelect={() =>
                                 stickerState.selectSticker(
@@ -878,7 +828,6 @@ export function SkinWorkspace({
                                   item.name,
                                   stickerState.activeSlot ?? 0,
                                   item.imageUrl,
-                                  item.incompatibleReason,
                                 )
                               }
                             />

@@ -117,24 +117,21 @@ export function WeaponStickerEditor({
           ) : (
             <div className="grid grid-cols-3 gap-3">
               {state.pickerItems.map((item) => {
-                const compatible = state.isPickerStickerCompatible(item);
                 const isSelected =
-                  compatible && item.defIndex === state.slots[state.activeSlot!];
+                  item.defIndex === state.slots[state.activeSlot!];
                 return (
                   <StickerPickerTile
                     key={item.id}
                     name={item.name}
                     imageUrl={item.imageUrl}
                     selected={isSelected}
-                    compatible={compatible}
-                    lockTitle={state.stickerLockLabel(item.incompatibleReason)}
+                    compatible
                     onSelect={() =>
                       state.selectSticker(
                         item.defIndex,
                         item.name,
                         state.activeSlot ?? undefined,
                         item.imageUrl,
-                        item.incompatibleReason,
                       )
                     }
                   />

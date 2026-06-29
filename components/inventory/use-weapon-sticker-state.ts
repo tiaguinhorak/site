@@ -76,8 +76,6 @@ type UseWeaponStickerStateOptions = {
   planMaxStickerSlots?: number;
   pickerPageSize?: number;
   categoryKey?: InventoryCategoryKey | null;
-  pickerCompatibleOnly?: boolean;
-  pickerStickerType?: string;
 };
 
 export function useWeaponStickerState(
@@ -91,8 +89,6 @@ export function useWeaponStickerState(
   const planMaxStickerSlots = options?.planMaxStickerSlots ?? STICKER_SLOT_COUNT;
   const pickerPageSize = options?.pickerPageSize ?? 24;
   const categoryKey = options?.categoryKey;
-  const pickerCompatibleOnly = options?.pickerCompatibleOnly ?? true;
-  const pickerStickerType = options?.pickerStickerType ?? "";
   const stickerLimits = getSkinStickerLimitState(
     weaponId,
     planMaxStickerSlots,
@@ -112,7 +108,6 @@ export function useWeaponStickerState(
   const [pickerPage, setPickerPage] = useState(1);
   const [pickerTotalPages, setPickerTotalPages] = useState(1);
   const [pickerTotal, setPickerTotal] = useState(0);
-  const [pickerStickerTypes, setPickerStickerTypes] = useState<string[]>([]);
   const loadedWeaponIdRef = useRef("");
   const loadGenerationRef = useRef(0);
   const lastPickerKeyRef = useRef("");
@@ -214,8 +209,7 @@ export function useWeaponStickerState(
     if (!weaponId) return;
     const query = search.trim();
     const safePage = Math.max(1, page);
-    const typeKey = pickerStickerType.trim().toLowerCase();
-    const key = `${weaponId}:${query}:${safePage}:${pickerCompatibleOnly}:${typeKey}`;
+    const key = `${weaponId}:${query}:${safePage}`;
     if (!force && lastPickerKeyRef.current === key) return;
     lastPickerKeyRef.current = key;
     setPickerLoading(true);
@@ -225,10 +219,8 @@ export function useWeaponStickerState(
         limit: String(pickerPageSize),
         page: String(safePage),
         weaponId,
-        compatibleOnly: pickerCompatibleOnly ? "1" : "0",
       });
       if (query) params.set("search", query);
-      if (typeKey) params.set("stickerType", pickerStickerType.trim());
       const res = await fetch(`/api/inventory/weapon-stickers?${params}`, {
         credentials: "same-origin",
       });
@@ -237,16 +229,14 @@ export function useWeaponStickerState(
       setPickerPage(data.page ?? safePage);
       setPickerTotalPages(data.totalPages ?? 1);
       setPickerTotal(data.total ?? 0);
-      setPickerStickerTypes(data.stickerTypes ?? []);
     } catch {
       setPickerItems([]);
       setPickerTotalPages(1);
       setPickerTotal(0);
-      setPickerStickerTypes([]);
     } finally {
       setPickerLoading(false);
     }
-  }, [weaponId, pickerPageSize, pickerCompatibleOnly, pickerStickerType]);
+  }, [weaponId, pickerPageSize]);
 
   function syncBothTeamsFrom(sourceTeam: LoadoutTeam) {
     setByTeam((prev) => {
@@ -268,8 +258,6 @@ export function useWeaponStickerState(
     pickerActive,
     pickerSearch,
     pickerPage,
-    pickerCompatibleOnly,
-    pickerStickerType,
     loadPicker,
     enabled,
     weaponId,
@@ -456,11 +444,7 @@ export function useWeaponStickerState(
     loadPicker,
     goToPickerPage,
     stickerLimits,
-    pickerStickerTypes,
     weaponDisplayName,
-    isPickerStickerCompatible,
-    stickerLockLabel,
-    stickerIncompatibleMessage,
     syncBothTeamsFrom,
   };
 }
