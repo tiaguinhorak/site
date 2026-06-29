@@ -4,8 +4,9 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { AdminSkinsSection } from "@/components/admin/admin-skins-section";
 import { AdminStickersSection } from "@/components/admin/admin-stickers-section";
+import { AdminAgentsSection } from "@/components/admin/admin-agents-section";
 
-type Tab = "skins" | "stickers";
+type Tab = "skins" | "stickers" | "agents";
 
 export function AdminCatalogTabs() {
   const [tab, setTab] = useState<Tab>("skins");
@@ -37,8 +38,26 @@ export function AdminCatalogTabs() {
         >
           Stickers
         </button>
+        <button
+          type="button"
+          onClick={() => setTab("agents")}
+          className={cn(
+            "rounded-lg px-4 py-2 text-sm font-medium transition",
+            tab === "agents"
+              ? "bg-primary/20 text-primary"
+              : "text-muted hover:text-foreground",
+          )}
+        >
+          Agentes
+        </button>
       </div>
-      {tab === "skins" ? <AdminSkinsSection /> : <AdminStickersSection />}
+      {tab === "skins" ? (
+        <AdminSkinsSection />
+      ) : tab === "stickers" ? (
+        <AdminStickersSection />
+      ) : (
+        <AdminAgentsSection />
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import "server-only";
 
-type ImportJobType = "stickers" | "skins";
+type ImportJobType = "stickers" | "skins" | "agents";
 
 export type CatalogImportJobStatus = "running" | "done" | "failed";
 

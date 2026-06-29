@@ -3,6 +3,7 @@ import "server-only";
 import { getPlayerLoadoutForSync } from "@/lib/csgo-api/services/skins";
 import { isMeleeWeaponId } from "@/lib/inventory/equip-slot-rules";
 import { pushPlayerStickersToGameServer } from "@/lib/inventory/push-stickers-to-game-server";
+import { pushPlayerAgentsToGameServer } from "@/lib/inventory/push-agents-to-game-server";
 import {
   getCsgoApiPushTargets,
   csgoBackendAuthHeaders,
@@ -126,7 +127,9 @@ export type PushLoadoutResult = {
   applyMode?: "staged" | "immediate" | "deferred_join" | "db_only";
   skinsOk: boolean;
   stickersOk: boolean;
+  agentsOk: boolean;
   stickerError?: string;
+  agentError?: string;
 };
 
 /**
@@ -143,6 +146,7 @@ export async function pushPlayerLoadoutToGameServer(
       error: "CSGO_SKINS_SYNC_KEY not configured",
       skinsOk: false,
       stickersOk: false,
+      agentsOk: false,
     };
   }
 
@@ -153,6 +157,7 @@ export async function pushPlayerLoadoutToGameServer(
       error: "CSGO_API_URL not configured",
       skinsOk: false,
       stickersOk: false,
+      agentsOk: false,
     };
   }
 
@@ -185,6 +190,7 @@ export async function pushPlayerLoadoutToGameServer(
       error: primary.error,
       skinsOk: false,
       stickersOk: false,
+      agentsOk: false,
     };
   }
 
@@ -193,16 +199,24 @@ export async function pushPlayerLoadoutToGameServer(
     console.warn("[Clutch] pushPlayerStickersToGameServer:", stickerResult.error);
   }
 
+  const agentResult = await pushPlayerAgentsToGameServer(steamId64);
+  if (!agentResult.ok) {
+    console.warn("[Clutch] pushPlayerAgentsToGameServer:", agentResult.error);
+  }
+
   const stickersOk = stickerResult.ok;
-  const ok = primary.ok && stickersOk;
+  const agentsOk = agentResult.ok;
+  const ok = primary.ok && stickersOk && agentsOk;
 
   return {
     ok,
     applyMode: primary.applyMode,
-    error: stickersOk ? undefined : stickerResult.error,
+    error: stickersOk && agentsOk ? undefined : stickerResult.error ?? agentResult.error,
     skinsOk: true,
     stickersOk,
+    agentsOk,
     stickerError: stickerResult.error,
+    agentError: agentResult.error,
   };
 }
 

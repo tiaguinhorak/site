@@ -12,6 +12,7 @@ export type InventoryPlanLimits = {
   allCatalogSkins: boolean;
   maxStickerSlots: number;
   canUseStickers: boolean;
+  canUseAgents: boolean;
 };
 
 const STICKER_SLOT_COUNT = 4;
@@ -44,6 +45,11 @@ export function canUseStickersForPlan(plan: ClientPlan, isAdmin: boolean): boole
   return plan === "premium" || plan === "elite";
 }
 
+export function canUseAgentsForPlan(plan: ClientPlan, isAdmin: boolean): boolean {
+  if (isAdmin) return true;
+  return plan === "premium" || plan === "elite";
+}
+
 export function isStickerSlotAllowed(slotIndex: number, maxSlots: number): boolean {
   return slotIndex >= 0 && slotIndex < maxSlots;
 }
@@ -72,6 +78,7 @@ export async function getInventoryPlanLimits(userId: string): Promise<InventoryP
     allCatalogSkins,
     maxStickerSlots: maxStickerSlotsForPlan(plan, isAdmin),
     canUseStickers: canUseStickersForPlan(plan, isAdmin),
+    canUseAgents: canUseAgentsForPlan(plan, isAdmin),
   };
 }
 

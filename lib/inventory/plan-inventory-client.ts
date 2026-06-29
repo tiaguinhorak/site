@@ -21,6 +21,11 @@ export function canUseStickersForPlan(plan: ClientPlan, isAdmin: boolean): boole
   return plan === "premium" || plan === "elite";
 }
 
+export function canUseAgentsForPlan(plan: ClientPlan, isAdmin: boolean): boolean {
+  if (isAdmin) return true;
+  return plan === "premium" || plan === "elite";
+}
+
 export function isStickerSlotLocked(slotIndex: number, maxSlots: number): boolean {
   return slotIndex >= maxSlots;
 }

@@ -12,6 +12,7 @@ import {
 import type { InventoryCategoryKey } from "@/lib/profile";
 import { lookupStickerFromApi } from "@/lib/inventory/csgo-api-sticker-index";
 import { normalizeStickerImageUrl } from "@/lib/inventory/sticker-image-url";
+import { getPlayerAgents } from "@/lib/inventory/player-agents";
 
 export type LoadoutSticker = {
   slot: number;
@@ -141,6 +142,44 @@ export async function getUserServerLoadout(userId: string, team?: LoadoutTeam) {
     stickersT: stickersForWeapon(row.skin.weaponId, "T"),
     stickersCT: stickersForWeapon(row.skin.weaponId, "CT"),
   }));
+
+  const agents = await getPlayerAgents(user.steamId);
+  if (agents.agentT > 0 && agents.agentTName) {
+    items.push({
+      catalogSkinId: `agent-t-${agents.agentT}`,
+      name: agents.agentTName,
+      category: "agent",
+      weaponId: "agent_t",
+      paintkit: agents.agentT,
+      paintkitName: agents.agentTName,
+      imageUrl: agents.agentTImage,
+      rarity: "lendário",
+      accent: rarityAccent("lendário"),
+      equippedT: true,
+      equippedCT: false,
+      equippedAt: new Date().toISOString(),
+      stickersT: [],
+      stickersCT: [],
+    });
+  }
+  if (agents.agentCT > 0 && agents.agentCTName) {
+    items.push({
+      catalogSkinId: `agent-ct-${agents.agentCT}`,
+      name: agents.agentCTName,
+      category: "agent",
+      weaponId: "agent_ct",
+      paintkit: agents.agentCT,
+      paintkitName: agents.agentCTName,
+      imageUrl: agents.agentCTImage,
+      rarity: "lendário",
+      accent: rarityAccent("lendário"),
+      equippedT: false,
+      equippedCT: true,
+      equippedAt: new Date().toISOString(),
+      stickersT: [],
+      stickersCT: [],
+    });
+  }
 
   return {
     steamLinked: true,

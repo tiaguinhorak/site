@@ -750,3 +750,32 @@ model CsgoPlayerWeaponSticker {
   @@unique([steamId, weaponId, team])
   @@index([steamId])
 }
+
+model CsgoAgentCatalog {
+  id          String  @id
+  defIndex    Int     @unique
+  name        String
+  imageUrl    String?
+  rarity      String
+  team        String
+  modelPlayer String?
+  collection  String?
+  enabled     Boolean @default(true)
+  source      String  @default("import")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([enabled])
+  @@index([team])
+}
+
+model CsgoPlayerAgent {
+  id        String   @id @default(cuid())
+  steamId   String   @unique
+  agentT    Int      @default(0)
+  agentCT   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([steamId])
+}

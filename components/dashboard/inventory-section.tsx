@@ -41,6 +41,7 @@ import {
   SkinWorkspace,
   type SkinWorkspaceData,
 } from "@/components/inventory/skin-workspace";
+import { AgentWorkspace } from "@/components/inventory/agent-workspace";
 import { prefetchSkinPickerPage } from "@/lib/inventory/skin-picker-cache";
 import { mapCatalogCategoryToUi } from "@/lib/inventory/catalog-categories";
 import { loadoutItemToPreview } from "@/lib/inventory/skin-preview-mappers";
@@ -48,12 +49,22 @@ import { useSkinPreview } from "@/lib/use-skin-preview";
 import { useUser } from "@/lib/hooks/use-user";
 import {
   canUseStickersForPlan,
+  canUseAgentsForPlan,
   maxStickerSlotsForPlan,
 } from "@/lib/inventory/plan-inventory-client";
 import { toast } from "@/lib/toast";
 import { InventoryPageSkeleton } from "@/components/loading/page-skeletons";
 import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
 import { SkinPreviewModal } from "@/components/skins/skin-preview-modal";
+
+type AgentCatalogItem = {
+  id: string;
+  defIndex: number;
+  name: string;
+  imageUrl: string | null;
+  rarity: string;
+  team: string;
+};
 
 type CatalogSkin = {
   id: string;
@@ -218,6 +229,10 @@ export function InventorySection() {
     user?.plan ?? "free",
     user?.isAdmin ?? false,
   );
+  const canUseAgents = canUseAgentsForPlan(
+    user?.plan ?? "free",
+    user?.isAdmin ?? false,
+  );
 
   const categoryLabels: Record<InventoryCategoryKey, string> = useMemo(
     () => ({
@@ -239,11 +254,15 @@ export function InventorySection() {
       { id: "rifle", label: t("catRifle") },
       { id: "pistol", label: t("catPistol") },
       { id: "smg", label: t("catSmg") },
+      { id: "agent", label: t("catAgent") },
     ],
     [t],
   );
 
   const [items, setItems] = useState<CatalogSkin[]>([]);
+  const [agentItems, setAgentItems] = useState<AgentCatalogItem[]>([]);
+  const [agentTeamBrowse, setAgentTeamBrowse] = useState<LoadoutTeam>("T");
+  const [agentWorkspaceOpen, setAgentWorkspaceOpen] = useState(false);
   const [loadout, setLoadout] = useState<LoadoutResponse | null>(null);
   const [dualTeamOnly, setDualTeamOnly] = useState(false);
   const [rarityFilter, setRarityFilter] = useState<RarityKey | "all">("all");
@@ -349,6 +368,47 @@ export function InventorySection() {
     }
   }, [pushLoadoutToServer]);
 
+  const fetchAgents = useCallback(async () => {
+    const reqId = ++reqIdRef.current;
+    setLoading(true);
+    setLoadError(false);
+
+    try {
+      const params = new URLSearchParams({
+        picker: "1",
+        page: String(page),
+        limit: "36",
+        team: agentTeamBrowse,
+        search,
+      });
+
+      const response = await fetch(`/api/inventory/agents?${params}`, {
+        credentials: "same-origin",
+      });
+
+      if (reqId !== reqIdRef.current) return;
+      if (!response.ok) {
+        setLoadError(true);
+        return;
+      }
+
+      const data = await response.json();
+      if (reqId !== reqIdRef.current) return;
+
+      setAgentItems(data.items ?? []);
+      setTotalPages(data.totalPages ?? 1);
+      setResultTotal(data.total ?? 0);
+      setCatalogTotal(data.total ?? 0);
+    } catch {
+      if (reqId === reqIdRef.current) setLoadError(true);
+    } finally {
+      if (reqId === reqIdRef.current) {
+        setLoading(false);
+        setBootstrapped(true);
+      }
+    }
+  }, [page, search, agentTeamBrowse]);
+
   const fetchSkins = useCallback(async () => {
     const reqId = ++reqIdRef.current;
     setLoading(true);
@@ -451,8 +511,12 @@ export function InventorySection() {
   }, [fetchLoadout]);
 
   useEffect(() => {
+    if (filter === "agent") {
+      fetchAgents();
+      return;
+    }
     fetchSkins();
-  }, [fetchSkins]);
+  }, [filter, fetchAgents, fetchSkins]);
 
   const handleEquip = async (item: CatalogSkin, side: EquipSide) => {
     if (!item.owned) return;
@@ -528,6 +592,10 @@ export function InventorySection() {
     tab: "skins" | "stickers" = "skins",
     stickerTeam?: LoadoutTeam,
   ) => {
+    if (item.category === "agent") {
+      setAgentWorkspaceOpen(true);
+      return;
+    }
     setWorkspace({ skin: loadoutToWorkspace(item), tab, stickerTeam });
   };
 
@@ -554,9 +622,15 @@ export function InventorySection() {
 
   const equippedCount = loadout?.items.length ?? 0;
   const showDualTeamFilter = weaponOptions.some((w) => weaponSupportsBothTeams(w.weaponId));
+  const isAgentView = filter === "agent";
   const showEmptyCatalog = bootstrapped && !loading && !loadError && catalogTotal === 0;
-  const showNoResults = bootstrapped && !loading && !loadError && catalogTotal > 0 && items.length === 0;
-  const catalogGridLoading = loading && items.length === 0;
+  const showNoResults =
+    bootstrapped &&
+    !loading &&
+    !loadError &&
+    catalogTotal > 0 &&
+    (isAgentView ? agentItems.length === 0 : items.length === 0);
+  const catalogGridLoading = loading && (isAgentView ? agentItems.length === 0 : items.length === 0);
 
   if (!bootstrapped) {
     return <InventoryPageSkeleton />;
@@ -613,7 +687,45 @@ export function InventorySection() {
             })}
           </div>
 
-          {availableRarityTiers.length > 0 && (
+          {isAgentView && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/50 pt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setAgentTeamBrowse("T");
+                  setPage(1);
+                }}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-xs font-medium transition",
+                  agentTeamBrowse === "T"
+                    ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground"
+                    : chipInactiveHoverClass,
+                )}
+              >
+                {t("teamTShort")}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAgentTeamBrowse("CT");
+                  setPage(1);
+                }}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-xs font-medium transition",
+                  agentTeamBrowse === "CT"
+                    ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground"
+                    : chipInactiveHoverClass,
+                )}
+              >
+                {t("teamCTShort")}
+              </button>
+              <Button type="button" size="sm" onClick={() => setAgentWorkspaceOpen(true)}>
+                {t("agentsOpenWorkspace")}
+              </Button>
+            </div>
+          )}
+
+          {!isAgentView && availableRarityTiers.length > 0 && (
           <div className="mt-3 border-t border-border/50 pt-3">
             <label className="mb-2 block text-[10px] font-semibold uppercase tracking-wider text-muted">
               {t("rarityLegendTitle")}
@@ -629,7 +741,7 @@ export function InventorySection() {
           </div>
           )}
 
-          {showDualTeamFilter && (
+          {!isAgentView && showDualTeamFilter && (
           <div className="mt-3 border-t border-border/50 pt-3">
             <button
               type="button"
@@ -650,7 +762,7 @@ export function InventorySection() {
           </div>
           )}
 
-          {weaponOptions.length > 0 && (
+          {!isAgentView && weaponOptions.length > 0 && (
             <div className="mt-3 border-t border-border/50 pt-3">
               <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted">
                 {t("weaponFilterLabel")}
@@ -700,7 +812,7 @@ export function InventorySection() {
             <div className="flex flex-col items-center gap-3 rounded-card glass py-16 text-center">
               <AlertTriangle className="h-8 w-8 text-amber-400" />
               <p className="text-sm text-muted">{t("loadError")}</p>
-              <Button type="button" variant="outline" size="sm" onClick={fetchSkins}>
+              <Button type="button" variant="outline" size="sm" onClick={isAgentView ? fetchAgents : fetchSkins}>
                 <RefreshCw className="h-3.5 w-3.5" />
                 {t("retry")}
               </Button>
@@ -714,6 +826,33 @@ export function InventorySection() {
             <div className="flex flex-col items-center gap-3 rounded-card glass py-16 text-center">
               <Search className="h-8 w-8 text-muted" />
               <p className="text-sm text-muted">{t("noResults")}</p>
+            </div>
+          ) : isAgentView ? (
+            <div
+              className={cn(
+                "grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 transition-opacity",
+                loading && "opacity-60",
+              )}
+            >
+              {agentItems.map((item) => (
+                <InventorySkinTile
+                  key={item.id}
+                  name={item.name}
+                  imageUrl={item.imageUrl}
+                  accent="from-violet-600 to-fuchsia-600"
+                  rarity={item.rarity}
+                  equippedT={item.team === "T"}
+                  equippedCT={item.team === "CT"}
+                  onClick={() => setAgentWorkspaceOpen(true)}
+                >
+                  <div className="mt-2 flex flex-wrap items-center justify-center gap-1">
+                    <SkinRarityBadge
+                      rarity={item.rarity}
+                      accent="from-violet-600 to-fuchsia-600"
+                    />
+                  </div>
+                </InventorySkinTile>
+              ))}
             </div>
           ) : (
             <div
@@ -775,6 +914,15 @@ export function InventorySection() {
             </div>
           )}
       </div>
+
+      <AgentWorkspace
+        open={agentWorkspaceOpen}
+        canUseAgents={canUseAgents}
+        onClose={() => setAgentWorkspaceOpen(false)}
+        onSaved={() => {
+          void fetchLoadout({ silent: true });
+        }}
+      />
 
       <SkinWorkspace
         open={workspace !== null}
