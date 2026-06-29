@@ -50,6 +50,22 @@ export function TeamScopePicker({
         role="group"
         aria-label={label}
       >
+        {showBoth && (
+          <button
+            type="button"
+            onClick={() => onChange("both")}
+            className={cn(
+              "rounded-lg font-semibold transition-all",
+              pad,
+              value === "both"
+                ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground shadow-sm"
+                : cn(chipInactiveHoverClass, "text-muted"),
+            )}
+            aria-pressed={value === "both"}
+          >
+            {labels.both}
+          </button>
+        )}
         {canCT && (
           <button
             type="button"
@@ -80,22 +96,6 @@ export function TeamScopePicker({
             aria-pressed={value === "T"}
           >
             {labels.t}
-          </button>
-        )}
-        {showBoth && (
-          <button
-            type="button"
-            onClick={() => onChange("both")}
-            className={cn(
-              "rounded-lg font-semibold transition-all",
-              pad,
-              value === "both"
-                ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground shadow-sm"
-                : cn(chipInactiveHoverClass, "text-muted"),
-            )}
-            aria-pressed={value === "both"}
-          >
-            {labels.both}
           </button>
         )}
       </div>

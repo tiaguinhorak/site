@@ -19,6 +19,11 @@ import {
   stickerCompatibilityMeta,
   type StickerWeaponCompatibilityReason,
 } from "@/lib/inventory/sticker-weapon-compatibility";
+import {
+  parseStickerFinishVariant,
+  stickerMatchesFinishFilter,
+  type StickerFinishVariant,
+} from "@/lib/inventory/sticker-finish-variant";
 
 export type StickerCatalogAdminRow = {
   id: string;
@@ -267,14 +272,21 @@ export async function deleteStickerCatalogAdmin(id: string) {
 export type StickerPickerItem = StickerCatalogAdminRow & {
   compatible: boolean;
   incompatibleReason: StickerWeaponCompatibilityReason | null;
+  finishVariant: StickerFinishVariant;
 };
 
 function enrichPickerItem(
   row: StickerCatalogAdminRow,
   weaponId?: string,
 ): StickerPickerItem {
+  const finishVariant = parseStickerFinishVariant(row.name, row.effect);
   if (!weaponId?.trim()) {
-    return { ...row, compatible: true, incompatibleReason: null };
+    return {
+      ...row,
+      compatible: true,
+      incompatibleReason: null,
+      finishVariant,
+    };
   }
 
   const compat = getStickerWeaponCompatibility(
@@ -283,6 +295,7 @@ function enrichPickerItem(
       effect: row.effect,
       tournament: row.tournament,
       stickerType: row.stickerType,
+      name: row.name,
     },
     weaponId,
   );
@@ -291,6 +304,7 @@ function enrichPickerItem(
     ...row,
     compatible: compat.compatible,
     incompatibleReason: compat.compatible ? null : compat.reason,
+    finishVariant,
   };
 }
 
@@ -318,6 +332,7 @@ export async function listEnabledStickersForPicker(options?: {
   page?: number;
   limit?: number;
   weaponId?: string;
+  finishVariant?: StickerFinishVariant | "";
 }) {
   await ensureLegacyStickerCatalogAndLoadouts();
 
@@ -325,6 +340,7 @@ export async function listEnabledStickersForPicker(options?: {
   const limit = Math.min(48, Math.max(1, options?.limit ?? 24));
   const trimmed = options?.search?.trim() ?? "";
   const weaponId = options?.weaponId?.trim() ?? "";
+  const finishFilter = options?.finishVariant ?? "";
   const where = legacyPickerWhere(trimmed || undefined);
 
   const rows = await prisma.csgoStickerCatalog.findMany({
@@ -333,7 +349,10 @@ export async function listEnabledStickersForPicker(options?: {
   });
 
   const withImage = rows.filter((row) => stickerHasImage(row.imageUrl));
-  let items = withImage.map((row) => enrichPickerItem(serializeRow(row), weaponId));
+  let items = withImage
+    .map((row) => enrichPickerItem(serializeRow(row), weaponId))
+    .filter((row) => stickerMatchesFinishFilter(row.name, row.effect, finishFilter));
+
   if (weaponId) {
     items = items.filter((row) => row.compatible);
   }

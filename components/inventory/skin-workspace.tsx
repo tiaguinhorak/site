@@ -36,6 +36,8 @@ import {
 import { WeaponStickerSlotGrid } from "@/components/inventory/weapon-sticker-slot-grid";
 import { StickerPickerTile } from "@/components/inventory/sticker-picker-tile";
 import { TeamScopePicker } from "@/components/inventory/team-scope-picker";
+import type { StickerFinishVariant } from "@/lib/inventory/sticker-finish-variant";
+import { STICKER_FINISH_VARIANTS } from "@/lib/inventory/sticker-finish-variant";
 import { toast } from "@/lib/toast";
 
 type WorkspaceTab = "skins" | "stickers";
@@ -136,8 +138,10 @@ export function SkinWorkspace({
 }: SkinWorkspaceProps) {
   const t = useTranslations("inventory");
   const [tab, setTab] = useState<WorkspaceTab>("skins");
-  const [pendingSide, setPendingSide] = useState<EquipSide>("CT");
-  const [stickerScope, setStickerScope] = useState<StickerEditScope>("CT");
+  const [pendingSide, setPendingSide] = useState<EquipSide>("both");
+  const [stickerScope, setStickerScope] = useState<StickerEditScope>("both");
+  const [lastSingleTeam, setLastSingleTeam] = useState<LoadoutTeam>("CT");
+  const [stickerFinishFilter, setStickerFinishFilter] = useState<StickerFinishVariant | "">("");
   const [savingAll, setSavingAll] = useState(false);
   const [activeSkin, setActiveSkin] = useState<SkinWorkspaceData | null>(null);
   const [skinPickerItems, setSkinPickerItems] = useState<SkinPickerItem[]>([]);
@@ -157,7 +161,12 @@ export function SkinWorkspace({
     return skinPreviewImageUrl(displaySkin.imageUrl) ?? displaySkin.imageUrl;
   }, [displaySkin?.imageUrl, tab]);
 
-  const stickerViewTeam: LoadoutTeam = stickerScope === "CT" ? "CT" : "T";
+  const stickerViewTeam: LoadoutTeam =
+    stickerScope === "CT"
+      ? "CT"
+      : stickerScope === "T"
+        ? "T"
+        : lastSingleTeam;
 
   const canEquipT = displaySkin ? weaponAllowedOnTeam(displaySkin.weaponId, "T") : false;
   const canEquipCT = displaySkin ? weaponAllowedOnTeam(displaySkin.weaponId, "CT") : false;
@@ -206,6 +215,7 @@ export function SkinWorkspace({
       planMaxStickerSlots: maxStickerSlots,
       pickerPageSize: 12,
       categoryKey: displaySkin?.categoryKey,
+      pickerFinishVariant: stickerFinishFilter,
     },
   );
 
@@ -289,11 +299,10 @@ export function SkinWorkspace({
   }, [open, displaySkin?.weaponId, skinPickerPage, skinPickerQuery]);
 
   function handleStickerScopeChange(scope: StickerEditScope) {
-    if (scope === "both" && canBoth) {
-      const source: LoadoutTeam =
-        stickerScope === "T" ? "T" : stickerScope === "CT" ? "CT" : stickerViewTeam;
-      stickerState.syncBothTeamsFrom(source);
-    }
+    if (stickerScope === "T") setLastSingleTeam("T");
+    if (stickerScope === "CT") setLastSingleTeam("CT");
+    if (scope === "T") setLastSingleTeam("T");
+    if (scope === "CT") setLastSingleTeam("CT");
     setStickerScope(scope);
   }
 
@@ -326,16 +335,18 @@ export function SkinWorkspace({
     setPendingSide(side);
     const nextScope: StickerEditScope =
       initialStickerTeam ??
-      (skin.equippedCT
-        ? "CT"
-        : skin.equippedT
-          ? "T"
-          : equipT && !equipCT
+      (canBoth
+        ? "both"
+        : skin.equippedCT
+          ? "CT"
+          : skin.equippedT
             ? "T"
-            : equipCT && !equipT
-              ? "CT"
+            : equipT
+              ? "T"
               : "CT");
     setStickerScope((prev) => (prev === nextScope ? prev : nextScope));
+    if (nextScope === "T") setLastSingleTeam("T");
+    if (nextScope === "CT") setLastSingleTeam("CT");
 
     if (singleOnly && hasStickers && stickersEnabled && resolveInitialTab(initialTab) === "skins") {
       setTab("stickers");
@@ -412,11 +423,15 @@ export function SkinWorkspace({
 
       if (shouldSaveStickers) {
         if (stickerScope === "both" && canBoth) {
-          stickerState.syncBothTeamsFrom(stickerViewTeam);
-          const slots = stickerState.getTeamSlots(stickerViewTeam);
-          const okT = await stickerState.saveWithTeam("T", slots);
+          const okT = await stickerState.saveWithTeam(
+            "T",
+            stickerState.getTeamSlots("T"),
+          );
           if (!okT) return;
-          const okCT = await stickerState.saveWithTeam("CT", slots);
+          const okCT = await stickerState.saveWithTeam(
+            "CT",
+            stickerState.getTeamSlots("CT"),
+          );
           if (!okCT) return;
         } else {
           const teamToSave: LoadoutTeam =
@@ -784,6 +799,36 @@ export function SkinWorkspace({
                       value={stickerState.pickerSearch}
                       onChange={(e) => stickerState.setPickerSearch(e.target.value)}
                     />
+                  </div>
+
+                  <div className="flex shrink-0 flex-wrap gap-1.5 pb-2">
+                    <button
+                      type="button"
+                      onClick={() => setStickerFinishFilter("")}
+                      className={cn(
+                        "rounded-lg px-2.5 py-1.5 text-xs font-semibold",
+                        stickerFinishFilter === ""
+                          ? "bg-primary text-primary-foreground"
+                          : chipInactiveHoverClass,
+                      )}
+                    >
+                      {t("stickersFilterFinishAll")}
+                    </button>
+                    {STICKER_FINISH_VARIANTS.map((variant) => (
+                      <button
+                        key={variant}
+                        type="button"
+                        onClick={() => setStickerFinishFilter(variant)}
+                        className={cn(
+                          "rounded-lg px-2.5 py-1.5 text-xs font-semibold",
+                          stickerFinishFilter === variant
+                            ? "bg-primary text-primary-foreground"
+                            : chipInactiveHoverClass,
+                        )}
+                      >
+                        {t(`stickersFilterFinish_${variant}`)}
+                      </button>
+                    ))}
                   </div>
 
                   {stickerState.activeSlot !== null && (

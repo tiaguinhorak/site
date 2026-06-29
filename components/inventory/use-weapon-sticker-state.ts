@@ -14,6 +14,7 @@ import {
   type StickerWeaponCompatibilityReason,
 } from "@/lib/inventory/sticker-weapon-compatibility";
 import { weaponIdToDisplayName } from "@/lib/inventory/weapon-display-name";
+import type { StickerFinishVariant } from "@/lib/inventory/sticker-finish-variant";
 import { toast } from "@/lib/toast";
 
 export type PickerSticker = {
@@ -76,6 +77,7 @@ type UseWeaponStickerStateOptions = {
   planMaxStickerSlots?: number;
   pickerPageSize?: number;
   categoryKey?: InventoryCategoryKey | null;
+  pickerFinishVariant?: StickerFinishVariant | "";
 };
 
 export function useWeaponStickerState(
@@ -89,6 +91,7 @@ export function useWeaponStickerState(
   const planMaxStickerSlots = options?.planMaxStickerSlots ?? STICKER_SLOT_COUNT;
   const pickerPageSize = options?.pickerPageSize ?? 24;
   const categoryKey = options?.categoryKey;
+  const pickerFinishVariant = options?.pickerFinishVariant ?? "";
   const stickerLimits = getSkinStickerLimitState(
     weaponId,
     planMaxStickerSlots,
@@ -209,7 +212,7 @@ export function useWeaponStickerState(
     if (!weaponId) return;
     const query = search.trim();
     const safePage = Math.max(1, page);
-    const key = `${weaponId}:${query}:${safePage}`;
+    const key = `${weaponId}:${query}:${safePage}:${pickerFinishVariant}`;
     if (!force && lastPickerKeyRef.current === key) return;
     lastPickerKeyRef.current = key;
     setPickerLoading(true);
@@ -221,6 +224,7 @@ export function useWeaponStickerState(
         weaponId,
       });
       if (query) params.set("search", query);
+      if (pickerFinishVariant) params.set("finishVariant", pickerFinishVariant);
       const res = await fetch(`/api/inventory/weapon-stickers?${params}`, {
         credentials: "same-origin",
       });
@@ -236,19 +240,7 @@ export function useWeaponStickerState(
     } finally {
       setPickerLoading(false);
     }
-  }, [weaponId, pickerPageSize]);
-
-  function syncBothTeamsFrom(sourceTeam: LoadoutTeam) {
-    setByTeam((prev) => {
-      const src = prev[sourceTeam];
-      const mirrored: TeamStickerCache = {
-        slots: [...src.slots],
-        slotLabels: [...src.slotLabels],
-        slotImageUrls: [...src.slotImageUrls],
-      };
-      return { T: mirrored, CT: { ...mirrored } };
-    });
-  }
+  }, [weaponId, pickerPageSize, pickerFinishVariant]);
 
   useEffect(() => {
     if (!enabled || !pickerActive) return;
@@ -258,6 +250,7 @@ export function useWeaponStickerState(
     pickerActive,
     pickerSearch,
     pickerPage,
+    pickerFinishVariant,
     loadPicker,
     enabled,
     weaponId,
@@ -291,8 +284,10 @@ export function useWeaponStickerState(
         effect: item.effect,
         tournament: item.tournament,
         stickerType: item.stickerType,
+        name: item.name,
       },
       weaponId,
+      planMaxStickerSlots,
     );
     return compat.compatible;
   }
@@ -308,7 +303,7 @@ export function useWeaponStickerState(
     if (target === null) return;
     if (!isStickerSlotEditable(target, stickerLimits)) return;
 
-    const compat = getStickerWeaponCompatibility({ defIndex }, weaponId);
+    const compat = getStickerWeaponCompatibility({ defIndex }, weaponId, planMaxStickerSlots);
     if (!compat.compatible) {
       toast.error(
         stickerIncompatibleMessage(incompatibleReason ?? compat.reason),
@@ -445,6 +440,5 @@ export function useWeaponStickerState(
     goToPickerPage,
     stickerLimits,
     weaponDisplayName,
-    syncBothTeamsFrom,
   };
 }

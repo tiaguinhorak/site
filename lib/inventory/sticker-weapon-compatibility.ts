@@ -1,10 +1,12 @@
 import { weaponSupportsStickersById } from "@/lib/inventory/weapon-sticker-slot-limits";
+import { getWeaponStickerProfile } from "@/lib/inventory/weapon-sticker-profile";
 
 export type StickerCompatibilityInput = {
   defIndex: number;
   effect?: string | null;
   tournament?: string | null;
   stickerType?: string | null;
+  name?: string | null;
 };
 
 export type StickerWeaponCompatibilityReason =
@@ -56,18 +58,24 @@ export function stickerCompatibilityMeta(
     effect: row.effect ?? null,
     tournament: row.tournament ?? null,
     stickerType: row.stickerType ?? null,
+    name: row.name ?? null,
   };
 }
 
 export function getStickerWeaponCompatibility(
   meta: StickerCompatibilityInput,
   weaponId: string,
+  planMax = 4,
 ): StickerWeaponCompatibility {
-  if (!weaponSupportsStickersById(weaponId)) {
+  const profile = getWeaponStickerProfile(weaponId, planMax);
+
+  if (!profile.supportsStickers || !weaponSupportsStickersById(weaponId)) {
     return { compatible: false, reason: "weapon_unsupported" };
   }
+
   if (!isLegacyCompatibleSticker(meta)) {
     return { compatible: false, reason: "legacy_cs2_only" };
   }
+
   return { compatible: true, reason: "compatible" };
 }

@@ -348,8 +348,10 @@ export async function savePlayerWeaponStickers(
         effect: sticker.effect,
         tournament: sticker.tournament,
         stickerType: sticker.stickerType,
+        name: sticker.name,
       },
       normalizedWeaponId,
+      limits.maxStickerSlots,
     );
     if (!compat.compatible) {
       if (compat.reason === "legacy_cs2_only") {
