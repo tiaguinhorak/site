@@ -52,6 +52,7 @@ const nextConfig: NextConfig = {
   },
   allowedDevOrigins: ["*.ngrok-free.dev", "*.ngrok.io", "*.ngrok.app"],
   images: {
+    qualities: [75, 85, 95],
     remotePatterns: [
       { protocol: "https", hostname: "cdn.steamstatic.com", pathname: "/**" },
       { protocol: "https", hostname: "avatars.steamstatic.com", pathname: "/**" },

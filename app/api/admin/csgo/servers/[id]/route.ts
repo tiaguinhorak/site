@@ -50,7 +50,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
   await logAdminAction({
     adminId: admin!.id,
-    action: "CSGO_SERVER_UPDATE",
+    action: "SERVER_UPDATE",
     targetType: "csgo_server",
     targetId: id,
     summary: `Atualizou servidor CS:GO ${parsed.data.name ?? id}`,

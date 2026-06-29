@@ -959,7 +959,7 @@
     "stickersSearchPlaceholder": "Search sticker…",
     "stickersNoResults": "No stickers in catalog.",
     "stickersFilterLegacy": "CS:GO Legacy only",
-    "stickersFilterAll": "Show all",
+    "stickersFilterAll": "Weapon-incompatible",
     "stickersFilterType": "Sticker type",
     "stickersFilterTypeAll": "All types",
     "stickersEditBothHint": "The same stickers will be applied to T and CT when you save.",

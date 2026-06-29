@@ -150,6 +150,8 @@ export async function importAllStickersFromApi(options?: { enabled?: boolean }) 
 }
 
 export async function disableCs2StickersInCatalog(): Promise<number> {
+  let disabled = 0;
+
   const byDefIndex = await prisma.csgoStickerCatalog.updateMany({
     where: {
       enabled: true,
@@ -157,6 +159,7 @@ export async function disableCs2StickersInCatalog(): Promise<number> {
     },
     data: { enabled: false },
   });
+  disabled += byDefIndex.count;
 
   const byEffect = await prisma.csgoStickerCatalog.updateMany({
     where: {
@@ -165,8 +168,33 @@ export async function disableCs2StickersInCatalog(): Promise<number> {
     },
     data: { enabled: false },
   });
+  disabled += byEffect.count;
 
-  return byDefIndex.count + byEffect.count;
+  for (const pattern of ["Austin 2025", "Budapest 2025", "CS2 Major"]) {
+    const byTournament = await prisma.csgoStickerCatalog.updateMany({
+      where: {
+        enabled: true,
+        tournament: { contains: pattern, mode: "insensitive" },
+      },
+      data: { enabled: false },
+    });
+    disabled += byTournament.count;
+  }
+
+  return disabled;
+}
+
+let legacyStickerPurgeDone = false;
+
+/** One-time per process: disable CS2 catalog rows and scrub saved player slots. */
+export async function ensureLegacyStickerCatalogAndLoadouts(): Promise<void> {
+  if (legacyStickerPurgeDone) return;
+  legacyStickerPurgeDone = true;
+  await disableCs2StickersInCatalog();
+  const { purgeCs2StickerSlotsFromAllPlayers } = await import(
+    "@/lib/inventory/player-weapon-stickers"
+  );
+  await purgeCs2StickerSlotsFromAllPlayers();
 }
 
 export async function disableStickersWithoutImages(): Promise<number> {
@@ -293,6 +321,8 @@ export async function listEnabledStickersForPicker(options?: {
   compatibleOnly?: boolean;
   stickerType?: string;
 }) {
+  await ensureLegacyStickerCatalogAndLoadouts();
+
   const page = Math.max(1, options?.page ?? 1);
   const limit = Math.min(48, Math.max(1, options?.limit ?? 24));
   const trimmed = options?.search?.trim() ?? "";

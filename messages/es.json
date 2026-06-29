@@ -959,7 +959,7 @@
     "stickersSearchPlaceholder": "Buscar sticker…",
     "stickersNoResults": "Sin stickers en el catálogo.",
     "stickersFilterLegacy": "Solo CS:GO Legacy",
-    "stickersFilterAll": "Mostrar todos",
+    "stickersFilterAll": "Incompatibles con arma",
     "stickersFilterType": "Tipo de sticker",
     "stickersFilterTypeAll": "Todos los tipos",
     "stickersEditBothHint": "Los mismos stickers se aplicarán a T y CT al guardar.",

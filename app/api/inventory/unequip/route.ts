@@ -8,7 +8,7 @@ import {
   unequipWeaponForUser,
 } from "@/lib/inventory/unequip-catalog-skin";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
-import { pushPlayerLoadoutToGameServer } from "@/lib/inventory/push-loadout-to-game-server";
+import { pushPlayerLoadoutToGameServer, type PushLoadoutResult } from "@/lib/inventory/push-loadout-to-game-server";
 import {
   applyApiGuards,
   parseJsonBody,
@@ -55,9 +55,7 @@ export async function POST(request: NextRequest) {
       ? await unequipCatalogSkinForUser(session!.userId, parsed.data.catalogSkinId, team)
       : await unequipWeaponForUser(session!.userId, parsed.data.weaponId!, team);
 
-    let gameSync: { ok: boolean; error?: string; applyMode?: "staged" | "immediate" } = {
-      ok: true,
-    };
+    let gameSync: PushLoadoutResult | undefined;
     if (result.steamId) {
       const isGlove =
         result.weaponId.toLowerCase().includes("gloves") ||

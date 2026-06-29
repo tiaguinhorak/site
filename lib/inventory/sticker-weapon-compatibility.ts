@@ -25,7 +25,7 @@ export const LEGACY_MAX_STICKER_DEFINDEX = 8553;
 
 const LEGACY_BLOCKED_EFFECTS = new Set(["Lenticular", "Embroidered"]);
 
-const LEGACY_BLOCKED_TOURNAMENT_PATTERNS = [
+export const LEGACY_BLOCKED_TOURNAMENT_PATTERNS = [
   /austin 2025/i,
   /budapest 2025/i,
   /cs2 major/i,

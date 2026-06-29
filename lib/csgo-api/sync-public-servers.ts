@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { listAllCsgoApiServers } from "@/lib/csgo-api/client";
+import { listAllCsgoApiServers, csgoBackendFetch } from "@/lib/csgo-api/client";
 import { cached, throttled } from "@/lib/csgo-api/request-cache";
 import { queryCsgoServersLive } from "@/lib/csgo-api/query-live-server";
 import type { CsgoGameServer, CsgoMatchSummary } from "@/lib/csgo-api/server-types";

@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { CsgoStickerCatalog } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { weaponIdToItemDefIndex } from "@/lib/inventory/weapon-defindex";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
@@ -15,7 +16,7 @@ import {
   STICKER_SLOT_STORAGE_COUNT,
   weaponSupportsStickersById,
 } from "@/lib/inventory/weapon-sticker-slot-limits";
-import { getStickerWeaponCompatibility, isLegacyCompatibleSticker } from "@/lib/inventory/sticker-weapon-compatibility";
+import { getStickerWeaponCompatibility } from "@/lib/inventory/sticker-weapon-compatibility";
 import { weaponIdToDisplayName } from "@/lib/inventory/weapon-display-name";
 import {
   getInventoryPlanLimits,
@@ -53,54 +54,175 @@ function normalizeSlots(slots: number[]): WeaponStickerSlots {
   return { slots: normalized, wears };
 }
 
-function zeroIncompatibleStickerSlots(slots: number[], weaponId: string): number[] {
-  return slots.map((defIndex) => {
-    if (defIndex <= 0) return 0;
-    if (!isLegacyCompatibleSticker({ defIndex })) return 0;
-    const compat = getStickerWeaponCompatibility({ defIndex }, weaponId);
-    return compat.compatible ? defIndex : 0;
-  });
+type StickerCatalogLite = Pick<
+  CsgoStickerCatalog,
+  "defIndex" | "effect" | "tournament" | "stickerType"
+>;
+
+function stickerMetaFromCatalog(
+  defIndex: number,
+  catalog?: StickerCatalogLite | null,
+): { defIndex: number; effect?: string | null; tournament?: string | null; stickerType?: string | null } {
+  if (!catalog) return { defIndex };
+  return {
+    defIndex,
+    effect: catalog.effect,
+    tournament: catalog.tournament,
+    stickerType: catalog.stickerType,
+  };
 }
 
-async function zeroIncompatibleStickerSlotsWithCatalog(
+function sanitizeStickerSlotsWithCatalogMap(
   slots: number[],
   weaponId: string,
-): Promise<number[]> {
-  const defIndices = slots.filter((defIndex) => defIndex > 0);
-  const catalogRows =
-    defIndices.length > 0
-      ? await prisma.csgoStickerCatalog.findMany({
-          where: { defIndex: { in: defIndices } },
-        })
-      : [];
-  const catalogByDef = new Map(catalogRows.map((row) => [row.defIndex, row]));
-
+  catalogByDef: Map<number, StickerCatalogLite>,
+): number[] {
   return slots.map((defIndex) => {
     if (defIndex <= 0) return 0;
     const catalog = catalogByDef.get(defIndex);
     const compat = getStickerWeaponCompatibility(
-      {
-        defIndex,
-        effect: catalog?.effect,
-        tournament: catalog?.tournament,
-        stickerType: catalog?.stickerType,
-      },
+      stickerMetaFromCatalog(defIndex, catalog),
       weaponId,
     );
     return compat.compatible ? defIndex : 0;
   });
 }
 
-function sanitizeStickerSlotsForWeapon(
+async function fetchCatalogMapForDefIndices(
+  defIndices: number[],
+): Promise<Map<number, StickerCatalogLite>> {
+  const unique = [...new Set(defIndices.filter((defIndex) => defIndex > 0))];
+  if (unique.length === 0) return new Map();
+  const catalogRows = await prisma.csgoStickerCatalog.findMany({
+    where: { defIndex: { in: unique } },
+  });
+  const map = new Map<number, StickerCatalogLite>(
+    catalogRows.map((row) => [row.defIndex, row]),
+  );
+
+  for (const defIndex of unique) {
+    if (map.has(defIndex)) continue;
+    const apiRow = await lookupStickerFromApi(defIndex);
+    if (!apiRow) continue;
+    map.set(defIndex, {
+      defIndex,
+      effect: apiRow.effect,
+      tournament: apiRow.tournament,
+      stickerType: apiRow.stickerType,
+    });
+  }
+
+  return map;
+}
+
+function slotsDiffer(raw: number[], sanitized: number[]): boolean {
+  for (let i = 0; i < SLOT_COUNT; i += 1) {
+    if ((raw[i] ?? 0) !== (sanitized[i] ?? 0)) return true;
+  }
+  return false;
+}
+
+async function persistSanitizedStickerSlots(
+  steamId: string,
+  weaponId: string,
+  team: LoadoutTeam,
+  sanitized: number[],
+  wears: number[],
+  allEmpty: boolean,
+): Promise<void> {
+  if (allEmpty) {
+    await prisma.csgoPlayerWeaponSticker.deleteMany({
+      where: { steamId, weaponId, team },
+    });
+    return;
+  }
+  await prisma.csgoPlayerWeaponSticker.upsert({
+    where: {
+      steamId_weaponId_team: { steamId, weaponId, team },
+    },
+    create: {
+      steamId,
+      weaponId,
+      team,
+      slot0: sanitized[0],
+      slot1: sanitized[1],
+      slot2: sanitized[2],
+      slot3: sanitized[3],
+      slot4: 0,
+      wear0: wears[0],
+      wear1: wears[1],
+      wear2: wears[2],
+      wear3: wears[3],
+      wear4: 0,
+    },
+    update: {
+      slot0: sanitized[0],
+      slot1: sanitized[1],
+      slot2: sanitized[2],
+      slot3: sanitized[3],
+      slot4: 0,
+      wear0: wears[0],
+      wear1: wears[1],
+      wear2: wears[2],
+      wear3: wears[3],
+      wear4: 0,
+    },
+  });
+}
+
+/** Zeros CS2 / incompatible sticker slots in all saved loadouts (DB cleanup). */
+export async function purgeCs2StickerSlotsFromAllPlayers(): Promise<number> {
+  const rows = await prisma.csgoPlayerWeaponSticker.findMany();
+  const allDefs = new Set<number>();
+  for (const row of rows) {
+    for (const defIndex of [row.slot0, row.slot1, row.slot2, row.slot3]) {
+      if (defIndex > 0) allDefs.add(defIndex);
+    }
+  }
+  const catalogByDef = await fetchCatalogMapForDefIndices([...allDefs]);
+  let updated = 0;
+
+  for (const row of rows) {
+    const weaponIndex = await weaponIdToItemDefIndex(row.weaponId);
+    const rawSlots = [row.slot0, row.slot1, row.slot2, row.slot3];
+    const clamped = clampStickerSlotsToWeapon(
+      rawSlots,
+      row.weaponId,
+      STICKER_SLOT_STORAGE_COUNT,
+      weaponIndex,
+    );
+    const sanitized = sanitizeStickerSlotsWithCatalogMap(
+      clamped,
+      row.weaponId,
+      catalogByDef,
+    );
+    if (!slotsDiffer(rawSlots, sanitized)) continue;
+
+    const { slots: normalizedSlots, wears } = normalizeSlots(sanitized);
+    const allEmpty = normalizedSlots.every((defIndex) => defIndex <= 0);
+    await persistSanitizedStickerSlots(
+      row.steamId,
+      row.weaponId,
+      row.team as LoadoutTeam,
+      normalizedSlots,
+      wears,
+      allEmpty,
+    );
+    updated += 1;
+  }
+
+  return updated;
+}
+
+async function sanitizeStickerSlotsForWeaponWithCatalog(
   slots: number[],
   weaponId: string,
   planMax: number,
   defIndex?: number | null,
-): number[] {
-  return zeroIncompatibleStickerSlots(
-    clampStickerSlotsToWeapon(slots, weaponId, planMax, defIndex),
-    weaponId,
-  );
+): Promise<number[]> {
+  const clamped = clampStickerSlotsToWeapon(slots, weaponId, planMax, defIndex);
+  const catalogByDef = await fetchCatalogMapForDefIndices(clamped);
+  return sanitizeStickerSlotsWithCatalogMap(clamped, weaponId, catalogByDef);
 }
 
 export async function getPlayerWeaponStickers(
@@ -121,20 +243,34 @@ export async function getPlayerWeaponStickers(
     },
   });
 
-  const slots = row
+  const rawSlots = row
     ? [row.slot0, row.slot1, row.slot2, row.slot3]
     : [];
   const clamped = clampStickerSlotsToWeapon(
-    slots,
+    rawSlots,
     normalizedWeaponId,
     planMax,
     defIndex,
   );
-  const sanitized = await zeroIncompatibleStickerSlotsWithCatalog(
+  const catalogByDef = await fetchCatalogMapForDefIndices(clamped);
+  const sanitized = sanitizeStickerSlotsWithCatalogMap(
     clamped,
     normalizedWeaponId,
+    catalogByDef,
   );
   const { slots: normalizedSlots, wears } = normalizeSlots(sanitized);
+
+  if (row && slotsDiffer(rawSlots, normalizedSlots)) {
+    const allEmpty = normalizedSlots.every((slotDefIndex) => slotDefIndex <= 0);
+    await persistSanitizedStickerSlots(
+      steamId,
+      normalizedWeaponId,
+      team,
+      normalizedSlots,
+      wears,
+      allEmpty,
+    );
+  }
 
   const defIndices = normalizedSlots.filter((defIndex) => defIndex > 0);
   const catalogStickers =
@@ -143,11 +279,11 @@ export async function getPlayerWeaponStickers(
           where: { defIndex: { in: defIndices } },
         })
       : [];
-  const catalogByDef = new Map(catalogStickers.map((entry) => [entry.defIndex, entry]));
+  const catalogDetailsByDef = new Map(catalogStickers.map((entry) => [entry.defIndex, entry]));
 
   const apiFallbacks = new Map<number, StickerCatalogRowFromApi>();
   for (const defIndex of defIndices) {
-    if (catalogByDef.has(defIndex)) continue;
+    if (catalogDetailsByDef.has(defIndex)) continue;
     const apiRow = await lookupStickerFromApi(defIndex);
     if (apiRow) apiFallbacks.set(defIndex, apiRow);
   }
@@ -156,7 +292,7 @@ export async function getPlayerWeaponStickers(
     if (defIndex <= 0) {
       return { slot, defIndex: 0, name: "", imageUrl: null };
     }
-    const catalog = catalogByDef.get(defIndex);
+    const catalog = catalogDetailsByDef.get(defIndex);
     const api = apiFallbacks.get(defIndex);
     return {
       slot,
@@ -184,7 +320,12 @@ export async function savePlayerWeaponStickers(
   const normalizedWeaponId = normalizeWeaponId(weaponId);
   const defIndex = await weaponIdToItemDefIndex(normalizedWeaponId);
   const { slots: normalized, wears } = normalizeSlots(
-    sanitizeStickerSlotsForWeapon(slots, normalizedWeaponId, limits.maxStickerSlots, defIndex),
+    await sanitizeStickerSlotsForWeaponWithCatalog(
+      slots,
+      normalizedWeaponId,
+      limits.maxStickerSlots,
+      defIndex,
+    ),
   );
 
   const weaponDisplayName = weaponIdToDisplayName(normalizedWeaponId);
@@ -277,6 +418,13 @@ export async function getAllPlayerStickersForSync(): Promise<
   Array<{ steamId: string; entries: StickerSyncEntry[] }>
 > {
   const rows = await prisma.csgoPlayerWeaponSticker.findMany();
+  const allDefs = new Set<number>();
+  for (const row of rows) {
+    for (const defIndex of [row.slot0, row.slot1, row.slot2, row.slot3]) {
+      if (defIndex > 0) allDefs.add(defIndex);
+    }
+  }
+  const catalogByDef = await fetchCatalogMapForDefIndices([...allDefs]);
 
   const bySteam = new Map<string, typeof rows>();
 
@@ -298,7 +446,7 @@ export async function getAllPlayerStickersForSync(): Promise<
       if (!weaponIndex) continue;
 
       const rawSlots = [row.slot0, row.slot1, row.slot2, row.slot3];
-      const slots = zeroIncompatibleStickerSlots(
+      const slots = sanitizeStickerSlotsWithCatalogMap(
         clampStickerSlotsToWeapon(
           rawSlots,
           row.weaponId,
@@ -306,6 +454,7 @@ export async function getAllPlayerStickersForSync(): Promise<
           weaponIndex,
         ),
         row.weaponId,
+        catalogByDef,
       );
 
       entries.push({
@@ -332,6 +481,13 @@ export async function getPlayerStickersForSync(steamId64: string): Promise<{
   const rows = await prisma.csgoPlayerWeaponSticker.findMany({
     where: { steamId: steamId64 },
   });
+  const allDefs = new Set<number>();
+  for (const row of rows) {
+    for (const defIndex of [row.slot0, row.slot1, row.slot2, row.slot3]) {
+      if (defIndex > 0) allDefs.add(defIndex);
+    }
+  }
+  const catalogByDef = await fetchCatalogMapForDefIndices([...allDefs]);
 
   const entries: StickerSyncEntry[] = [];
 
@@ -341,7 +497,7 @@ export async function getPlayerStickersForSync(steamId64: string): Promise<{
     const weaponIndex = await weaponIdToItemDefIndex(row.weaponId);
     if (!weaponIndex) continue;
 
-    const slots = zeroIncompatibleStickerSlots(
+    const slots = sanitizeStickerSlotsWithCatalogMap(
       clampStickerSlotsToWeapon(
         [row.slot0, row.slot1, row.slot2, row.slot3],
         row.weaponId,
@@ -349,6 +505,7 @@ export async function getPlayerStickersForSync(steamId64: string): Promise<{
         weaponIndex,
       ),
       row.weaponId,
+      catalogByDef,
     );
 
     entries.push({

@@ -7,7 +7,7 @@ import {
   getPlayerWeaponStickers,
   savePlayerWeaponStickers,
 } from "@/lib/inventory/player-weapon-stickers";
-import { listEnabledStickersForPicker } from "@/lib/inventory/sticker-catalog-admin";
+import { listEnabledStickersForPicker, ensureLegacyStickerCatalogAndLoadouts } from "@/lib/inventory/sticker-catalog-admin";
 import { pushPlayerStickersToGameServer } from "@/lib/inventory/push-stickers-to-game-server";
 import { getInventoryPlanLimits } from "@/lib/inventory/plan-inventory-access";
 import { getSessionUserId } from "@/lib/auth/session-user";
@@ -85,6 +85,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const steamId = await requireUserSteamId(userId);
+    await ensureLegacyStickerCatalogAndLoadouts();
     const limits = await getInventoryPlanLimits(userId);
     const defIndex = await weaponIdToItemDefIndex(weaponId);
     const weaponMaxStickerSlots = maxStickerSlotsForWeaponId(weaponId);

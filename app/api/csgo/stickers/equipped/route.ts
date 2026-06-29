@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getAllPlayerStickersForSync } from "@/lib/inventory/player-weapon-stickers";
+import { ensureLegacyStickerCatalogAndLoadouts } from "@/lib/inventory/sticker-catalog-admin";
 import { isValidSkinsSyncRequest } from "@/lib/env/skins-sync";
 
 const SYNC_HEADER = "x-skins-sync-key";
@@ -15,6 +16,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  await ensureLegacyStickerCatalogAndLoadouts();
   const stickers = await getAllPlayerStickersForSync();
   return NextResponse.json({
     ok: true,

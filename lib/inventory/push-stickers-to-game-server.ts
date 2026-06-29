@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getPlayerStickersForSync } from "@/lib/inventory/player-weapon-stickers";
+import { ensureLegacyStickerCatalogAndLoadouts } from "@/lib/inventory/sticker-catalog-admin";
 import {
   getCsgoApiPushTargets,
   csgoBackendAuthHeaders,
@@ -57,6 +58,7 @@ export async function pushPlayerStickersToGameServer(
     return { ok: false, error: "CSGO_SKINS_SYNC_KEY not configured" };
   }
 
+  await ensureLegacyStickerCatalogAndLoadouts();
   const payload = await getPlayerStickersForSync(steamId64);
 
   const targets = getCsgoApiPushTargets();

@@ -132,7 +132,7 @@ export function WeaponStickerEditor({
                       state.selectSticker(
                         item.defIndex,
                         item.name,
-                        state.activeSlot,
+                        state.activeSlot ?? undefined,
                         item.imageUrl,
                         item.incompatibleReason,
                       )
