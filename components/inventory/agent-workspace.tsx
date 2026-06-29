@@ -6,7 +6,7 @@ import { Loader2, Lock, Search, UserRound, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RemoteImage } from "@/components/ui/remote-image";
 import { TeamScopePicker } from "@/components/inventory/team-scope-picker";
-import type { EquipSide, LoadoutTeam } from "@/lib/inventory/loadout-team";
+import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
 import { cn } from "@/lib/utils";
 import {
   chipInactiveHoverClass,
@@ -39,6 +39,12 @@ type AgentLoadout = {
   agentCTImage: string | null;
 };
 
+type AgentSaveResponse = {
+  loadout: AgentLoadout;
+  gameSync?: { ok: boolean; error?: string; applyMode?: "staged" | "immediate" };
+  error?: string;
+};
+
 type AgentWorkspaceProps = {
   open: boolean;
   canUseAgents?: boolean;
@@ -48,6 +54,22 @@ type AgentWorkspaceProps = {
 
 const PAGE_SIZE = 12;
 
+function notifyGameSync(
+  gameSync: AgentSaveResponse["gameSync"],
+  t: ReturnType<typeof useTranslations<"inventory">>,
+) {
+  if (!gameSync) return;
+  if (gameSync.ok) {
+    toast.info(
+      gameSync.applyMode === "immediate"
+        ? t("gameSyncImmediate")
+        : t("gameSyncStaged"),
+    );
+  } else {
+    toast.warning(t("gameSyncPartial"));
+  }
+}
+
 export function AgentWorkspace({
   open,
   canUseAgents = true,
@@ -55,8 +77,7 @@ export function AgentWorkspace({
   onSaved,
 }: AgentWorkspaceProps) {
   const t = useTranslations("inventory");
-  const [scope, setScope] = useState<EquipSide>("both");
-  const [lastSingleTeam, setLastSingleTeam] = useState<LoadoutTeam>("CT");
+  const [scope, setScope] = useState<LoadoutTeam>("CT");
   const [loadout, setLoadout] = useState<AgentLoadout | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -68,8 +89,7 @@ export function AgentWorkspace({
   const [pickerTotalPages, setPickerTotalPages] = useState(1);
   const [selectedDefIndex, setSelectedDefIndex] = useState<number | null>(null);
 
-  const editTeam: LoadoutTeam =
-    scope === "T" ? "T" : scope === "CT" ? "CT" : lastSingleTeam;
+  const editTeam = scope;
 
   const currentDefIndex =
     editTeam === "T" ? loadout?.agentT ?? 0 : loadout?.agentCT ?? 0;
@@ -153,10 +173,11 @@ export function AgentWorkspace({
         headers: inventoryWriteHeaders,
         body: JSON.stringify({ team: editTeam, defIndex }),
       });
-      const data = await res.json();
+      const data = (await res.json()) as AgentSaveResponse;
       if (!res.ok) throw new Error(data.error ?? "Falha ao salvar.");
       setLoadout(data.loadout);
       toast.success(t("agentsSaved"));
+      notifyGameSync(data.gameSync, t);
       onSaved?.();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("genericError"));
@@ -173,52 +194,12 @@ export function AgentWorkspace({
         credentials: "same-origin",
         headers: { [API_REQUEST_HEADER]: "1" },
       });
-      const data = await res.json();
+      const data = (await res.json()) as AgentSaveResponse;
       if (!res.ok) throw new Error(data.error ?? "Falha ao remover.");
       setLoadout(data.loadout);
       setSelectedDefIndex(null);
       toast.success(t("agentsCleared"));
-      onSaved?.();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("genericError"));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function saveBothTeams() {
-    if (!canUseAgents || !selectedDefIndex) return;
-    setSaving(true);
-    try {
-      for (const team of ["T", "CT"] as const) {
-        const params = new URLSearchParams({
-          picker: "1",
-          page: "1",
-          limit: "1",
-          team,
-        });
-        const check = await fetch(`/api/inventory/agents?${params}`, {
-          credentials: "same-origin",
-        });
-        const catalog = await check.json();
-        const hasAgent = (catalog.items ?? []).some(
-          (item: AgentPickerItem) => item.defIndex === selectedDefIndex,
-        );
-        if (!hasAgent) continue;
-        const res = await fetch("/api/inventory/agents", {
-          method: "POST",
-          credentials: "same-origin",
-          headers: inventoryWriteHeaders,
-          body: JSON.stringify({ team, defIndex: selectedDefIndex }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error ?? "Falha ao salvar.");
-        }
-        const data = await res.json();
-        setLoadout(data.loadout);
-      }
-      toast.success(t("agentsSaved"));
+      notifyGameSync(data.gameSync, t);
       onSaved?.();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("genericError"));
@@ -317,9 +298,9 @@ export function AgentWorkspace({
             <TeamScopePicker
               value={scope}
               onChange={(next) => {
-                if (next === "T" || next === "CT") setLastSingleTeam(next);
-                setScope(next);
+                if (next === "T" || next === "CT") setScope(next);
               }}
+              canBoth={false}
               labels={{
                 t: t("teamTShort"),
                 ct: t("teamCTShort"),
@@ -363,13 +344,7 @@ export function AgentWorkspace({
               <Button
                 type="button"
                 disabled={!canUseAgents || saving || !selectedDefIndex}
-                onClick={() => {
-                  if (scope === "both") {
-                    void saveBothTeams();
-                  } else {
-                    void saveAgent(selectedDefIndex ?? 0);
-                  }
-                }}
+                onClick={() => void saveAgent(selectedDefIndex ?? 0)}
               >
                 {saving ? <Loader2 className="h-4 w-4 motion-safe-spin" /> : t("agentsEquip")}
               </Button>

@@ -16,7 +16,12 @@ async function pushAgentsToTarget(
   payload: Awaited<ReturnType<typeof getPlayerAgentsForSync>>,
   syncKey: string,
   timeoutMs: number,
-): Promise<{ baseUrl: string; ok: boolean; error?: string }> {
+): Promise<{
+  baseUrl: string;
+  ok: boolean;
+  error?: string;
+  applyMode?: "staged" | "immediate";
+}> {
   const url = `${baseUrl}/api/csgo/agents/player-sync`;
 
   try {
@@ -33,7 +38,14 @@ async function pushAgentsToTarget(
     });
 
     if (res.ok) {
-      return { baseUrl, ok: true };
+      const body = (await res.json().catch(() => null)) as {
+        applyMode?: "staged" | "immediate";
+      } | null;
+      return {
+        baseUrl,
+        ok: true,
+        applyMode: body?.applyMode ?? "immediate",
+      };
     }
 
     const text = await res.text().catch(() => "");
@@ -50,7 +62,7 @@ async function pushAgentsToTarget(
 
 export async function pushPlayerAgentsToGameServer(
   steamId64: string,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; applyMode?: "staged" | "immediate" }> {
   const syncKey = getSkinsSyncKey();
   if (!syncKey) {
     return { ok: false, error: "CSGO_SKINS_SYNC_KEY not configured" };
@@ -94,5 +106,5 @@ export async function pushPlayerAgentsToGameServer(
     return { ok: false, error: primary.error };
   }
 
-  return { ok: true };
+  return { ok: true, applyMode: primary.applyMode ?? "immediate" };
 }

@@ -5,8 +5,12 @@ import {
 } from "@/lib/inventory/weapon-sticker-slot-limits";
 import { clientWeaponIdToDefIndex } from "@/lib/inventory/weapon-defindex-client";
 
-/** CS:GO Legacy: knives and gloves never accept weapon stickers. */
-const NON_STICKER_CATEGORIES = new Set<InventoryCategoryKey>(["knife", "gloves"]);
+/** CS:GO Legacy: knives, gloves, and agents never accept weapon stickers. */
+const NON_STICKER_CATEGORIES = new Set<InventoryCategoryKey>([
+  "knife",
+  "gloves",
+  "agent",
+]);
 
 export function isNonStickerInventoryCategory(
   category?: InventoryCategoryKey | string | null,
