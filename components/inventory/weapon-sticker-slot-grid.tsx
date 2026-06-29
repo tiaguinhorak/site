@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Lock } from "lucide-react";
+import type { InventoryCategoryKey } from "@/lib/profile";
 import { StickerImage } from "@/components/inventory/sticker-image";
 import { useWeaponStickerLimits } from "@/components/inventory/use-weapon-sticker-limits";
 import { isStickerSlotPlanLocked } from "@/lib/inventory/weapon-sticker-slot-limits";
@@ -11,6 +12,7 @@ import { surfaceSubtleClass } from "@/lib/ui/theme-surfaces";
 type WeaponStickerSlotGridProps = {
   weaponId: string;
   planMax: number;
+  categoryKey?: InventoryCategoryKey;
   slots: number[];
   slotLabels: string[];
   slotImageUrls: string[];
@@ -57,9 +59,10 @@ export function WeaponStickerSlotGrid({
   layout = "stack",
   showClear = false,
   showHint = false,
+  categoryKey,
 }: WeaponStickerSlotGridProps) {
   const t = useTranslations("inventory");
-  const { limits, isSlotEditable } = useWeaponStickerLimits(weaponId, planMax);
+  const { limits, isSlotEditable } = useWeaponStickerLimits(weaponId, planMax, categoryKey);
   const cfg = SIZE_CONFIG[size];
 
   if (!limits.supportsStickers || limits.weaponMaxSlots <= 0) {

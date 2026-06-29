@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { InventorySkinTile } from "@/components/inventory/inventory-skin-tile";
 import { LoadoutStickerStrip } from "@/components/inventory/loadout-sticker-strip";
 import { SkinRarityBadge } from "@/components/skins/skin-rarity-badge";
-import { weaponSupportsStickers } from "@/lib/inventory/weapon-stickers";
+import { mapCatalogCategoryToUi } from "@/lib/inventory/catalog-categories";
+import { skinSupportsStickers } from "@/lib/inventory/weapon-sticker-support";
+import type { InventoryCategoryKey } from "@/lib/profile";
 import { cn } from "@/lib/utils";
 import { surfaceSubtleClass, textWarningClass } from "@/lib/ui/theme-surfaces";
 
@@ -14,6 +16,7 @@ export type EquippedLoadoutEntry = {
   catalogSkinId: string;
   name: string;
   weaponId: string;
+  category?: InventoryCategoryKey;
   imageUrl: string | null;
   accent: string;
   rarity: string;
@@ -32,7 +35,7 @@ type EquippedLoadoutGridProps = {
   items: EquippedLoadoutEntry[];
   refreshing: boolean;
   onRefresh: () => void;
-  onOpen: (item: EquippedLoadoutEntry, tab?: "settings" | "stickers", stickerTeam?: "T" | "CT") => void;
+  onOpen: (item: EquippedLoadoutEntry, tab?: "skins" | "stickers", stickerTeam?: "T" | "CT") => void;
 };
 
 export function EquippedLoadoutGrid({
@@ -77,7 +80,11 @@ export function EquippedLoadoutGrid({
       ) : (
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {items.map((item) => {
-            const supportsStickers = weaponSupportsStickers(item.weaponId);
+            const supportsStickers = skinSupportsStickers(
+              item.weaponId,
+              4,
+              item.category ?? mapCatalogCategoryToUi(undefined, item.weaponId),
+            );
 
             return (
               <InventorySkinTile
@@ -88,7 +95,7 @@ export function EquippedLoadoutGrid({
                 rarity={item.rarity}
                 equippedT={item.equippedT}
                 equippedCT={item.equippedCT}
-                onClick={() => onOpen(item, "settings")}
+                onClick={() => onOpen(item, "skins")}
                 className={cn(surfaceSubtleClass, "border-border/50")}
               >
                 <div className="mt-2 flex flex-wrap items-center justify-center gap-1">

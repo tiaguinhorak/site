@@ -15,6 +15,7 @@ type RemoteImageProps = {
   sizes?: string;
   priority?: boolean;
   showPlaceholder?: boolean;
+  quality?: number;
 };
 
 export function RemoteImage({
@@ -27,6 +28,7 @@ export function RemoteImage({
   sizes,
   priority,
   showPlaceholder = true,
+  quality = 85,
 }: RemoteImageProps) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -53,6 +55,7 @@ export function RemoteImage({
           )}
           referrerPolicy="no-referrer"
           priority={priority}
+          quality={quality}
           loading={priority ? undefined : "lazy"}
           onLoad={() => setLoaded(true)}
           onError={() => setFailed(true)}
@@ -82,6 +85,7 @@ export function RemoteImage({
         )}
         referrerPolicy="no-referrer"
         priority={priority}
+        quality={quality}
         loading={priority ? undefined : "lazy"}
         onLoad={() => setLoaded(true)}
         onError={() => setFailed(true)}

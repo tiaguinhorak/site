@@ -24,3 +24,14 @@ export function catalogSkinImageUrl(catalogId: string | null | undefined): strin
   if (!catalogId) return null;
   return CATALOG_SKIN_IMAGE_URLS[catalogId] ?? null;
 }
+
+/** Request full-resolution Steam economy preview (512px) for workspace/modal heroes. */
+export function skinPreviewImageUrl(url: string | null | undefined): string | null {
+  if (!url?.trim()) return null;
+  const trimmed = url.trim();
+  if (!trimmed.includes("/economy/image/")) return trimmed;
+
+  const withoutSize = trimmed.replace(/\/(\d+fx\d+f(?:[^/]*)?|\d+x\d+(?:[^/]*)?)$/i, "");
+  if (withoutSize.endsWith("/512fx512f")) return withoutSize;
+  return `${withoutSize}/512fx512f`;
+}

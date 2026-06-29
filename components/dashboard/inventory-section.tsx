@@ -41,6 +41,7 @@ import {
   SkinWorkspace,
   type SkinWorkspaceData,
 } from "@/components/inventory/skin-workspace";
+import { mapCatalogCategoryToUi } from "@/lib/inventory/catalog-categories";
 import { loadoutItemToPreview } from "@/lib/inventory/skin-preview-mappers";
 import { useSkinPreview } from "@/lib/use-skin-preview";
 import { useUser } from "@/lib/hooks/use-user";
@@ -97,6 +98,7 @@ function catalogToWorkspace(
     accent: item.accent,
     rarity: item.rarity,
     category: categoryLabel,
+    categoryKey: item.category,
     owned: item.owned,
     equippedT: item.equippedT,
     equippedCT: item.equippedCT,
@@ -104,6 +106,8 @@ function catalogToWorkspace(
 }
 
 function loadoutToWorkspace(item: EquippedLoadoutEntry): SkinWorkspaceData {
+  const categoryKey =
+    item.category ?? mapCatalogCategoryToUi(undefined, item.weaponId);
   return {
     catalogSkinId: item.catalogSkinId,
     name: item.name,
@@ -111,6 +115,7 @@ function loadoutToWorkspace(item: EquippedLoadoutEntry): SkinWorkspaceData {
     imageUrl: item.imageUrl,
     accent: item.accent,
     rarity: item.rarity,
+    categoryKey,
     owned: true,
     equippedT: item.equippedT,
     equippedCT: item.equippedCT,
@@ -132,6 +137,11 @@ function mergeWorkspaceFromSources(
     weaponName: catalog?.weaponName ?? skin.weaponName,
     paintkitName: catalog?.paintkitName ?? skin.paintkitName,
     imageUrl: catalog?.imageUrl ?? loadout?.imageUrl ?? skin.imageUrl,
+    categoryKey:
+      catalog?.category ??
+      loadout?.category ??
+      skin.categoryKey ??
+      mapCatalogCategoryToUi(undefined, skin.weaponId),
   };
 }
 
@@ -255,7 +265,7 @@ export function InventorySection() {
   const [refreshing, setRefreshing] = useState(false);
   const [workspace, setWorkspace] = useState<{
     skin: SkinWorkspaceData;
-    tab: "settings" | "stickers";
+    tab: "skins" | "stickers";
     stickerTeam?: LoadoutTeam;
   } | null>(null);
   const [availableRarityTiers, setAvailableRarityTiers] = useState<RarityKey[]>([]);
@@ -501,7 +511,7 @@ export function InventorySection() {
 
   const openCatalogWorkspace = (
     item: CatalogSkin,
-    tab: "settings" | "stickers" = "settings",
+    tab: "skins" | "stickers" = "skins",
     stickerTeam?: LoadoutTeam,
   ) => {
     setWorkspace({
@@ -513,7 +523,7 @@ export function InventorySection() {
 
   const openLoadoutWorkspace = (
     item: EquippedLoadoutEntry,
-    tab: "settings" | "stickers" = "settings",
+    tab: "skins" | "stickers" = "skins",
     stickerTeam?: LoadoutTeam,
   ) => {
     setWorkspace({ skin: loadoutToWorkspace(item), tab, stickerTeam });
@@ -778,8 +788,13 @@ export function InventorySection() {
             : false
         }
         onClose={() => setWorkspace(null)}
-        onEquip={async (side) => {
-          if (workspaceCatalogItem) await handleEquip(workspaceCatalogItem, side);
+        onPreviewSkinChange={(next) =>
+          setWorkspace((prev) => (prev ? { ...prev, skin: next } : null))
+        }
+        onEquip={async (side, catalogSkinId) => {
+          const item =
+            items.find((i) => i.id === catalogSkinId) ?? workspaceCatalogItem;
+          if (item) await handleEquip(item, side);
         }}
         onUnequip={async (side) => {
           if (!workspace?.skin) return;

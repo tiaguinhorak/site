@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { RemoteImage } from "@/components/ui/remote-image";
 import { SkinRarityBadge } from "@/components/skins/skin-rarity-badge";
 import { SkinRarityLine } from "@/components/skins/skin-rarity-line";
-import { cn } from "@/lib/utils";
+import { skinPreviewImageUrl } from "@/lib/inventory/skin-images";
 
 export type SkinPreviewData = {
   id?: string;
@@ -94,12 +94,13 @@ export function SkinPreviewModal({
           >
             {skin.imageUrl ? (
               <RemoteImage
-                src={skin.imageUrl}
+                src={skinPreviewImageUrl(skin.imageUrl) ?? skin.imageUrl}
                 alt=""
                 fill
-                sizes="(max-width: 768px) 100vw, 512px"
+                sizes="(max-width: 768px) 100vw, 640px"
                 priority
-                className="object-contain p-6"
+                quality={95}
+                className="object-contain p-4"
               />
             ) : null}
           </div>

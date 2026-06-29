@@ -5,10 +5,10 @@ import { useTranslations } from "next-intl";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
 import {
   STICKER_SLOT_STORAGE_COUNT,
-  getWeaponStickerLimitState,
   isStickerSlotEditable,
 } from "@/lib/inventory/weapon-sticker-slot-limits";
-import { clientWeaponIdToDefIndex } from "@/lib/inventory/weapon-defindex-client";
+import { getSkinStickerLimitState } from "@/lib/inventory/weapon-sticker-support";
+import type { InventoryCategoryKey } from "@/lib/profile";
 import {
   getStickerWeaponCompatibility,
   type StickerWeaponCompatibilityReason,
@@ -74,6 +74,8 @@ function teamCacheFromResponse(
 type UseWeaponStickerStateOptions = {
   mirrorEditsToBoth?: boolean;
   planMaxStickerSlots?: number;
+  pickerPageSize?: number;
+  categoryKey?: InventoryCategoryKey | null;
 };
 
 export function useWeaponStickerState(
@@ -85,10 +87,12 @@ export function useWeaponStickerState(
 ) {
   const mirrorEditsToBoth = options?.mirrorEditsToBoth ?? false;
   const planMaxStickerSlots = options?.planMaxStickerSlots ?? STICKER_SLOT_COUNT;
-  const stickerLimits = getWeaponStickerLimitState(
+  const pickerPageSize = options?.pickerPageSize ?? 24;
+  const categoryKey = options?.categoryKey;
+  const stickerLimits = getSkinStickerLimitState(
     weaponId,
     planMaxStickerSlots,
-    clientWeaponIdToDefIndex(weaponId),
+    categoryKey,
   );
   const t = useTranslations("inventory");
   const [byTeam, setByTeam] = useState<Record<LoadoutTeam, TeamStickerCache>>({
@@ -212,7 +216,7 @@ export function useWeaponStickerState(
     try {
       const params = new URLSearchParams({
         picker: "1",
-        limit: "24",
+        limit: String(pickerPageSize),
         page: String(safePage),
         weaponId,
       });
@@ -232,7 +236,19 @@ export function useWeaponStickerState(
     } finally {
       setPickerLoading(false);
     }
-  }, [weaponId]);
+  }, [weaponId, pickerPageSize]);
+
+  function syncBothTeamsFrom(sourceTeam: LoadoutTeam) {
+    setByTeam((prev) => {
+      const src = prev[sourceTeam];
+      const mirrored: TeamStickerCache = {
+        slots: [...src.slots],
+        slotLabels: [...src.slotLabels],
+        slotImageUrls: [...src.slotImageUrls],
+      };
+      return { T: mirrored, CT: { ...mirrored } };
+    });
+  }
 
   useEffect(() => {
     if (!enabled || !pickerActive) return;
@@ -425,5 +441,6 @@ export function useWeaponStickerState(
     isPickerStickerCompatible,
     stickerLockLabel,
     stickerIncompatibleMessage,
+    syncBothTeamsFrom,
   };
 }

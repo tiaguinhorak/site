@@ -1,23 +1,26 @@
 "use client";
 
 import { useMemo } from "react";
-import { clientWeaponIdToDefIndex } from "@/lib/inventory/weapon-defindex-client";
+import type { InventoryCategoryKey } from "@/lib/profile";
+import { getSkinStickerLimitState } from "@/lib/inventory/weapon-sticker-support";
 import {
-  getWeaponStickerLimitState,
   isStickerSlotEditable,
   type WeaponStickerLimitState,
 } from "@/lib/inventory/weapon-sticker-slot-limits";
 
-export function useWeaponStickerLimits(weaponId: string, planMax: number) {
+export function useWeaponStickerLimits(
+  weaponId: string,
+  planMax: number,
+  categoryKey?: InventoryCategoryKey | null,
+) {
   return useMemo(() => {
-    const defIndex = clientWeaponIdToDefIndex(weaponId);
-    const limits = getWeaponStickerLimitState(weaponId, planMax, defIndex);
+    const limits = getSkinStickerLimitState(weaponId, planMax, categoryKey);
     return {
       limits,
       isSlotEditable: (slotIndex: number) => isStickerSlotEditable(slotIndex, limits),
       firstEditableSlot: findFirstEditableSlot(limits),
     };
-  }, [weaponId, planMax]);
+  }, [weaponId, planMax, categoryKey]);
 }
 
 function findFirstEditableSlot(limits: WeaponStickerLimitState): number | null {

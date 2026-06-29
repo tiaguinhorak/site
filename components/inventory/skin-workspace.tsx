@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { motion } from "motion/react";
-import { Loader2, Lock, Search, SlidersHorizontal, Sticker, X } from "lucide-react";
+import { Loader2, Lock, Palette, Search, Sticker, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RemoteImage } from "@/components/ui/remote-image";
 import { SkinRarityBadge } from "@/components/skins/skin-rarity-badge";
@@ -15,18 +15,38 @@ import {
 import type { EquipSide } from "@/lib/inventory/loadout-team";
 import { weaponAllowedOnTeam } from "@/lib/inventory/loadout-team";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
-import { getWeaponStickerLimitState, isStickerSlotEditable } from "@/lib/inventory/weapon-sticker-slot-limits";
-import { clientWeaponIdToDefIndex } from "@/lib/inventory/weapon-defindex-client";
+import type { InventoryCategoryKey } from "@/lib/profile";
+import { isStickerSlotEditable } from "@/lib/inventory/weapon-sticker-slot-limits";
+import {
+  getSkinStickerLimitState,
+  skinSupportsStickers,
+} from "@/lib/inventory/weapon-sticker-support";
+import { skinPreviewImageUrl } from "@/lib/inventory/skin-images";
 import { cn } from "@/lib/utils";
 import {
   chipInactiveHoverClass,
   surfaceInputClass,
   surfaceSubtleClass,
-  teamPillClass,
 } from "@/lib/ui/theme-surfaces";
 import { WeaponStickerSlotGrid } from "@/components/inventory/weapon-sticker-slot-grid";
 import { StickerPickerTile } from "@/components/inventory/sticker-picker-tile";
+import { TeamScopePicker } from "@/components/inventory/team-scope-picker";
 import { toast } from "@/lib/toast";
+
+type WorkspaceTab = "skins" | "stickers";
+type StickerEditScope = LoadoutTeam | "both";
+type SkinPickerItem = {
+  catalogSkinId: string;
+  name: string;
+  imageUrl: string | null;
+  accent: string;
+  rarity: string;
+  owned: boolean;
+  equippedT: boolean;
+  equippedCT: boolean;
+};
+
+const SKIN_PICKER_PAGE_SIZE = 12;
 
 export type SkinWorkspaceData = {
   catalogSkinId: string;
@@ -38,31 +58,30 @@ export type SkinWorkspaceData = {
   accent: string;
   rarity: string;
   category?: string;
+  categoryKey?: InventoryCategoryKey;
   owned?: boolean;
   equippedT: boolean;
   equippedCT: boolean;
 };
 
-type WorkspaceTab = "settings" | "stickers";
-type StickerEditScope = LoadoutTeam | "both";
-
 type SkinWorkspaceProps = {
   open: boolean;
   skin: SkinWorkspaceData | null;
-  initialTab?: WorkspaceTab | "preview";
+  initialTab?: WorkspaceTab | "preview" | "settings";
   initialStickerTeam?: LoadoutTeam;
   maxStickerSlots?: number;
   canUseStickers?: boolean;
   actionLoading?: boolean;
   onClose: () => void;
-  onEquip: (side: EquipSide) => Promise<void> | void;
+  onEquip: (side: EquipSide, catalogSkinId: string) => Promise<void> | void;
   onUnequip: (side: EquipSide) => Promise<void> | void;
   onSaved?: () => void;
+  onPreviewSkinChange?: (skin: SkinWorkspaceData) => void;
 };
 
-function resolveInitialTab(tab?: WorkspaceTab | "preview"): WorkspaceTab {
+function resolveInitialTab(tab?: WorkspaceTab | "preview" | "settings"): WorkspaceTab {
   if (tab === "stickers") return "stickers";
-  return "settings";
+  return "skins";
 }
 
 function defaultPendingSide(
@@ -99,7 +118,7 @@ function needsEquipForSide(skin: SkinWorkspaceData, side: EquipSide): boolean {
 export function SkinWorkspace({
   open,
   skin,
-  initialTab = "settings",
+  initialTab = "skins",
   initialStickerTeam,
   maxStickerSlots = 4,
   canUseStickers = true,
@@ -108,45 +127,145 @@ export function SkinWorkspace({
   onEquip,
   onUnequip,
   onSaved,
+  onPreviewSkinChange,
 }: SkinWorkspaceProps) {
   const t = useTranslations("inventory");
-  const [tab, setTab] = useState<WorkspaceTab>("settings");
+  const [tab, setTab] = useState<WorkspaceTab>("skins");
   const [pendingSide, setPendingSide] = useState<EquipSide>("CT");
   const [stickerScope, setStickerScope] = useState<StickerEditScope>("CT");
   const [savingAll, setSavingAll] = useState(false);
+  const [activeSkin, setActiveSkin] = useState<SkinWorkspaceData | null>(null);
+  const [skinPickerItems, setSkinPickerItems] = useState<SkinPickerItem[]>([]);
+  const [skinPickerLoading, setSkinPickerLoading] = useState(false);
+  const [skinPickerSearch, setSkinPickerSearch] = useState("");
+  const [skinPickerQuery, setSkinPickerQuery] = useState("");
+  const [skinPickerPage, setSkinPickerPage] = useState(1);
+  const [skinPickerTotalPages, setSkinPickerTotalPages] = useState(1);
+
+  const displaySkin = activeSkin ?? skin;
+  const previewImageUrl = useMemo(
+    () => skinPreviewImageUrl(displaySkin?.imageUrl ?? null),
+    [displaySkin?.imageUrl],
+  );
 
   const stickerViewTeam: LoadoutTeam = stickerScope === "CT" ? "CT" : "T";
 
-  const canEquipT = skin ? weaponAllowedOnTeam(skin.weaponId, "T") : false;
-  const canEquipCT = skin ? weaponAllowedOnTeam(skin.weaponId, "CT") : false;
+  const canEquipT = displaySkin ? weaponAllowedOnTeam(displaySkin.weaponId, "T") : false;
+  const canEquipCT = displaySkin ? weaponAllowedOnTeam(displaySkin.weaponId, "CT") : false;
   const canBoth = canEquipT && canEquipCT;
-  const supportsStickers = skin
-    ? getWeaponStickerLimitState(
-        skin.weaponId,
+  const stickerLimits = displaySkin
+    ? getSkinStickerLimitState(
+        displaySkin.weaponId,
         maxStickerSlots,
-        clientWeaponIdToDefIndex(skin.weaponId),
-      ).supportsStickers
-    : false;
-  const stickerLimits = skin
-    ? getWeaponStickerLimitState(
-        skin.weaponId,
-        maxStickerSlots,
-        clientWeaponIdToDefIndex(skin.weaponId),
+        displaySkin.categoryKey,
       )
     : null;
+  const supportsStickers = stickerLimits?.supportsStickers ?? false;
   const stickersEnabled = supportsStickers && canUseStickers;
-  const anyEquipped = skin ? skin.equippedT || skin.equippedCT : false;
+  const anyEquipped = displaySkin ? displaySkin.equippedT || displaySkin.equippedCT : false;
 
-  const stickerHookEnabled = open && Boolean(skin) && stickersEnabled;
+  const stickerHookEnabled = open && Boolean(displaySkin) && stickersEnabled;
   const pickerActive = open && tab === "stickers";
 
   const stickerState = useWeaponStickerState(
-    skin?.weaponId ?? "",
+    displaySkin?.weaponId ?? "",
     stickerViewTeam,
     stickerHookEnabled,
     pickerActive,
-    { mirrorEditsToBoth: stickerScope === "both", planMaxStickerSlots: maxStickerSlots },
+    {
+      mirrorEditsToBoth: stickerScope === "both",
+      planMaxStickerSlots: maxStickerSlots,
+      pickerPageSize: 12,
+      categoryKey: displaySkin?.categoryKey,
+    },
   );
+
+  useEffect(() => {
+    if (skin) setActiveSkin(skin);
+  }, [skin?.catalogSkinId, skin]);
+
+  useEffect(() => {
+    if (!open) return;
+    const timer = setTimeout(() => setSkinPickerQuery(skinPickerSearch), 300);
+    return () => clearTimeout(timer);
+  }, [open, skinPickerSearch]);
+
+  useEffect(() => {
+    if (!open || !displaySkin?.weaponId || tab !== "skins") {
+      return;
+    }
+    let cancelled = false;
+    setSkinPickerLoading(true);
+    const params = new URLSearchParams({
+      weaponId: displaySkin.weaponId,
+      limit: String(SKIN_PICKER_PAGE_SIZE),
+      page: String(skinPickerPage),
+      category: "all",
+    });
+    const query = skinPickerQuery.trim();
+    if (query) params.set("search", query);
+    void fetch(`/api/inventory/skins?${params}`, { credentials: "same-origin" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data?.items) return;
+        setSkinPickerItems(
+          data.items.map(
+            (item: {
+              id: string;
+              name: string;
+              imageUrl?: string | null;
+              accent: string;
+              rarity: string;
+              owned: boolean;
+              equippedT: boolean;
+              equippedCT: boolean;
+            }) => ({
+              catalogSkinId: item.id,
+              name: item.name,
+              imageUrl: item.imageUrl ?? null,
+              accent: item.accent,
+              rarity: item.rarity,
+              owned: item.owned,
+              equippedT: item.equippedT,
+              equippedCT: item.equippedCT,
+            }),
+          ),
+        );
+        setSkinPickerTotalPages(data.totalPages ?? 1);
+      })
+      .finally(() => {
+        if (!cancelled) setSkinPickerLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, displaySkin?.weaponId, tab, skinPickerPage, skinPickerQuery]);
+
+  function handleStickerScopeChange(scope: StickerEditScope) {
+    if (scope === "both" && canBoth) {
+      const source: LoadoutTeam =
+        stickerScope === "T" ? "T" : stickerScope === "CT" ? "CT" : stickerViewTeam;
+      stickerState.syncBothTeamsFrom(source);
+    }
+    setStickerScope(scope);
+  }
+
+  function selectSkinVariant(item: SkinPickerItem) {
+    if (!displaySkin) return;
+    const next: SkinWorkspaceData = {
+      ...displaySkin,
+      catalogSkinId: item.catalogSkinId,
+      name: item.name,
+      imageUrl: item.imageUrl,
+      accent: item.accent,
+      rarity: item.rarity,
+      owned: item.owned,
+      equippedT: item.equippedT,
+      equippedCT: item.equippedCT,
+    };
+    setActiveSkin(next);
+    onPreviewSkinChange?.(next);
+  }
 
   useEffect(() => {
     if (!open || !skin) return;
@@ -154,13 +273,7 @@ export function SkinWorkspace({
     const equipCT = weaponAllowedOnTeam(skin.weaponId, "CT");
     const both = equipT && equipCT;
     const singleOnly = !both && (equipT || equipCT);
-    const hasStickers = skin
-      ? getWeaponStickerLimitState(
-          skin.weaponId,
-          maxStickerSlots,
-          clientWeaponIdToDefIndex(skin.weaponId),
-        ).supportsStickers && stickersEnabled
-      : false;
+    const hasStickers = skinSupportsStickers(skin.weaponId, maxStickerSlots, skin.categoryKey) && canUseStickers;
     setTab(resolveInitialTab(initialTab));
     const side = defaultPendingSide(skin, equipT, equipCT);
     setPendingSide(side);
@@ -177,7 +290,7 @@ export function SkinWorkspace({
               : "CT");
     setStickerScope((prev) => (prev === nextScope ? prev : nextScope));
 
-    if (singleOnly && hasStickers && stickersEnabled && resolveInitialTab(initialTab) === "settings") {
+    if (singleOnly && hasStickers && stickersEnabled && resolveInitialTab(initialTab) === "skins") {
       setTab("stickers");
     }
   }, [
@@ -236,31 +349,27 @@ export function SkinWorkspace({
     return t("teamCT");
   }, [pendingSide, canBoth, t]);
 
-  if (!open || !skin) return null;
+  if (!open || !displaySkin) return null;
 
   async function handleSave() {
     setSavingAll(true);
     try {
-      const willEquip = skin!.owned && needsEquipForSide(skin!, pendingSide);
+      const willEquip = displaySkin!.owned && needsEquipForSide(displaySkin!, pendingSide);
 
       if (willEquip) {
-        await onEquip(pendingSide);
+        await onEquip(pendingSide, displaySkin!.catalogSkinId);
       }
 
       const shouldSaveStickers =
-        stickersEnabled && skin!.owned && (anyEquipped || willEquip);
+        stickersEnabled && displaySkin!.owned && (anyEquipped || willEquip);
 
       if (shouldSaveStickers) {
         if (stickerScope === "both" && canBoth) {
-          const okT = await stickerState.saveWithTeam(
-            "T",
-            stickerState.getTeamSlots("T"),
-          );
+          stickerState.syncBothTeamsFrom(stickerViewTeam);
+          const slots = stickerState.getTeamSlots(stickerViewTeam);
+          const okT = await stickerState.saveWithTeam("T", slots);
           if (!okT) return;
-          const okCT = await stickerState.saveWithTeam(
-            "CT",
-            stickerState.getTeamSlots("CT"),
-          );
+          const okCT = await stickerState.saveWithTeam("CT", slots);
           if (!okCT) return;
         } else {
           const teamToSave: LoadoutTeam =
@@ -301,7 +410,7 @@ export function SkinWorkspace({
   }
 
   function selectStickerSlot(slotIndex: number) {
-    if (!stickersEnabled || !skin || !stickerLimits) return;
+    if (!stickersEnabled || !displaySkin || !stickerLimits) return;
     if (!isStickerSlotEditable(slotIndex, stickerLimits)) return;
     if (tab !== "stickers") setTab("stickers");
     stickerState.setActiveSlot(slotIndex);
@@ -340,16 +449,16 @@ export function SkinWorkspace({
               id="skin-workspace-title"
               className="mt-1 font-display text-lg font-bold leading-tight text-foreground sm:text-2xl"
             >
-              {skin.name}
+              {displaySkin.name}
             </h2>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <SkinRarityBadge rarity={skin.rarity} accent={skin.accent} size="md" />
-              {skin.category && (
+              <SkinRarityBadge rarity={displaySkin.rarity} accent={displaySkin.accent} size="md" />
+              {displaySkin.category && (
                 <span className="text-[10px] uppercase tracking-wider text-muted">
-                  {skin.category}
+                  {displaySkin.category}
                 </span>
               )}
-              <TeamEquipBadge equippedT={skin.equippedT} equippedCT={skin.equippedCT} />
+              <TeamEquipBadge equippedT={displaySkin.equippedT} equippedCT={displaySkin.equippedCT} />
             </div>
           </div>
           <button
@@ -362,44 +471,47 @@ export function SkinWorkspace({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 lg:grid lg:grid-cols-2">
+        <div className="grid min-h-0 flex-1 grid-rows-[auto_1fr] lg:grid-cols-2 lg:grid-rows-1">
           {/* Preview column */}
-          <div className="relative flex min-h-0 flex-col border-b border-border/40 lg:border-b-0 lg:border-r">
-            <div className="relative flex min-h-0 flex-1 flex-col px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
+          <div className="flex min-h-0 flex-col border-b border-border/40 lg:border-b-0 lg:border-r">
+            <div className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-hidden px-4 py-3 sm:px-6 lg:px-6 lg:py-4">
               <div
                 className={cn(
-                  "pointer-events-none absolute inset-x-8 top-8 h-48 rounded-full opacity-35 blur-3xl lg:h-64",
+                  "pointer-events-none absolute inset-x-8 top-20 h-32 rounded-full opacity-30 blur-3xl lg:top-24",
                   "bg-linear-to-r",
-                  skin.accent,
+                  displaySkin.accent,
                 )}
                 aria-hidden
               />
-              <div className="relative mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col overflow-hidden rounded-xl border border-border/50 glass">
-                <SkinRarityLine accent={skin.accent} rarity={skin.rarity} />
+              <div className="relative mx-auto flex w-full max-w-xl shrink-0 flex-col overflow-hidden rounded-xl border border-border/50 glass">
+                <SkinRarityLine accent={displaySkin.accent} rarity={displaySkin.rarity} />
                 <div
                   className={cn(
-                    "relative min-h-[200px] flex-1 bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)]",
-                    !skin.imageUrl && "bg-linear-to-br",
-                    !skin.imageUrl && skin.accent,
+                    "relative aspect-[16/10] min-h-[180px] w-full bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)] sm:min-h-[220px] lg:min-h-[260px]",
+                    !previewImageUrl && "bg-linear-to-br",
+                    !previewImageUrl && displaySkin.accent,
                   )}
                 >
-                  {skin.imageUrl ? (
+                  {previewImageUrl ? (
                     <RemoteImage
-                      src={skin.imageUrl}
+                      src={previewImageUrl}
                       alt=""
                       fill
-                      sizes="(max-width: 1024px) 100vw, 50vw"
+                      sizes="(max-width: 1024px) 90vw, 640px"
                       priority
-                      className="object-contain p-6 sm:p-10 lg:p-12"
+                      quality={95}
+                      className="object-contain p-2 sm:p-3"
+                    />
                     />
                   ) : null}
                 </div>
-                <SkinRarityLine accent={skin.accent} rarity={skin.rarity} position="bottom" />
+                <SkinRarityLine accent={displaySkin.accent} rarity={displaySkin.rarity} position="bottom" />
 
                 {supportsStickers && stickersEnabled && (
-                  <div className="flex shrink-0 justify-center border-t border-border/40 bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)] px-4 py-3">
+                  <div className="flex shrink-0 justify-center border-t border-border/40 bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)] px-3 py-2">
                     <WeaponStickerSlotGrid
-                      weaponId={skin.weaponId}
+                      weaponId={displaySkin.weaponId}
+                      categoryKey={displaySkin.categoryKey}
                       planMax={maxStickerSlots}
                       slots={stickerState.slots}
                       slotLabels={stickerState.slotLabels}
@@ -407,7 +519,7 @@ export function SkinWorkspace({
                       activeSlot={activeSlotIndex}
                       onSelectSlot={selectStickerSlot}
                       onClearSlot={(index) => stickerState.clearSlot(index)}
-                      size="md"
+                      size="sm"
                       layout="stack"
                       showClear
                     />
@@ -415,30 +527,30 @@ export function SkinWorkspace({
                 )}
               </div>
 
-              {skin.paintkitName && skin.weaponName && (
-                <p className="mt-3 text-center text-xs text-muted">
-                  {skin.weaponName} · {skin.paintkitName}
+              {displaySkin.paintkitName && displaySkin.weaponName && (
+                <p className="shrink-0 text-center text-xs text-muted">
+                  {displaySkin.weaponName} · {displaySkin.paintkitName}
                 </p>
               )}
             </div>
           </div>
 
           {/* Controls column */}
-          <div className="flex min-h-0 flex-col">
+          <div className="flex min-h-0 flex-col overflow-hidden">
             <div className="shrink-0 px-4 pt-4 sm:px-6 lg:px-8">
               <div className="flex rounded-xl border border-border/40 p-1 glass">
                 <button
                   type="button"
-                  onClick={() => setTab("settings")}
+                  onClick={() => setTab("skins")}
                   className={cn(
                     "flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all",
-                    tab === "settings"
+                    tab === "skins"
                       ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground shadow-sm"
                       : "text-muted hover:text-foreground",
                   )}
                 >
-                  <SlidersHorizontal className="h-4 w-4" />
-                  {t("workspaceEquipTab")}
+                  <Palette className="h-4 w-4" />
+                  {t("workspaceTabSkins")}
                 </button>
                 {supportsStickers && (
                   <button
@@ -458,96 +570,127 @@ export function SkinWorkspace({
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 lg:px-8">
-          {tab === "settings" ? (
-            <div className="space-y-4">
-              {!skin.owned ? (
-                <div className={cn("rounded-xl p-4 text-center", surfaceSubtleClass)}>
-                  <Lock className="mx-auto h-6 w-6 text-muted" aria-hidden />
-                  <p className="mt-2 text-sm text-muted">{t("equipUnavailable")}</p>
-                </div>
-              ) : canBoth ? (
-                <>
-                  <p className="text-sm text-muted">{t("equipSideHint")}</p>
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    {canEquipCT && (
-                      <button
-                        type="button"
-                        onClick={() => setPendingSide("CT")}
-                        className={cn(
-                          "rounded-xl px-3 py-3 text-sm font-semibold transition-all",
-                          teamPillClass("CT", pendingSide === "CT"),
-                        )}
-                      >
-                        CT
-                      </button>
-                    )}
-                    {canEquipT && (
-                      <button
-                        type="button"
-                        onClick={() => setPendingSide("T")}
-                        className={cn(
-                          "rounded-xl px-3 py-3 text-sm font-semibold transition-all",
-                          teamPillClass("T", pendingSide === "T"),
-                        )}
-                      >
-                        TR
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setPendingSide("both")}
-                      className={cn(
-                        "rounded-xl px-3 py-3 text-sm font-semibold transition-all",
-                        pendingSide === "both"
-                          ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground"
-                          : chipInactiveHoverClass,
-                      )}
-                    >
-                      {t("teamBothShort")}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className={cn("rounded-xl p-4", surfaceSubtleClass)}>
-                  <p className="text-sm text-muted">
-                    {anyEquipped
-                      ? canEquipT
-                        ? t("equipSideHintT")
-                        : t("equipSideHintCT")
-                      : t("workspaceEquipHint")}
-                  </p>
-                  {!anyEquipped && (
-                    <p className="mt-2 text-xs font-medium text-primary">
-                      {pendingSideLabel}
-                    </p>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-2 pt-3 sm:px-6 lg:px-6">
+          {tab === "skins" ? (
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <div className="relative shrink-0 pb-2">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                <input
+                  className={cn(
+                    "w-full rounded-xl py-2 pl-10 pr-3 text-sm",
+                    surfaceInputClass,
                   )}
-                </div>
-              )}
-
-              {anyEquipped && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  disabled={busy ? true : undefined}
-                  onClick={async () => {
-                    const side: EquipSide =
-                      skin.equippedT && skin.equippedCT
-                        ? "both"
-                        : skin.equippedT
-                          ? "T"
-                          : "CT";
-                    await onUnequip(side);
+                  placeholder={t("searchPlaceholder")}
+                  value={skinPickerSearch}
+                  onChange={(e) => {
+                    setSkinPickerSearch(e.target.value);
+                    setSkinPickerPage(1);
                   }}
-                >
-                  {busy ? t("unequipping") : t("unequip")}
-                </Button>
+                />
+              </div>
+
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                {skinPickerLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-6 w-6 motion-safe-spin text-muted" />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-2 pb-2">
+                    {skinPickerItems.map((item) => {
+                      const selected = item.catalogSkinId === displaySkin.catalogSkinId;
+                      const equipped = item.equippedT || item.equippedCT;
+                      return (
+                        <button
+                          key={item.catalogSkinId}
+                          type="button"
+                          title={item.name}
+                          onClick={() => selectSkinVariant(item)}
+                          className={cn(
+                            "relative aspect-square overflow-hidden rounded-lg border-2 transition-all",
+                            surfaceSubtleClass,
+                            selected
+                              ? "border-primary ring-2 ring-primary/35"
+                              : "border-border/30 hover:border-primary/40",
+                            !item.owned && "opacity-55",
+                          )}
+                          aria-pressed={selected}
+                        >
+                          {item.imageUrl ? (
+                            <RemoteImage
+                              src={item.imageUrl}
+                              alt=""
+                              fill
+                              sizes="80px"
+                              className="object-contain p-1"
+                            />
+                          ) : (
+                            <div
+                              className={cn(
+                                "h-full w-full bg-linear-to-br opacity-40",
+                                item.accent,
+                              )}
+                            />
+                          )}
+                          {equipped && (
+                            <span
+                              className="absolute inset-x-0 bottom-0 bg-emerald-500/90 py-px text-[8px] font-bold uppercase text-white"
+                              aria-hidden
+                            >
+                              ✓
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                    {skinPickerItems.length === 0 && (
+                      <p className="col-span-full py-6 text-center text-sm text-muted">
+                        {t("noResults")}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {skinPickerTotalPages > 1 && !skinPickerLoading && (
+                <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border/30 pt-2">
+                  <button
+                    type="button"
+                    disabled={skinPickerPage <= 1}
+                    onClick={() => setSkinPickerPage((p) => Math.max(1, p - 1))}
+                    className={cn(
+                      "rounded-lg px-3 py-2 text-xs font-semibold",
+                      chipInactiveHoverClass,
+                      skinPickerPage <= 1 && "opacity-40",
+                    )}
+                  >
+                    {t("stickersPagePrev")}
+                  </button>
+                  <span className="text-xs text-muted">
+                    {t("stickersPageLabel", {
+                      page: skinPickerPage,
+                      total: skinPickerTotalPages,
+                    })}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={skinPickerPage >= skinPickerTotalPages}
+                    onClick={() =>
+                      setSkinPickerPage((p) => Math.min(skinPickerTotalPages, p + 1))
+                    }
+                    className={cn(
+                      "rounded-lg px-3 py-2 text-xs font-semibold",
+                      chipInactiveHoverClass,
+                      skinPickerPage >= skinPickerTotalPages && "opacity-40",
+                    )}
+                  >
+                    {t("stickersPageNext")}
+                  </button>
+                </div>
               )}
             </div>
           ) : (
-            <div>
-              {!skin.owned ? (
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              {!displaySkin.owned ? (
                 <div className={cn("rounded-xl p-4 text-center", surfaceSubtleClass)}>
                   <Lock className="mx-auto h-6 w-6 text-muted" aria-hidden />
                   <p className="mt-2 text-sm text-muted">{t("equipUnavailable")}</p>
@@ -557,59 +700,35 @@ export function SkinWorkspace({
                   <p className="text-sm text-muted">{t("stickersPlanRequired")}</p>
                 </div>
               ) : stickerState.loading ? (
-                <div className="flex justify-center py-12">
+                <div className="flex flex-1 items-center justify-center">
                   <Loader2 className="h-8 w-8 motion-safe-spin text-muted" />
                 </div>
               ) : (
                 <>
-                  {canBoth && (
-                    <div className={cn("rounded-xl p-3", surfaceSubtleClass)}>
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-                        {t("stickersTeamLabel")}
-                      </p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {canEquipT && (
-                          <button
-                            type="button"
-                            onClick={() => setStickerScope("T")}
-                            className={teamPillClass("T", stickerScope === "T")}
-                          >
-                            TR
-                          </button>
-                        )}
-                        {canEquipCT && (
-                          <button
-                            type="button"
-                            onClick={() => setStickerScope("CT")}
-                            className={teamPillClass("CT", stickerScope === "CT")}
-                          >
-                            CT
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => setStickerScope("both")}
-                          className={cn(
-                            "rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
-                            stickerScope === "both"
-                              ? "bg-primary text-primary-foreground"
-                              : chipInactiveHoverClass,
-                          )}
-                        >
-                          {t("teamBothShort")}
-                        </button>
-                      </div>
-                      {stickerScope === "both" && (
-                        <p className="mt-2 text-xs text-muted">{t("stickersEditBothHint")}</p>
-                      )}
+                  {(canBoth || canEquipT || canEquipCT) && (
+                    <div className="shrink-0 pb-3">
+                      <TeamScopePicker
+                        value={stickerScope}
+                        onChange={handleStickerScopeChange}
+                        canT={canEquipT}
+                        canCT={canEquipCT}
+                        canBoth={canBoth}
+                        label={t("stickersTeamLabel")}
+                        labels={{
+                          t: "TR",
+                          ct: "CT",
+                          both: t("teamBothShort"),
+                        }}
+                        hintBoth={t("stickersEditBothHint")}
+                      />
                     </div>
                   )}
 
-                  <div className="relative mt-3">
+                  <div className="relative shrink-0 pb-2">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
                     <input
                       className={cn(
-                        "w-full rounded-xl py-2.5 pl-10 pr-4 text-sm",
+                        "w-full rounded-xl py-2 pl-10 pr-3 text-sm",
                         surfaceInputClass,
                       )}
                       placeholder={t("stickersSearchPlaceholder")}
@@ -619,7 +738,7 @@ export function SkinWorkspace({
                   </div>
 
                   {stickerState.activeSlot !== null && (
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <div className="flex shrink-0 flex-wrap items-center gap-2 pb-2">
                       <p className="text-xs font-medium text-primary">
                         {t("stickersSlotPicker", { slot: stickerState.activeSlot + 1 })}
                       </p>
@@ -635,48 +754,51 @@ export function SkinWorkspace({
                     </div>
                   )}
 
-                  {stickerState.pickerLoading ? (
-                    <div className="flex justify-center py-10">
-                      <Loader2 className="h-6 w-6 motion-safe-spin text-muted" />
-                    </div>
-                  ) : (
-                    <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4">
-                      {stickerState.pickerItems.map((item) => {
-                        const compatible = stickerState.isPickerStickerCompatible(item);
-                        const isSelected =
-                          compatible &&
-                          item.defIndex > 0 &&
-                          item.defIndex === selectedStickerDefIndex;
-                        return (
-                          <StickerPickerTile
-                            key={item.id}
-                            name={item.name}
-                            imageUrl={item.imageUrl}
-                            selected={isSelected}
-                            compatible={compatible}
-                            lockTitle={stickerState.stickerLockLabel(item.incompatibleReason)}
-                            onSelect={() =>
-                              stickerState.selectSticker(
-                                item.defIndex,
-                                item.name,
-                                stickerState.activeSlot ?? 0,
-                                item.imageUrl,
-                                item.incompatibleReason,
-                              )
-                            }
-                          />
-                        );
-                      })}
-                      {stickerState.pickerItems.length === 0 && (
-                        <p className="col-span-full py-8 text-center text-sm text-muted">
-                          {t("stickersNoResults")}
-                        </p>
-                      )}
-                    </div>
-                  )}
+                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                    {stickerState.pickerLoading ? (
+                      <div className="flex justify-center py-8">
+                        <Loader2 className="h-6 w-6 motion-safe-spin text-muted" />
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-4 gap-2 pb-2">
+                        {stickerState.pickerItems.map((item) => {
+                          const compatible = stickerState.isPickerStickerCompatible(item);
+                          const isSelected =
+                            compatible &&
+                            item.defIndex > 0 &&
+                            item.defIndex === selectedStickerDefIndex;
+                          return (
+                            <StickerPickerTile
+                              key={item.id}
+                              name={item.name}
+                              imageUrl={item.imageUrl}
+                              selected={isSelected}
+                              compatible={compatible}
+                              lockTitle={stickerState.stickerLockLabel(item.incompatibleReason)}
+                              sizeClass="max-h-14 max-w-14"
+                              onSelect={() =>
+                                stickerState.selectSticker(
+                                  item.defIndex,
+                                  item.name,
+                                  stickerState.activeSlot ?? 0,
+                                  item.imageUrl,
+                                  item.incompatibleReason,
+                                )
+                              }
+                            />
+                          );
+                        })}
+                        {stickerState.pickerItems.length === 0 && (
+                          <p className="col-span-full py-6 text-center text-sm text-muted">
+                            {t("stickersNoResults")}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
                   {stickerState.pickerTotalPages > 1 && !stickerState.pickerLoading && (
-                    <div className="mt-4 flex items-center justify-between gap-2">
+                    <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border/30 pt-2">
                       <button
                         type="button"
                         disabled={stickerState.pickerPage <= 1}
@@ -684,7 +806,7 @@ export function SkinWorkspace({
                           stickerState.goToPickerPage(stickerState.pickerPage - 1)
                         }
                         className={cn(
-                          "rounded-lg px-3 py-1.5 text-xs font-semibold",
+                          "rounded-lg px-3 py-2 text-xs font-semibold",
                           chipInactiveHoverClass,
                           stickerState.pickerPage <= 1 && "opacity-40",
                         )}
@@ -706,7 +828,7 @@ export function SkinWorkspace({
                           stickerState.goToPickerPage(stickerState.pickerPage + 1)
                         }
                         className={cn(
-                          "rounded-lg px-3 py-1.5 text-xs font-semibold",
+                          "rounded-lg px-3 py-2 text-xs font-semibold",
                           chipInactiveHoverClass,
                           stickerState.pickerPage >= stickerState.pickerTotalPages &&
                             "opacity-40",
@@ -722,12 +844,66 @@ export function SkinWorkspace({
           )}
             </div>
 
-            <div className="shrink-0 border-t border-border/40 px-4 py-4 sm:px-6 lg:px-8">
+            <div className="shrink-0 border-t border-border/40 px-4 py-3 sm:px-6 lg:px-8">
+              {!displaySkin.owned ? (
+                <p className="mb-3 text-center text-xs text-muted">{t("equipUnavailable")}</p>
+              ) : (
+                <div className="mb-3 space-y-2">
+                  {canBoth ? (
+                    <TeamScopePicker
+                      value={pendingSide}
+                      onChange={setPendingSide}
+                      canT={canEquipT}
+                      canCT={canEquipCT}
+                      canBoth={canBoth}
+                      label={t("workspaceSide")}
+                      labels={{
+                        t: "TR",
+                        ct: "CT",
+                        both: t("teamBothShort"),
+                      }}
+                      hintBoth={t("equipSideHint")}
+                      size="sm"
+                    />
+                  ) : (
+                    <p className="text-xs text-muted">
+                      {anyEquipped
+                        ? canEquipT
+                          ? t("equipSideHintT")
+                          : t("equipSideHintCT")
+                        : t("workspaceEquipHint")}
+                      {!anyEquipped && (
+                        <span className="ml-1 font-medium text-primary">{pendingSideLabel}</span>
+                      )}
+                    </p>
+                  )}
+                  {anyEquipped && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      disabled={busy ? true : undefined}
+                      onClick={async () => {
+                        const side: EquipSide =
+                          displaySkin.equippedT && displaySkin.equippedCT
+                            ? "both"
+                            : displaySkin.equippedT
+                              ? "T"
+                              : "CT";
+                        await onUnequip(side);
+                      }}
+                    >
+                      {busy ? t("unequipping") : t("unequip")}
+                    </Button>
+                  )}
+                </div>
+              )}
               <Button
                 type="button"
                 variant="primary"
                 className="w-full font-display text-sm uppercase tracking-wider"
-                disabled={busy || (!skin.owned && !anyEquipped) ? true : undefined}
+                disabled={busy || !displaySkin.owned ? true : undefined}
                 onClick={handleSave}
               >
                 {busy ? t("workspaceSaving") : t("workspaceSaveLoadout")}
