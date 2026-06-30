@@ -118,6 +118,30 @@ function mapMismatchWarning(expectedMap: string, actualMap: string | null): stri
   return `Servidor respondeu, mas o mapa continua ${formatMapLabel(actualMap)} em vez de ${formatMapLabel(expectedMap)}. Verifique RCON/senha na API CS:GO da VPS.`;
 }
 
+/** Se a API falhou no RCON mas o jogo responde na query UDP, trata como sucesso. */
+async function recoverFromLiveQuery(
+  server: CsgoGameServer,
+  map: string,
+  apiError: string,
+): Promise<ServerControlResult | null> {
+  const online = await waitUntilOnline(server.host, server.port, 25_000);
+  if (!online) return null;
+
+  const verify = await verifyMap(server.host, server.port, map);
+  return {
+    ok: true,
+    message: verify.matched
+      ? `Servidor online em ${formatMapLabel(map)} (${server.host}:${server.port}).`
+      : `Servidor online em ${server.host}:${server.port}.`,
+    warning: verify.matched
+      ? `RCON indisponível — operação confirmada via query do jogo. ${apiError.slice(0, 120)}`
+      : [mapMismatchWarning(map, verify.actualMap), apiError.slice(0, 120)].join(" "),
+    server,
+    expectedMap: map,
+    actualMap: verify.actualMap,
+  };
+}
+
 async function tryRconShutdown(serverId: string, host: string, port: number): Promise<boolean> {
   const base = await resolveCsgoServerBackend(serverId);
   if (!base) return false;
@@ -142,6 +166,7 @@ async function invokeApiStop(serverId: string): Promise<CsgoGameServer> {
   const base = await getServerApiBase(serverId);
   return csgoBackendFetchAt<CsgoGameServer>(`/api/servers/${serverId}/stop`, base, {
     method: "POST",
+    timeoutMs: 30_000,
   });
 }
 
@@ -236,6 +261,7 @@ export async function startCsgoServer(
     const server = await csgoBackendFetchAt<CsgoGameServer>(`/api/servers/${serverId}/start`, base, {
       method: "POST",
       body: { map },
+      timeoutMs: 50_000,
     });
 
     const online = await waitUntilOnline(server.host, server.port, START_TIMEOUT_MS);
@@ -269,6 +295,8 @@ export async function startCsgoServer(
     };
   } catch (err) {
     const message = err instanceof CsgoBackendError ? err.message : "Falha ao iniciar servidor.";
+    const recovered = await recoverFromLiveQuery(before, map, message);
+    if (recovered) return recovered;
     return { ok: false, message };
   }
 }
@@ -359,6 +387,17 @@ export async function changeCsgoServerMap(serverId: string, map: string): Promis
   if (live.online) {
     const rconAttempt = await tryRconChangeMap(serverId, server, map);
     if (rconAttempt.ok) return rconAttempt;
+
+    const afterRcon = await verifyMap(server.host, server.port, map);
+    if (afterRcon.matched) {
+      return {
+        ok: true,
+        message: `Mapa alterado para ${formatMapLabel(map)}.`,
+        server,
+        expectedMap: map,
+        actualMap: afterRcon.actualMap,
+      };
+    }
   }
 
   const stopped = await stopCsgoServer(serverId);
@@ -372,7 +411,13 @@ export async function changeCsgoServerMap(serverId: string, map: string): Promis
     return stopped;
   }
 
-  return startCsgoServer(serverId, map, { afterStop: true });
+  const started = await startCsgoServer(serverId, map, { afterStop: true });
+  if (started.ok) return started;
+
+  const recovered = await recoverFromLiveQuery(server, map, started.message);
+  if (recovered) return recovered;
+
+  return started;
 }
 
 export async function registerCsgoServer(input: RegisterCsgoServerInput): Promise<ServerControlResult> {
@@ -385,9 +430,10 @@ export async function registerCsgoServer(input: RegisterCsgoServerInput): Promis
         port: input.port,
         rconPort: input.rconPort,
         rconPassword: input.rconPassword,
-        csgoDir: input.csgoDir,
+        csgoDir: input.csgoDir?.trim() || "/home/csgo/server",
         tickrate: input.tickrate ?? 128,
         pool: input.pool ?? "public",
+        screenSession: `csgo-${input.name.toLowerCase().replace(/\s+/g, "-")}-${input.port}`,
       },
     });
 
@@ -400,6 +446,36 @@ export async function registerCsgoServer(input: RegisterCsgoServerInput): Promis
     const message = err instanceof CsgoBackendError ? err.message : "Falha ao registrar servidor.";
     return { ok: false, message };
   }
+}
+
+export async function registerAndStartCsgoServer(
+  input: RegisterCsgoServerInput & { map?: string },
+): Promise<ServerControlResult> {
+  const registered = await registerCsgoServer(input);
+  if (!registered.ok || !registered.server) {
+    return registered;
+  }
+
+  const map = input.map?.trim() || "de_dust2";
+  const started = await startCsgoServer(registered.server.id, map, { afterStop: true });
+
+  if (!started.ok) {
+    return {
+      ok: false,
+      message: `Registrado como ${registered.server.name}, mas falhou ao subir: ${started.message}`,
+      warning: started.warning,
+      server: registered.server,
+    };
+  }
+
+  return {
+    ok: true,
+    message: started.message,
+    warning: started.warning,
+    server: started.server ?? registered.server,
+    expectedMap: map,
+    actualMap: started.actualMap,
+  };
 }
 
 export async function updateCsgoServerMetadata(

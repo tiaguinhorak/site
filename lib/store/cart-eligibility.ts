@@ -11,6 +11,13 @@ export async function validateAddToCart(
   item: StoreItemWithRewards,
   cartRows: { storeItemId: string; quantity: number }[],
 ): Promise<void> {
+  if (item.coinShopOnly) {
+    throw new CsgoApiError(
+      "Este item só pode ser comprado com moedas na Loja de Moedas.",
+      409,
+    );
+  }
+
   await validatePurchaseEligibility(userId, item);
 
   const inCart = cartRows.find((row) => row.storeItemId === item.id);

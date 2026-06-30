@@ -53,6 +53,7 @@ type StoreItem = {
   priceCents: number;
   originalCents: number | null;
   coinPrice: number | null;
+  coinShopOnly: boolean;
   badge: string;
   description: string;
   accent: string;
@@ -90,6 +91,7 @@ const emptyForm: {
   featured: boolean;
   sortOrder: string;
   maxPerUser: string;
+  coinShopOnly: boolean;
 } = {
   name: "",
   type: STORE_TYPE_PRESETS[0],
@@ -106,6 +108,7 @@ const emptyForm: {
   featured: false,
   sortOrder: "0",
   maxPerUser: "",
+  coinShopOnly: false,
 };
 
 export function AdminStoreSection() {
@@ -156,6 +159,7 @@ export function AdminStoreSection() {
       featured: item.featured,
       sortOrder: String(item.sortOrder),
       maxPerUser: item.maxPerUser != null ? String(item.maxPerUser) : "",
+      coinShopOnly: item.coinShopOnly,
     });
     setError(null);
     setSuccess(null);
@@ -181,6 +185,7 @@ export function AdminStoreSection() {
       featured: form.featured,
       sortOrder: Number(form.sortOrder),
       maxPerUser: form.maxPerUser ? Number(form.maxPerUser) : null,
+      coinShopOnly: form.coinShopOnly,
     };
     const result = editing
       ? await secureApi<{ ok: true; item: StoreItem }>(`/api/admin/store/${editing.id}`, {
@@ -299,6 +304,7 @@ export function AdminStoreSection() {
                           </p>
                           <p className="truncate text-[10px] text-muted">
                             {item.rewards?.length ?? 0} recomp. · {item.badge}
+                            {item.coinShopOnly ? " · loja moedas" : ""}
                             {!item.enabled ? " · inativo" : ""}
                           </p>
                         </div>
@@ -438,6 +444,23 @@ export function AdminStoreSection() {
               onChange={(e) => setForm({ ...form, coinPrice: e.target.value })}
               placeholder="Não vendável por moedas"
             />
+            <div className="sm:col-span-2">
+              <label className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={form.coinShopOnly}
+                  onChange={(e) => setForm({ ...form, coinShopOnly: e.target.checked })}
+                />
+                <span>
+                  <span className="font-semibold text-foreground">Exclusivo da Loja de Moedas</span>
+                  <span className="mt-0.5 block text-xs text-muted">
+                    Não aparece na loja em R$ nem no carrinho. Exige preço em moedas. Skins, facas,
+                    agentes e pacotes configurados nas recompensas.
+                  </span>
+                </span>
+              </label>
+            </div>
             <Input
               label="Ordem"
               type="number"

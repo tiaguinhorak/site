@@ -33,6 +33,7 @@ export function enrichUserLobbyRoom(room: SerializedLobbyRoom): LobbyRoomEnriche
       avatarUrl: member.avatarUrl,
       avatarInitials: member.avatarInitials,
       steamVerified: member.steamVerified,
+      customization: member.customization,
     };
   });
 

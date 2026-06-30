@@ -26,7 +26,10 @@ import type {
   RankedTeamConfigInput,
 } from "@/lib/ranked/party-shared";
 import { hasRankedSubscription } from "@/lib/ranked";
+import { assertNotSmurfBlocked } from "@/lib/anti-smurf/service";
 import { logRankedPartyActivity } from "@/lib/ranked/party-activity";
+import { assertRankedSmurfEligible } from "@/lib/anti-smurf/service";
+import { serializeProfileCustomization } from "@/lib/profile/serialize-customization";
 
 import { RankedPartyError } from "@/lib/errors/domain";
 
@@ -43,6 +46,23 @@ export const partyInclude = {
       steamAvatarUrl: true,
       plan: true,
       steamLinkedAt: true,
+      profileBannerUrl: true,
+      profileBannerMediaType: true,
+      profileBannerModerationStatus: true,
+      profileBackgroundId: true,
+      profileBackgroundColor: true,
+      profileFrameId: true,
+      profileFrameColor: true,
+      profileAccentColor: true,
+      profileThemeId: true,
+      profileThemeColor: true,
+      profileBorderId: true,
+      profileBorderColor: true,
+      profileShowPlanBadge: true,
+      profileShowAchievements: true,
+      avatarMediaType: true,
+      avatarModerationStatus: true,
+      isAdmin: true,
     },
   },
   members: {
@@ -56,6 +76,24 @@ export const partyInclude = {
           avatarUrl: true,
           avatarPreset: true,
           steamAvatarUrl: true,
+          plan: true,
+          profileBannerUrl: true,
+          profileBannerMediaType: true,
+          profileBannerModerationStatus: true,
+          profileBackgroundId: true,
+          profileBackgroundColor: true,
+          profileFrameId: true,
+          profileFrameColor: true,
+          profileAccentColor: true,
+          profileThemeId: true,
+          profileThemeColor: true,
+          profileBorderId: true,
+          profileBorderColor: true,
+          profileShowPlanBadge: true,
+          profileShowAchievements: true,
+          avatarMediaType: true,
+          avatarModerationStatus: true,
+          isAdmin: true,
         },
       },
     },
@@ -85,6 +123,7 @@ function serializeMember(
     elo: member.user.elo,
     avatarUrl: resolveUserAvatarUrl(member.user),
     avatarInitials: getAvatarInitials("", "", member.user.nickname),
+    customization: serializeProfileCustomization(member.user),
     slotIndex: member.slotIndex,
     isLeader: isLeaderMember,
     isYou: viewerUserId === member.userId,
@@ -214,6 +253,7 @@ async function assertRankedEligible(userId: string) {
   if (!hasRankedSubscription(user.plan.toLowerCase() as "free" | "premium" | "elite")) {
     throw new RankedPartyError("subscriptionRequired", 403);
   }
+  await assertRankedSmurfEligible(userId);
 }
 
 export async function getPartyForUser(userId: string) {

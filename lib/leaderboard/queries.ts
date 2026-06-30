@@ -1,6 +1,7 @@
 import type { Plan, Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { resolveUserAvatarUrl } from "@/lib/profile/avatar";
+import { serializeProfileCustomization } from "@/lib/profile/serialize-customization";
 import { LEADERBOARD_PARTICIPANT_WHERE } from "@/lib/leaderboard/sync-ranks-core";
 import type {
   LeaderboardPageResult,
@@ -36,6 +37,23 @@ const USER_SELECT = {
   winRate: true,
   matches: true,
   level: true,
+  profileBannerUrl: true,
+  profileBannerMediaType: true,
+  profileBannerModerationStatus: true,
+  profileBackgroundId: true,
+  profileBackgroundColor: true,
+  profileFrameId: true,
+  profileFrameColor: true,
+  profileAccentColor: true,
+  profileThemeId: true,
+  profileThemeColor: true,
+  profileBorderId: true,
+  profileBorderColor: true,
+  profileShowPlanBadge: true,
+  profileShowAchievements: true,
+  avatarMediaType: true,
+  avatarModerationStatus: true,
+  isAdmin: true,
 } satisfies Prisma.UserSelect;
 
 type LeaderboardUserRow = Prisma.UserGetPayload<{ select: typeof USER_SELECT }>;
@@ -85,6 +103,7 @@ function serializeLeaderboardUser(
     utilityDamage: user.rankedUtilityDamage,
     awpKills: user.rankedAwpKills,
     level: user.level,
+    customization: serializeProfileCustomization(user),
   };
 }
 

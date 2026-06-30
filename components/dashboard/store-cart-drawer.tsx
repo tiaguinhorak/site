@@ -101,6 +101,14 @@ export function StoreCartDrawer() {
   }, [open, load]);
 
   useEffect(() => {
+    const onCartUpdate = () => {
+      if (open) void load();
+    };
+    window.addEventListener("store-cart-updated", onCartUpdate);
+    return () => window.removeEventListener("store-cart-updated", onCartUpdate);
+  }, [open, load]);
+
+  useEffect(() => {
     const onOpen = () => void load();
     window.addEventListener("store-cart-open", onOpen);
     return () => window.removeEventListener("store-cart-open", onOpen);

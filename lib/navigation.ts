@@ -222,6 +222,13 @@ export const adminNav = [
     description: "Banimentos, advertências e histórico de moderação.",
   },
   {
+    label: "GIFs de perfil",
+    href: "/admin/moderacao-gifs",
+    icon: "ImageIcon",
+    title: "Moderação de GIFs",
+    description: "Aprovar ou rejeitar avatares animados enviados por usuários Elite.",
+  },
+  {
     label: "Notificações",
     href: "/admin/notificacoes",
     icon: "Bell",
@@ -301,25 +308,25 @@ export const adminNavGroups: AdminNavGroup[] = [
     id: "community",
     label: "Comunidade",
     icon: "Users",
-    items: [adminNav[1], adminNav[2], adminNav[3]],
+    items: [adminNav[1], adminNav[2], adminNav[3], adminNav[4]],
   },
   {
     id: "content",
     label: "Conteúdo",
     icon: "Newspaper",
-    items: [adminNav[7], adminNav[8], adminNav[9]],
+    items: [adminNav[8], adminNav[9], adminNav[10]],
   },
   {
     id: "infra",
     label: "Infra",
     icon: "Server",
-    items: [adminNav[4], adminNav[5], adminNav[6]],
+    items: [adminNav[5], adminNav[6], adminNav[7]],
   },
   {
     id: "system",
     label: "Sistema",
     icon: "ScrollText",
-    items: [adminNav[10]],
+    items: [adminNav[11]],
   },
 ];
 

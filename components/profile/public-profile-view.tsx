@@ -18,65 +18,63 @@ import {
 import { useTranslations } from "next-intl";
 import { SteamIcon } from "@/components/ui/icons";
 import { PublicProfileShareButton } from "@/components/profile/public-profile-share-button";
+import { ProfileCustomizationHero } from "@/components/profile/profile-customization-hero";
+import { ProfileDisplayName } from "@/components/profile/profile-display-name";
+import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
+import { PlanBadgeDisplay } from "@/components/profile/plan-badge";
+import { EloRankBadge } from "@/components/ranked/elo-rank-badge";
 import type { PublicPlayerProfile } from "@/lib/profile/serialize-public";
+import type { PublicProfileLabels } from "@/lib/profile/public-profile-labels.shared";
+import { formatPublicProfileBadge } from "@/lib/profile/public-profile-labels.shared";
 import { cn } from "@/lib/utils";
 
-const planBadge = {
-  free: "bg-muted/20 text-muted",
-  premium: "bg-primary/20 text-primary",
-  elite: "bg-amber-500/20 text-amber-400",
-};
+export function PublicProfileView({
+  player,
+  labels,
+}: {
+  player: PublicPlayerProfile;
+  labels: PublicProfileLabels;
+}) {
+  const custom = player.customization;
+  const planLabel =
+    player.plan === "elite"
+      ? labels.planElite
+      : player.plan === "premium"
+        ? labels.planPremium
+        : labels.planFree;
+  const rankBadgeText = formatPublicProfileBadge(labels.rankBadgeTemplate, {
+    rank: player.rank,
+  });
+  const levelBadgeText = formatPublicProfileBadge(labels.levelBadgeTemplate, {
+    level: player.level,
+  });
 
-const planLabels = {
-  free: "Free",
-  premium: "Premium",
-  elite: "Elite",
-};
-
-export function PublicProfileView({ player }: { player: PublicPlayerProfile }) {
-  const t = useTranslations("publicProfile");
   return (
     <div className="space-y-6">
-      {/* Hero */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="overflow-hidden rounded-card glass-strong"
       >
-        <div className="relative p-6 sm:p-8">
-          <div
-            className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full opacity-40 blur-3xl"
-            style={{ background: "var(--glow-1)" }}
-            aria-hidden
-          />
-
-          <div className="relative flex flex-col gap-6 sm:flex-row sm:items-start">
-            <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[linear-gradient(135deg,var(--primary-soft),var(--primary))] font-display text-4xl font-bold text-white shadow-lg ring-2 ring-[color-mix(in_srgb,var(--primary)_30%,transparent)]">
-              {player.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={player.avatarUrl}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                player.nickname.slice(0, 2)
-              )}
-            </div>
+        <ProfileCustomizationHero customization={custom} ownerPreview={false} priority>
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+            <UserProfileAvatar
+              avatarUrl={player.avatarUrl}
+              nickname={player.nickname}
+              customization={custom}
+              size="lg"
+              priority
+            />
 
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="font-display text-3xl font-bold text-foreground sm:text-4xl">
-                  {player.nickname}
-                </h1>
-                <span
-                  className={cn(
-                    "rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider",
-                    planBadge[player.plan],
-                  )}
-                >
-                  {planLabels[player.plan]}
-                </span>
+                <ProfileDisplayName
+                  nickname={player.nickname}
+                  plan={player.plan}
+                  customization={custom}
+                  planLabel={planLabel}
+                  nameClassName="font-display text-3xl font-bold text-foreground sm:text-4xl"
+                  badgeSize="md"
+                />
                 {player.profileTag ? (
                   <span className="rounded-full bg-violet-500/20 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-violet-300">
                     [{player.profileTag}]
@@ -94,32 +92,45 @@ export function PublicProfileView({ player }: { player: PublicPlayerProfile }) {
                   {player.bio}
                 </p>
               ) : (
-                <p className="mt-4 text-sm text-muted">{t("noBio")}</p>
+                <p className="mt-4 text-sm text-muted">{labels.noBio}</p>
               )}
 
               <div className="mt-5 flex flex-wrap items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] px-3 py-1 text-sm font-medium text-foreground">
-                  <Trophy className="h-4 w-4 text-primary" />
-                  {t("rankBadge", { rank: player.rank })}
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] px-3 py-1 text-sm font-medium text-foreground"
+                  data-profile-accent-bg
+                >
+                  <Trophy className="h-4 w-4 text-primary" data-profile-accent />
+                  {rankBadgeText}
                 </span>
+                <EloRankBadge
+                  elo={player.elo}
+                  rankName={player.eloRankName}
+                  groupName={player.eloGroupName}
+                  size="md"
+                />
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] px-3 py-1 text-sm font-medium text-foreground">
-                  <Medal className="h-4 w-4 text-primary" />
-                  {player.elo} ELO
+                  {levelBadgeText}
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] px-3 py-1 text-sm font-medium text-foreground">
-                  {t("levelBadge", { level: player.level })}
-                </span>
-                <PublicProfileShareButton nickname={player.nickname} />
+                <PublicProfileShareButton
+                  nickname={player.nickname}
+                  labels={{
+                    shareProfile: labels.shareProfile,
+                    shareCopied: labels.shareCopied,
+                    shareCopiedShort: labels.shareCopiedShort,
+                    shareFailed: labels.shareFailed,
+                  }}
+                />
                 {player.anticheatInstalled && (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-sm font-medium text-emerald-400">
                     <ShieldCheck className="h-4 w-4" />
-                    {t("anticheatVerified")}
+                    {labels.anticheatVerified}
                   </span>
                 )}
               </div>
             </div>
           </div>
-        </div>
+        </ProfileCustomizationHero>
       </motion.div>
 
       {/* Stats */}
@@ -130,15 +141,15 @@ export function PublicProfileView({ player }: { player: PublicPlayerProfile }) {
         className="rounded-card glass-strong p-6 sm:p-8"
       >
         <h2 className="font-display text-sm font-bold uppercase tracking-wider text-muted">
-          {t("statsTitle")}
+          {labels.statsTitle}
         </h2>
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
           {[
-            { label: t("kd"), value: player.kd.toFixed(2), icon: Target },
-            { label: t("matches"), value: player.matches, icon: Medal },
-            { label: t("winRate"), value: `${player.winRate}%`, icon: TrendingUp },
+            { label: labels.kd, value: player.kd.toFixed(2), icon: Target },
+            { label: labels.matches, value: player.matches, icon: Medal },
+            { label: labels.winRate, value: `${player.winRate}%`, icon: TrendingUp },
             {
-              label: t("record"),
+              label: labels.record,
               value: `${player.rankedWins}W / ${player.rankedLosses}L`,
               icon: Trophy,
             },
@@ -163,21 +174,27 @@ export function PublicProfileView({ player }: { player: PublicPlayerProfile }) {
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           <div className="rounded-xl glass p-5">
-            <p className="text-xs uppercase tracking-wider text-muted">{t("globalPosition")}</p>
+            <p className="text-xs uppercase tracking-wider text-muted">{labels.globalPosition}</p>
             <p className="mt-2 font-display text-4xl font-bold text-gradient">
               {player.rank > 0 ? `#${player.rank}` : "—"}
             </p>
-            <p className="mt-1 text-sm text-muted">{t("currentSeason")}</p>
+            <p className="mt-1 text-sm text-muted">{labels.currentSeason}</p>
           </div>
           <div className="rounded-xl glass p-5">
-            <p className="text-xs uppercase tracking-wider text-muted">{t("eloRating")}</p>
-            <p className="mt-2 font-display text-4xl font-bold text-foreground">
-              {player.elo}
-            </p>
-            <p className="mt-1 text-sm text-muted">{t("eloLabel")}</p>
+            <p className="text-xs uppercase tracking-wider text-muted">{labels.eloRating}</p>
+            <div className="mt-3">
+              <EloRankBadge
+                elo={player.elo}
+                rankName={player.eloRankName}
+                groupName={player.eloGroupName}
+                size="lg"
+                showNumeric
+              />
+            </div>
+            <p className="mt-2 text-sm text-muted">{labels.eloLabel}</p>
           </div>
           <div className="rounded-xl glass p-5">
-            <p className="text-xs uppercase tracking-wider text-muted">{t("competitiveScore")}</p>
+            <p className="text-xs uppercase tracking-wider text-muted">{labels.competitiveScore}</p>
             <p className="mt-2 font-display text-4xl font-bold text-gradient">
               {player.competitivePoints.toLocaleString("pt-BR")}
             </p>
@@ -196,15 +213,15 @@ export function PublicProfileView({ player }: { player: PublicPlayerProfile }) {
         className="rounded-card glass-strong p-6 sm:p-8"
       >
         <h2 className="font-display text-sm font-bold uppercase tracking-wider text-muted">
-          {t("advancedStatsTitle")}
+          {labels.advancedStatsTitle}
         </h2>
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-5">
           {[
-            { label: t("hsPct"), value: `${player.hsPct}%`, icon: Crosshair },
-            { label: t("adr"), value: player.adr.toFixed(1), icon: Flame },
-            { label: t("mvps"), value: player.rankedMvps, icon: Trophy },
-            { label: t("clutches"), value: player.rankedClutches, icon: Zap },
-            { label: t("awpKills"), value: player.rankedAwpKills, icon: Target },
+            { label: labels.hsPct, value: `${player.hsPct}%`, icon: Crosshair },
+            { label: labels.adr, value: player.adr.toFixed(1), icon: Flame },
+            { label: labels.mvps, value: player.rankedMvps, icon: Trophy },
+            { label: labels.clutches, value: player.rankedClutches, icon: Zap },
+            { label: labels.awpKills, value: player.rankedAwpKills, icon: Target },
           ].map((stat) => {
             const Icon = stat.icon;
             return (
@@ -220,18 +237,18 @@ export function PublicProfileView({ player }: { player: PublicPlayerProfile }) {
         </div>
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <div className="rounded-xl glass p-4">
-            <p className="text-xs uppercase tracking-wider text-muted">{t("favoriteWeapon")}</p>
+            <p className="text-xs uppercase tracking-wider text-muted">{labels.favoriteWeapon}</p>
             <p className="mt-2 font-display text-lg font-bold text-foreground">
-              {player.favoriteWeapon ?? t("notAvailable")}
+              {player.favoriteWeapon ?? labels.notAvailable}
             </p>
           </div>
           <div className="rounded-xl glass p-4">
             <p className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-muted">
               <MapPin className="h-3.5 w-3.5" />
-              {t("favoriteMap")}
+              {labels.favoriteMap}
             </p>
             <p className="mt-2 font-display text-lg font-bold text-foreground">
-              {player.favoriteMap ?? t("notAvailable")}
+              {player.favoriteMap ?? labels.notAvailable}
             </p>
           </div>
         </div>
@@ -250,24 +267,26 @@ export function PublicProfileView({ player }: { player: PublicPlayerProfile }) {
               <Crown className="h-5 w-5" />
             </div>
             <div>
-              <p className="font-display text-sm font-bold text-foreground">{t("plan")}</p>
-              <p className="text-sm text-muted">{planLabels[player.plan]}</p>
+              <p className="font-display text-sm font-bold text-foreground">{labels.plan}</p>
+              <p className="text-sm text-muted">
+                <PlanBadgeDisplay plan={player.plan} label={planLabel} size="sm" />
+              </p>
             </div>
           </div>
           <div className="mt-5 space-y-3 border-t border-border pt-5">
             <div className="flex justify-between text-sm">
-              <span className="text-muted">{t("anticheat")}</span>
+              <span className="text-muted">{labels.anticheat}</span>
               <span
                 className={cn(
                   "font-medium",
                   player.anticheatInstalled ? "text-emerald-400" : "text-muted",
                 )}
               >
-                {player.anticheatInstalled ? t("installed") : t("notDetected")}
+                {player.anticheatInstalled ? labels.installed : labels.notDetected}
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted">{t("country")}</span>
+              <span className="text-muted">{labels.country}</span>
               <span className="font-medium text-foreground">
                 {player.countryFlag} {player.countryName}
               </span>
@@ -281,23 +300,23 @@ export function PublicProfileView({ player }: { player: PublicPlayerProfile }) {
               <SteamIcon className="h-5 w-5" />
             </div>
             <div>
-              <p className="font-display text-sm font-bold text-foreground">{t("steam")}</p>
+              <p className="font-display text-sm font-bold text-foreground">{labels.steam}</p>
               <p className="text-sm text-muted">
-                {player.steamPersonaName ? t("linkedAccount") : t("notLinked")}
+                {player.steamPersonaName ? labels.linkedAccount : labels.notLinked}
               </p>
             </div>
           </div>
           {player.steamPersonaName && (
             <div className="mt-5 space-y-3 border-t border-border pt-5">
               <div className="flex justify-between gap-4 text-sm">
-                <span className="text-muted">{t("persona")}</span>
+                <span className="text-muted">{labels.persona}</span>
                 <span className="font-medium text-foreground text-right">
                   {player.steamPersonaName}
                 </span>
               </div>
               {player.steamProfileUrl && (
                 <div className="flex justify-between gap-4 text-sm">
-                  <span className="text-muted">{t("profile")}</span>
+                  <span className="text-muted">{labels.profile}</span>
                   <Link
                     href={player.steamProfileUrl}
                     target="_blank"

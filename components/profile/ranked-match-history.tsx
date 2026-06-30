@@ -8,9 +8,10 @@ import { cn } from "@/lib/utils";
 
 type RankedMatchHistoryProps = {
   nickname: string;
+  limit?: number;
 };
 
-export function RankedMatchHistory({ nickname }: RankedMatchHistoryProps) {
+export function RankedMatchHistory({ nickname, limit = 20 }: RankedMatchHistoryProps) {
   const t = useTranslations("publicProfile");
   const [history, setHistory] = useState<RankedMatchHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,9 +19,12 @@ export function RankedMatchHistory({ nickname }: RankedMatchHistoryProps) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetch(`/api/players/${encodeURIComponent(nickname)}/ranked-history`, {
+    fetch(
+      `/api/players/${encodeURIComponent(nickname)}/ranked-history?limit=${limit}`,
+      {
       credentials: "same-origin",
-    })
+    },
+    )
       .then((res) => (res.ok ? res.json() : { history: [] }))
       .then((data) => {
         if (!cancelled) setHistory(data.history ?? []);
@@ -34,7 +38,7 @@ export function RankedMatchHistory({ nickname }: RankedMatchHistoryProps) {
     return () => {
       cancelled = true;
     };
-  }, [nickname]);
+  }, [nickname, limit]);
 
   if (loading) {
     return (

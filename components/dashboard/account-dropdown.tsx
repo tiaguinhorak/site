@@ -6,11 +6,13 @@ import { useRouter } from "next/navigation";
 import {
   ChevronDown,
   ChevronRight,
+  ExternalLink,
   LogOut,
   Moon,
   Settings,
   Sun,
   UserRound,
+  UserRoundPen,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -21,7 +23,7 @@ import { secureApi } from "@/lib/api/client";
 import { notifyAuthSessionChanged } from "@/lib/auth/auth-events";
 import { useUser } from "@/lib/hooks/use-user";
 import { useTheme } from "@/lib/theme";
-import { AvatarImage } from "@/components/ui/avatar-image";
+import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
 import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +47,12 @@ export function AccountDropdown({ className }: Props) {
   const avatarSrc = user.avatarUrl ?? getDefaultAvatarPresetUrl();
 
   const links = [
-    { href: "/dashboard/perfil", label: t("profile"), icon: UserRound },
+    {
+      href: `/player/${encodeURIComponent(user.nickname)}`,
+      label: t("publicProfile"),
+      icon: ExternalLink,
+    },
+    { href: "/dashboard/perfil", label: t("configureProfile"), icon: UserRoundPen },
     { href: "/dashboard/perfil?tab=notifications", label: t("notificationSettings"), icon: Settings },
   ];
 
@@ -59,9 +66,12 @@ export function AccountDropdown({ className }: Props) {
         aria-expanded={open}
         className="flex items-center gap-2 rounded-xl glass-chip py-1.5 pl-1.5 pr-2.5 transition-colors hover:glow-ring-contained"
       >
-        <div className="flex h-8 w-8 shrink-0 overflow-hidden rounded-lg">
-          <AvatarImage src={avatarSrc} size={32} className="rounded-lg" />
-        </div>
+        <UserProfileAvatar
+          avatarUrl={avatarSrc}
+          nickname={user.nickname}
+          customization={user.customization}
+          size="sm"
+        />
         <span className="hidden max-w-[88px] truncate font-display text-sm font-semibold text-foreground md:block">
           {user.nickname}
         </span>
@@ -80,9 +90,12 @@ export function AccountDropdown({ className }: Props) {
       >
         <div className="border-b border-border/80 p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 overflow-hidden rounded-xl">
-              <AvatarImage src={avatarSrc} size={44} className="rounded-xl" />
-            </div>
+            <UserProfileAvatar
+              avatarUrl={avatarSrc}
+              nickname={user.nickname}
+              customization={user.customization}
+              size="md"
+            />
             <div className="min-w-0">
               <p className="truncate font-display text-sm font-bold text-foreground">
                 {user.nickname}

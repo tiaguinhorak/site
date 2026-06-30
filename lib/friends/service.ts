@@ -3,6 +3,10 @@ import "server-only";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { resolveUserAvatarUrl } from "@/lib/profile/avatar";
+import {
+  serializeProfileCustomization,
+  type PublicProfileCustomization,
+} from "@/lib/profile/serialize-customization";
 import { fetchSteamFriendIds } from "@/lib/steam/friends";
 
 export class FriendError extends Error {
@@ -23,6 +27,23 @@ const FRIEND_USER_SELECT = {
   plan: true,
   level: true,
   elo: true,
+  profileBannerUrl: true,
+  profileBannerMediaType: true,
+  profileBannerModerationStatus: true,
+  profileBackgroundId: true,
+  profileBackgroundColor: true,
+  profileFrameId: true,
+  profileFrameColor: true,
+  profileAccentColor: true,
+  profileThemeId: true,
+  profileThemeColor: true,
+  profileBorderId: true,
+  profileBorderColor: true,
+  profileShowPlanBadge: true,
+  profileShowAchievements: true,
+  avatarMediaType: true,
+  avatarModerationStatus: true,
+  isAdmin: true,
 } satisfies Prisma.UserSelect;
 
 export type FriendUser = {
@@ -33,6 +54,7 @@ export type FriendUser = {
   plan: string;
   level: number;
   elo: number;
+  customization: PublicProfileCustomization | null;
 };
 
 export type FriendRequestView = {
@@ -60,6 +82,7 @@ function serializeFriendUser(user: FriendUserRow): FriendUser {
     plan: user.plan.toLowerCase(),
     level: user.level,
     elo: user.elo,
+    customization: serializeProfileCustomization(user),
   };
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Coins, Flame, Loader2, Package, ShoppingBag, ShoppingCart, X } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -12,7 +12,7 @@ import { secureApi } from "@/lib/api/client";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { StoreRewardsPreview } from "@/components/dashboard/store-rewards-preview";
-import { dispatchStoreCartOpen, dispatchStoreCartUpdated } from "@/lib/hooks/use-store-cart";
+import { dispatchStoreCartOpen, dispatchStoreCartUpdated, useStoreCart } from "@/lib/hooks/use-store-cart";
 
 type StoreProductKind = "SKIN" | "PACKAGE" | "CASE" | "AGENT";
 
@@ -151,6 +151,18 @@ function PurchaseResultModal({
   );
 }
 
+function applyCartState(items: StoreItem[], cartItemIds: Set<string>): StoreItem[] {
+  return items.map((item) => {
+    const inCart = cartItemIds.has(item.id);
+    if (inCart === item.inCart) return item;
+    return {
+      ...item,
+      inCart,
+      canPurchase: !inCart && (item.canPurchase || item.inCart),
+    };
+  });
+}
+
 function StoreItemCard({
   item,
   featured,
@@ -158,6 +170,7 @@ function StoreItemCard({
   addingToCartId,
   onPurchase,
   onAddToCart,
+  shopMode = "brl",
 }: {
   item: StoreItem;
   featured?: boolean;
@@ -165,6 +178,7 @@ function StoreItemCard({
   addingToCartId: string | null;
   onPurchase: (item: StoreItem, currency: "brl" | "coins") => void;
   onAddToCart: (item: StoreItem) => void;
+  shopMode?: "brl" | "coins";
 }) {
   const t = useTranslations("store");
   const confirmPresets = useConfirmPresets();
@@ -176,15 +190,18 @@ function StoreItemCard({
   const hasEnoughCoins = item.coinPrice != null && userCoins >= item.coinPrice;
   const coinPriceLabel = item.coinPrice != null ? item.coinPrice.toLocaleString("pt-BR") : null;
 
-  const statusLabel = item.inCart
-    ? t("inCart")
-    : item.ownedSkin
-      ? t("owned")
-      : item.maxPerUser != null && item.purchaseCount >= item.maxPerUser
-        ? t("limitReached")
-        : !item.canPurchase && item.rewardsPreview.length === 0
-          ? t("unavailable")
-          : null;
+  const statusLabel =
+    shopMode === "brl" && item.inCart
+      ? t("inCart")
+      : item.ownedSkin
+        ? t("owned")
+        : item.maxPerUser != null && item.purchaseCount >= item.maxPerUser
+          ? t("limitReached")
+          : !item.canPurchase && !item.canBuyWithCoins && item.rewardsPreview.length === 0
+            ? t("unavailable")
+            : shopMode === "coins" && !item.canBuyWithCoins
+              ? t("unavailable")
+              : null;
 
   return (
     <motion.article
@@ -259,21 +276,35 @@ function StoreItemCard({
                 {item.description}
               </p>
               <div className="mt-3 flex flex-wrap items-baseline justify-center gap-3 sm:justify-start">
-                {item.originalPrice && (
+                {shopMode === "brl" && item.originalPrice && (
                   <span className="text-base text-muted line-through sm:text-lg">{item.originalPrice}</span>
                 )}
-                <span
-                  className={cn(
-                    "font-display font-bold text-foreground",
-                    featured ? "text-2xl sm:text-3xl" : "text-lg sm:text-xl",
-                  )}
-                >
-                  {item.priceCents === 0 ? t("free") : item.price}
-                </span>
+                {shopMode === "brl" && (
+                  <span
+                    className={cn(
+                      "font-display font-bold text-foreground",
+                      featured ? "text-2xl sm:text-3xl" : "text-lg sm:text-xl",
+                    )}
+                  >
+                    {item.priceCents === 0 ? t("free") : item.price}
+                  </span>
+                )}
                 {coinPriceLabel && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/15 px-2.5 py-1 text-sm font-semibold text-amber-300">
-                    <Coins className="h-4 w-4" />
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full bg-amber-400/15 px-2.5 py-1 font-semibold text-amber-300",
+                      shopMode === "coins"
+                        ? featured
+                          ? "text-xl sm:text-2xl"
+                          : "text-base sm:text-lg"
+                        : "text-sm",
+                    )}
+                  >
+                    <Coins className={cn("h-4 w-4", shopMode === "coins" && "h-5 w-5")} />
                     {coinPriceLabel}
+                    {shopMode === "coins" && (
+                      <span className="text-sm font-medium opacity-80">{t("coinsLabel")}</span>
+                    )}
                   </span>
                 )}
               </div>
@@ -289,51 +320,55 @@ function StoreItemCard({
               featured && "lg:w-auto lg:min-w-[220px] lg:shrink-0",
             )}
           >
-            <Button
-              type="button"
-              variant="outline"
-              size={featured ? "lg" : "md"}
-              className="w-full"
-              disabled={!item.canPurchase || item.inCart || isAddingToCart || isPurchasing}
-              onClick={() => onAddToCart(item)}
-            >
-              {isAddingToCart ? (
-                <Loader2 className="h-5 w-5 motion-safe-spin" />
-              ) : (
-                <>
-                  <ShoppingCart className="h-4 w-4" />
-                  {t("addToCart")}
-                </>
-              )}
-            </Button>
-            <Button
-              type="button"
-              variant="primary"
-              size={featured ? "lg" : "md"}
-              className="w-full"
-              disabled={!item.canPurchase || isPurchasing || isAddingToCart}
-              confirm={
-                item.canPurchase
-                  ? confirmPresets.purchaseItem(item.name, item.priceCents === 0 ? t("free") : item.price)
-                  : undefined
-              }
-              onClick={() => onPurchase(item, "brl")}
-            >
-              {isPurchasing ? (
-                <Loader2 className="h-5 w-5 motion-safe-spin" />
-              ) : item.productKind === "CASE" ? (
-                t("openCase")
-              ) : (
-                t("buyNow")
-              )}
-            </Button>
+            {shopMode === "brl" && (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size={featured ? "lg" : "md"}
+                  className="w-full"
+                  disabled={!item.canPurchase || item.inCart || isAddingToCart || isPurchasing}
+                  onClick={() => onAddToCart(item)}
+                >
+                  {isAddingToCart ? (
+                    <Loader2 className="h-5 w-5 motion-safe-spin" />
+                  ) : (
+                    <>
+                      <ShoppingCart className="h-4 w-4" />
+                      {t("addToCart")}
+                    </>
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size={featured ? "lg" : "md"}
+                  className="w-full"
+                  disabled={!item.canPurchase || isPurchasing || isAddingToCart}
+                  confirm={
+                    item.canPurchase
+                      ? confirmPresets.purchaseItem(item.name, item.priceCents === 0 ? t("free") : item.price)
+                      : undefined
+                  }
+                  onClick={() => onPurchase(item, "brl")}
+                >
+                  {isPurchasing ? (
+                    <Loader2 className="h-5 w-5 motion-safe-spin" />
+                  ) : item.productKind === "CASE" ? (
+                    t("openCase")
+                  ) : (
+                    t("buyNow")
+                  )}
+                </Button>
+              </>
+            )}
             {item.canBuyWithCoins && coinPriceLabel && (
               <Button
                 type="button"
-                variant="glass"
+                variant={shopMode === "coins" ? "primary" : "glass"}
                 size={featured ? "lg" : "md"}
                 className="w-full"
-                disabled={!hasEnoughCoins || isPurchasing || isAddingToCart}
+                disabled={!hasEnoughCoins || isPurchasing || isAddingToCart || !item.canBuyWithCoins}
                 confirm={
                   hasEnoughCoins
                     ? confirmPresets.purchaseItem(item.name, `${coinPriceLabel} ${t("coinsLabel")}`)
@@ -341,8 +376,14 @@ function StoreItemCard({
                 }
                 onClick={() => onPurchase(item, "coins")}
               >
-                <Coins className="h-4 w-4" />
-                {hasEnoughCoins ? t("buyWithCoins") : t("notEnoughCoins")}
+                {isPurchasing ? (
+                  <Loader2 className="h-5 w-5 motion-safe-spin" />
+                ) : (
+                  <>
+                    <Coins className="h-4 w-4" />
+                    {hasEnoughCoins ? t("buyWithCoins") : t("notEnoughCoins")}
+                  </>
+                )}
               </Button>
             )}
           </div>
@@ -363,27 +404,44 @@ function StoreItemCard({
   );
 }
 
-export function StoreSection() {
+export function StoreSection({ shopMode = "brl" }: { shopMode?: "brl" | "coins" }) {
   const t = useTranslations("store");
   const { refresh } = useUser();
+  const { cartItemIds } = useStoreCart();
   const [items, setItems] = useState<StoreItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [addingToCartId, setAddingToCartId] = useState<string | null>(null);
   const [purchaseResult, setPurchaseResult] = useState<PurchaseResult | null>(null);
 
-  const loadItems = useCallback(() => {
-    setLoading(true);
-    fetch("/api/store", { credentials: "same-origin" })
+  const apiPath = shopMode === "coins" ? "/api/store?coinShop=1" : "/api/store";
+
+  const loadItems = useCallback((options?: { silent?: boolean }) => {
+    if (!options?.silent) setLoading(true);
+    fetch(apiPath, { credentials: "same-origin" })
       .then((r) => r.json())
       .then((data) => setItems(data.items ?? []))
       .catch(() => setItems([]))
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => {
+        if (!options?.silent) setLoading(false);
+      });
+  }, [apiPath]);
 
   useEffect(() => {
     loadItems();
   }, [loadItems]);
+
+  useEffect(() => {
+    if (shopMode !== "brl") return;
+    const onCartUpdate = () => loadItems({ silent: true });
+    window.addEventListener("store-cart-updated", onCartUpdate);
+    return () => window.removeEventListener("store-cart-updated", onCartUpdate);
+  }, [loadItems, shopMode]);
+
+  const displayItems = useMemo(() => {
+    if (shopMode !== "brl") return items;
+    return applyCartState(items, cartItemIds);
+  }, [items, cartItemIds, shopMode]);
 
   async function handleAddToCart(item: StoreItem) {
     if (!item.canPurchase || addingToCartId || purchasingId) return;
@@ -441,17 +499,17 @@ export function StoreSection() {
     );
   }
 
-  if (items.length === 0) {
+  if (displayItems.length === 0) {
     return (
       <section className="rounded-card glass p-8 text-center text-muted">
         <ShoppingBag className="mx-auto h-10 w-10 opacity-50" />
-        <p className="mt-4">{t("empty")}</p>
+        <p className="mt-4">{shopMode === "coins" ? t("coinShopEmpty") : t("empty")}</p>
       </section>
     );
   }
 
-  const featured = items.find((i) => i.featured) ?? items[0];
-  const others = items.filter((i) => i.id !== featured?.id);
+  const featured = displayItems.find((i) => i.featured) ?? displayItems[0];
+  const others = displayItems.filter((i) => i.id !== featured?.id);
 
   return (
     <>
@@ -460,6 +518,7 @@ export function StoreSection() {
           <StoreItemCard
             item={featured}
             featured
+            shopMode={shopMode}
             purchasingId={purchasingId}
             addingToCartId={addingToCartId}
             onPurchase={handlePurchase}
@@ -473,6 +532,7 @@ export function StoreSection() {
               <StoreItemCard
                 key={item.id}
                 item={item}
+                shopMode={shopMode}
                 purchasingId={purchasingId}
                 addingToCartId={addingToCartId}
                 onPurchase={handlePurchase}

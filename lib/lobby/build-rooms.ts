@@ -103,6 +103,7 @@ function buildLobbyPlayer(
     avatarUrl,
     avatarInitials: getAvatarInitials("", "", personaName),
     steamVerified: Boolean(dbUser?.steamLinkedAt ?? steamProfile),
+    customization: null,
   };
 }
 

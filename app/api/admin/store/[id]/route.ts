@@ -47,6 +47,16 @@ export async function PATCH(
     );
   }
 
+  const nextCoinShopOnly = parsed.data.coinShopOnly ?? existing.coinShopOnly;
+  const nextCoinPrice =
+    parsed.data.coinPrice !== undefined ? parsed.data.coinPrice : existing.coinPrice;
+  if (nextCoinShopOnly && (!nextCoinPrice || nextCoinPrice <= 0)) {
+    return jsonError(
+      400,
+      "Itens exclusivos da loja de moedas precisam de preço em moedas.",
+    );
+  }
+
   const item = await enrichSingleStoreItemForAdmin(
     await prisma.storeItem.update({
       where: { id },

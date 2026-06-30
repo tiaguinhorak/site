@@ -7,7 +7,11 @@ type CsgoRequestInit = {
   method?: string;
   body?: unknown;
   searchParams?: Record<string, string | undefined>;
+  /** Aborta a requisição após N ms para o painel nunca pendurar (padrão 15s). */
+  timeoutMs?: number;
 };
+
+const DEFAULT_CSGO_FETCH_TIMEOUT_MS = 15_000;
 
 export class CsgoBackendError extends Error {
   constructor(
@@ -37,26 +41,49 @@ function buildUrl(
 
 export type CsgoBackendServer = CsgoGameServer & { apiBaseUrl: string };
 
-/** Lista servidores de todas as APIs (ranked + warmup + extras). */
-export async function listAllCsgoApiServers(): Promise<CsgoBackendServer[]> {
-  const merged: CsgoBackendServer[] = [];
-  const seen = new Set<string>();
+export type CsgoBackendError_ = { baseUrl: string; message: string };
 
-  for (const base of getCsgoApiPushTargets()) {
+export type CsgoApiServersResult = {
+  servers: CsgoBackendServer[];
+  errors: CsgoBackendError_[];
+  /** true quando há pelo menos um backend configurado e respondendo. */
+  anyReachable: boolean;
+  configured: number;
+};
+
+/** Lista servidores de todas as APIs, reportando falhas por backend (não engole erros). */
+export async function listAllCsgoApiServersWithStatus(): Promise<CsgoApiServersResult> {
+  const merged: CsgoBackendServer[] = [];
+  const errors: CsgoBackendError_[] = [];
+  const seen = new Set<string>();
+  const targets = getCsgoApiPushTargets();
+  let anyReachable = false;
+
+  for (const base of targets) {
     try {
-      const servers = await csgoBackendFetchAt<CsgoGameServer[]>("/api/servers", base);
+      const servers = await csgoBackendFetchAt<CsgoGameServer[]>("/api/servers", base, {
+        timeoutMs: 8_000,
+      });
+      anyReachable = true;
       for (const server of servers) {
         const key = `${server.host}:${server.port}`;
         if (seen.has(key)) continue;
         seen.add(key);
         merged.push({ ...server, apiBaseUrl: base });
       }
-    } catch {
-      /* API offline or auth failure */
+    } catch (err) {
+      const message = err instanceof CsgoBackendError ? err.message : "Backend inacessível.";
+      errors.push({ baseUrl: base, message });
     }
   }
 
-  return merged;
+  return { servers: merged, errors, anyReachable, configured: targets.length };
+}
+
+/** Lista servidores de todas as APIs (ranked + warmup + extras). */
+export async function listAllCsgoApiServers(): Promise<CsgoBackendServer[]> {
+  const { servers } = await listAllCsgoApiServersWithStatus();
+  return servers;
 }
 
 /** Encontra qual api-csgo tem este server id (ranked vs warmup). */
@@ -79,15 +106,35 @@ export async function csgoBackendFetchAt<T = unknown>(
   init: CsgoRequestInit = {},
 ): Promise<T> {
   const method = init.method ?? (init.body ? "POST" : "GET");
-  const res = await fetch(buildUrl(path, init.searchParams, baseUrl), {
-    method,
-    headers: {
-      ...csgoBackendAuthHeaders(),
-      "Content-Type": "application/json",
-    },
-    body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
-    cache: "no-store",
-  });
+  const timeoutMs = init.timeoutMs ?? DEFAULT_CSGO_FETCH_TIMEOUT_MS;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let res: Response;
+  try {
+    res = await fetch(buildUrl(path, init.searchParams, baseUrl), {
+      method,
+      headers: {
+        ...csgoBackendAuthHeaders(),
+        "Content-Type": "application/json",
+      },
+      body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new CsgoBackendError(
+        `Backend CS:GO não respondeu em ${timeoutMs / 1000}s (${baseUrl}). ` +
+          `Verifique se o api-csgo está no ar e acessível.`,
+        504,
+      );
+    }
+    const message = err instanceof Error ? err.message : "Falha de rede";
+    throw new CsgoBackendError(`Falha ao conectar no backend CS:GO (${baseUrl}): ${message}`, 502);
+  } finally {
+    clearTimeout(timer);
+  }
 
   const contentType = res.headers.get("content-type") ?? "";
   const text = await res.text();

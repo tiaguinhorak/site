@@ -2,6 +2,10 @@ import type { User, Plan } from "@/lib/generated/prisma/client";
 import { getAvatarInitials } from "@/lib/profile";
 import { resolveUserAvatarUrl } from "@/lib/profile/avatar";
 import { getLevelProgress } from "@/lib/progression/xp-curve";
+import {
+  serializeProfileCustomization,
+  type PublicProfileCustomization,
+} from "@/lib/profile/serialize-customization";
 
 export type UserProfile = {
   id: string;
@@ -47,8 +51,13 @@ export type UserProfile = {
   steamProfileUrl: string | null;
   steamCountryCode: string | null;
   steamLinkedAt: string | null;
+  discordLinked: boolean;
+  discordUserId: string | null;
+  discordUsername: string | null;
+  discordLinkedAt: string | null;
   mfaEnabled: boolean;
   isAdmin: boolean;
+  customization: PublicProfileCustomization | null;
 };
 
 function planToClient(plan: Plan): UserProfile["plan"] {
@@ -124,8 +133,13 @@ export function serializeUser(user: User): UserProfile {
     steamProfileUrl: user.steamProfileUrl,
     steamCountryCode: user.steamCountryCode,
     steamLinkedAt: user.steamLinkedAt?.toISOString() ?? null,
+    discordLinked: Boolean(user.discordUserId),
+    discordUserId: user.discordUserId,
+    discordUsername: user.discordUsername,
+    discordLinkedAt: user.discordLinkedAt?.toISOString() ?? null,
     mfaEnabled: user.mfaEnabled,
     isAdmin: user.isAdmin,
+    customization: serializeProfileCustomization(user),
   };
 }
 

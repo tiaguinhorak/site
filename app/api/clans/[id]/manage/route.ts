@@ -9,6 +9,9 @@ import {
   kickMember,
   setMemberRole,
   disbandClan,
+  reviewJoinRequest,
+  inviteMemberByNickname,
+  updateClanSettings,
   ClanError,
 } from "@/lib/clans/service";
 
@@ -20,6 +23,17 @@ const manageSchema = z.discriminatedUnion("action", [
     role: z.enum(["OFFICER", "MEMBER"]),
   }),
   z.object({ action: z.literal("disband") }),
+  z.object({
+    action: z.literal("review_request"),
+    requestId: z.string().min(1),
+    approve: z.boolean(),
+  }),
+  z.object({ action: z.literal("invite"), nickname: z.string().min(2).max(24) }),
+  z.object({
+    action: z.literal("settings"),
+    description: z.string().max(500).optional(),
+    joinMode: z.enum(["OPEN", "CLOSED"]).optional(),
+  }),
 ]);
 
 export async function POST(
@@ -60,6 +74,19 @@ export async function POST(
       case "disband":
         await disbandClan(userId, id);
         break;
+      case "review_request":
+        await reviewJoinRequest(userId, id, payload.requestId, payload.approve);
+        break;
+      case "invite":
+        await inviteMemberByNickname(userId, id, payload.nickname);
+        break;
+      case "settings": {
+        await updateClanSettings(userId, id, {
+          description: payload.description,
+          joinMode: payload.joinMode,
+        });
+        break;
+      }
       default: {
         const _exhaustive: never = payload;
         throw new Error(`Ação não suportada: ${JSON.stringify(_exhaustive)}`);

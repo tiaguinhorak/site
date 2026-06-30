@@ -16,6 +16,7 @@ const createSchema = z.object({
   tag: z.string().min(2).max(6),
   name: z.string().min(3).max(24),
   description: z.string().max(500).optional(),
+  joinMode: z.enum(["OPEN", "CLOSED"]).optional(),
 });
 
 export async function GET(request: NextRequest) {

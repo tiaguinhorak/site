@@ -13,11 +13,12 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { AvatarImage } from "@/components/ui/avatar-image";
+import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
+import { ProfileDisplayName } from "@/components/profile/profile-display-name";
 import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button";
 import { getCountryFlag } from "@/lib/profile";
-import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
+import { EloRankBadgeI18n } from "@/components/ranked/elo-rank-badge-i18n";
 import {
   LEADERBOARD_PAGE_SIZE,
   type LeaderboardPageResult,
@@ -132,7 +133,7 @@ export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoar
   const showPodium =
     page === 1 && !debouncedQuery && sort === "points" && data.players.length >= 1;
   const podium = showPodium ? data.players.slice(0, 3) : [];
-  const tablePlayers = showPodium ? data.players.slice(3) : data.players;
+  const podiumOrder = podium.length >= 3 ? [podium[1], podium[0], podium[2]] : podium;
 
   const sortOptions: { id: LeaderboardSort; label: string }[] = [
     { id: "points", label: t("sortPoints") },
@@ -166,15 +167,12 @@ export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoar
         >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
-              <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-border bg-[color-mix(in_srgb,var(--primary)_10%,transparent)]">
-                {data.you.avatarUrl ? (
-                  <AvatarImage src={data.you.avatarUrl} alt="" size={56} />
-                ) : (
-                  <span className="font-display text-lg font-bold text-primary">
-                    {data.you.nickname.slice(0, 2)}
-                  </span>
-                )}
-              </div>
+              <UserProfileAvatar
+                avatarUrl={data.you.avatarUrl}
+                nickname={data.you.nickname}
+                customization={data.you.customization}
+                size="lg"
+              />
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted">
                   {t("yourPosition")}
@@ -189,7 +187,12 @@ export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoar
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
               <StatPill label={t("colPoints")} value={data.you.points.toLocaleString("pt-BR")} highlight />
-              <StatPill label={t("colElo")} value={String(data.you.elo)} />
+              <div className="rounded-xl border border-border px-3 py-2 text-center sm:text-left">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">{t("colElo")}</p>
+                <div className="mt-1 flex justify-center sm:justify-start">
+                  <EloRankBadgeI18n elo={data.you.elo} size="sm" />
+                </div>
+              </div>
               <StatPill label={t("colKd")} value={data.you.kd.toFixed(2)} />
               <StatPill label={t("colWinRate")} value={`${data.you.winRate}%`} />
             </div>
@@ -228,16 +231,22 @@ export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoar
       </div>
 
       {showPodium && podium.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {podium.map((player, index) => (
-            <PodiumCard
-              key={player.nickname}
-              player={player}
-              place={index}
-              profileHref={profileHref(player.nickname)}
-              t={t}
-            />
-          ))}
+        <div className="overflow-hidden rounded-card glass-strong border border-[color-mix(in_srgb,var(--primary)_18%,transparent)]">
+          <div className="border-b border-border px-5 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary">{t("topSeason")}</p>
+          </div>
+          <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-3 sm:items-end sm:gap-4 sm:p-5">
+            {podiumOrder.map((player) => (
+              <PodiumCard
+                key={player.nickname}
+                player={player}
+                place={player.rank - 1}
+                profileHref={profileHref(player.nickname)}
+                t={t}
+                compact={player.rank !== 1}
+              />
+            ))}
+          </div>
         </div>
       )}
 
@@ -269,12 +278,13 @@ export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoar
               <span className="text-right">{t("colMatches")}</span>
             </div>
             <ul className={cn(loading && "pointer-events-none opacity-60")}>
-              {tablePlayers.map((player) => (
+              {data.players.map((player) => (
                 <LeaderboardRow
                   key={`${player.rank}-${player.nickname}`}
                   player={player}
                   profileHref={profileHref(player.nickname)}
                   highlightYou={data.you?.nickname === player.nickname}
+                  inPodium={showPodium && player.rank <= 3}
                   t={t}
                 />
               ))}
@@ -349,14 +359,15 @@ function PodiumCard({
   place,
   profileHref,
   t,
+  compact = false,
 }: {
   player: LeaderboardPlayer;
   place: number;
   profileHref: string;
   t: ReturnType<typeof useTranslations<"ranking">>;
+  compact?: boolean;
 }) {
   const Icon = place === 0 ? Crown : Medal;
-  const avatar = player.avatarUrl ?? getDefaultAvatarPresetUrl();
 
   return (
     <motion.div
@@ -364,38 +375,55 @@ function PodiumCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: place * 0.08 }}
       className={cn(
-        "relative overflow-hidden rounded-card glass p-5 sm:p-6",
+        "relative overflow-hidden rounded-xl border border-border bg-[color-mix(in_srgb,var(--background)_60%,transparent)] p-4",
         place === 0 &&
-          "border border-amber-400/25 shadow-[0_0_40px_-12px_rgba(251,191,36,0.35)]",
+          "sm:-translate-y-1 border-amber-400/30 shadow-[0_0_32px_-12px_rgba(251,191,36,0.35)]",
+        compact && "sm:opacity-95",
       )}
     >
       <span
         className={cn(
-          "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wider",
+          "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
           place === 0 ? "bg-amber-400/15 text-amber-400" : "bg-muted/15 text-muted",
         )}
       >
-        <Icon className="h-3.5 w-3.5" />
+        <Icon className="h-3 w-3" />
         {place === 0 ? t("topSeason") : `#${player.rank}`}
       </span>
-      <div className="mt-4 flex items-center gap-3">
-        <div className="h-14 w-14 overflow-hidden rounded-2xl border border-border">
-          <AvatarImage src={avatar} alt="" size={56} />
-        </div>
+      <div className="mt-3 flex items-center gap-3">
+        <UserProfileAvatar
+          avatarUrl={player.avatarUrl}
+          nickname={player.nickname}
+          customization={player.customization}
+          size={place === 0 ? "lg" : "md"}
+        />
         <div className="min-w-0">
           <Link
             href={profileHref}
             prefetch={false}
-            className="font-display text-xl font-bold text-foreground transition-colors hover:text-primary"
+            className={cn(
+              "block truncate font-display font-bold text-foreground transition-colors hover:text-primary",
+              place === 0 ? "text-lg" : "text-base",
+            )}
           >
-            {player.nickname}
+            <ProfileDisplayName
+              nickname={player.nickname}
+              plan={player.plan}
+              customization={player.customization}
+              nameClassName={cn(
+                "font-display font-bold",
+                place === 0 ? "text-lg" : "text-base",
+              )}
+              badgeSize="sm"
+            />
           </Link>
-          <p className="text-sm text-muted">
-            {getCountryFlag(player.country)} {t("colElo")} {player.elo}
-          </p>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="text-xs text-muted">{getCountryFlag(player.country)}</span>
+            <EloRankBadgeI18n elo={player.elo} size="sm" />
+          </div>
         </div>
       </div>
-      <div className="mt-5 grid grid-cols-3 gap-2">
+      <div className="mt-4 grid grid-cols-3 gap-2">
         <StatPill label={t("colPoints")} value={player.points.toLocaleString("pt-BR")} highlight />
         <StatPill label={t("colKd")} value={player.kd.toFixed(2)} />
         <StatPill label={t("colWinRate")} value={`${player.winRate}%`} />
@@ -408,20 +436,21 @@ function LeaderboardRow({
   player,
   profileHref,
   highlightYou,
+  inPodium,
   t,
 }: {
   player: LeaderboardPlayer;
   profileHref: string;
   highlightYou: boolean;
+  inPodium?: boolean;
   t: ReturnType<typeof useTranslations<"ranking">>;
 }) {
-  const avatar = player.avatarUrl ?? getDefaultAvatarPresetUrl();
-
   return (
     <li
       className={cn(
         "border-b border-border px-4 py-3.5 transition-colors last:border-0 hover:bg-[color-mix(in_srgb,var(--primary)_6%,transparent)]",
         highlightYou && "bg-[color-mix(in_srgb,var(--primary)_10%,transparent)]",
+        inPodium && "bg-[color-mix(in_srgb,var(--amber-400)_6%,transparent)]",
       )}
     >
       <div className="flex items-center gap-3 md:grid md:grid-cols-[3rem_1fr_repeat(7,minmax(0,4rem))] md:items-center md:gap-3">
@@ -435,27 +464,28 @@ function LeaderboardRow({
         </span>
 
         <div className="flex min-w-0 flex-1 items-center gap-3 md:col-span-1">
-          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-border">
-            <AvatarImage src={avatar} alt="" size={40} />
-          </div>
+          <UserProfileAvatar
+            avatarUrl={player.avatarUrl}
+            nickname={player.nickname}
+            customization={player.customization}
+            size="md"
+          />
           <div className="min-w-0">
             <Link
               href={profileHref}
               prefetch={false}
-              className="truncate font-display text-sm font-semibold text-foreground hover:text-primary"
+              className="block truncate font-display text-sm font-semibold text-foreground hover:text-primary"
             >
-              {player.nickname}
+              <ProfileDisplayName
+                nickname={player.nickname}
+                plan={player.plan}
+                customization={player.customization}
+                nameClassName="font-display text-sm font-semibold"
+                badgeSize="sm"
+              />
             </Link>
             <div className="flex items-center gap-2 text-xs text-muted">
               <span>{getCountryFlag(player.country)}</span>
-              <span
-                className={cn(
-                  "rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase",
-                  planStyles[player.plan],
-                )}
-              >
-                {player.plan}
-              </span>
             </div>
           </div>
         </div>
@@ -463,7 +493,9 @@ function LeaderboardRow({
         <span className="hidden text-right font-mono text-sm font-semibold text-gradient md:block">
           {player.points.toLocaleString("pt-BR")}
         </span>
-        <span className="hidden text-right text-sm text-foreground md:block">{player.elo}</span>
+        <span className="hidden text-right md:block">
+          <EloRankBadgeI18n elo={player.elo} size="sm" className="ml-auto" />
+        </span>
         <span className="hidden items-center justify-end gap-1 text-sm text-muted md:flex">
           <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
           {player.kd.toFixed(2)}

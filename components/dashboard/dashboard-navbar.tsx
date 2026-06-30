@@ -26,12 +26,15 @@ import {
   Award,
   Swords,
   UserPlus,
+  History,
+  Coins,
   type LucideIcon,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Logo } from "@/components/ui/logo";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { AccountDropdown } from "@/components/dashboard/account-dropdown";
+import { WalletDropdown } from "@/components/dashboard/wallet-dropdown";
 import { useUser } from "@/lib/hooks/use-user";
 import { cn } from "@/lib/utils";
 
@@ -54,6 +57,8 @@ const iconMap: Record<string, LucideIcon> = {
   Award,
   Swords,
   UserPlus,
+  History,
+  Coins,
 };
 
 type NavLinkItem = {
@@ -92,6 +97,7 @@ const COMMERCE_GROUP: NavGroup = {
   icon: "ShoppingBag",
   items: [
     { href: "/dashboard/loja", icon: "ShoppingBag", i18nKey: "store" },
+    { href: "/dashboard/loja-moedas", icon: "Coins", i18nKey: "coinShop" },
     { href: "/dashboard/inventario", icon: "Package", i18nKey: "inventory" },
   ],
 };
@@ -106,6 +112,7 @@ const PROGRESS_GROUP: NavGroup = {
     { href: "/dashboard/conquistas", icon: "Award", i18nKey: "achievements" },
     { href: "/dashboard/clas", icon: "Swords", i18nKey: "clans" },
     { href: "/dashboard/ranking", icon: "Medal", i18nKey: "ranking" },
+    { href: "/dashboard/partidas", icon: "History", i18nKey: "matches" },
   ],
 };
 
@@ -408,6 +415,7 @@ export function DashboardNavbar() {
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
+            <WalletDropdown />
             <AccountDropdown />
             <NotificationsDropdown />
 

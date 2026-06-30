@@ -16,6 +16,7 @@ import {
 import { logAdminAction } from "@/lib/admin/audit";
 import { adminUserUpdateSchema } from "@/lib/admin/schemas";
 import { getAdminUserDetail } from "@/lib/admin/queries";
+import { notifyDiscordPlanSyncForUser } from "@/lib/discord/sync-user";
 
 export async function GET(
   request: NextRequest,
@@ -102,6 +103,10 @@ export async function PATCH(
     where: { id },
     data: updateData,
   });
+
+  if (parsed.data.plan !== undefined && parsed.data.plan !== target.plan) {
+    void notifyDiscordPlanSyncForUser(id);
+  }
 
   await logAdminAction({
     adminId: admin!.id,

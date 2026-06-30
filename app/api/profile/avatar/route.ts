@@ -59,6 +59,8 @@ export async function POST(request: NextRequest) {
     data: {
       avatarUrl: `/uploads/avatars/${filename}`,
       avatarPreset: null,
+      avatarMediaType: "STATIC",
+      avatarModerationStatus: "APPROVED",
     },
   });
 

@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import { afterCsgoMatchMutation } from "@/lib/csgo-api/invalidate-caches";
+import { notifyDiscordMatchFinished } from "@/lib/discord/notify-bot";
 import { syncLeaderboardRanks } from "@/lib/leaderboard/sync-ranks";
 import { abandonRankedSessionInternal } from "@/lib/ranked/reconcile-stale-sessions";
 import { notifySessionParticipants, notifyRankedRooms } from "@/lib/realtime/notify";
@@ -439,6 +440,15 @@ export async function processMatchResultFromGame(input: MatchResultInput): Promi
   void notifySessionParticipants(session.id, "session");
   void notifyRankedRooms("session");
   void triggerQueueMatchmaking();
+
+  void notifyDiscordMatchFinished({
+    sessionId: session.id,
+    map: session.selectedMap ?? "—",
+    scoreTeamA: input.scoreTeamA,
+    scoreTeamB: input.scoreTeamB,
+    winnerTeam,
+    durationSec: input.durationSec,
+  });
 
   return { ok: true, sessionId: session.id };
 }

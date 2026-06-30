@@ -65,11 +65,25 @@ export type ClanDetail = {
   name: string;
   description: string;
   avatarUrl: string | null;
+  joinMode: "OPEN" | "CLOSED";
   ownerId: string;
   createdAt: string;
   stats: ClanStats;
   members: ClanMemberView[];
   viewerRole: ClanRole | null;
+  pendingRequests: ClanJoinRequestView[];
+};
+
+export type ClanJoinRequestView = {
+  id: string;
+  userId: string;
+  nickname: string;
+  avatarUrl: string | null;
+  country: string;
+  level: number;
+  elo: number;
+  message: string;
+  createdAt: string;
 };
 
 export type ClanRankingEntry = {
@@ -77,6 +91,7 @@ export type ClanRankingEntry = {
   tag: string;
   name: string;
   avatarUrl: string | null;
+  joinMode: "OPEN" | "CLOSED";
   rank: number;
   memberCount: number;
   totalPoints: number;
@@ -146,11 +161,20 @@ export async function getUserClanId(userId: string): Promise<string | null> {
 
 export async function createClan(
   userId: string,
-  input: { tag: string; name: string; description?: string },
+  input: { tag: string; name: string; description?: string; joinMode?: "OPEN" | "CLOSED" },
 ): Promise<ClanDetail> {
   const tag = input.tag.trim().toUpperCase();
   const name = input.name.trim();
   const description = (input.description ?? "").trim().slice(0, 500);
+  const joinMode = input.joinMode ?? "OPEN";
+
+  const owner = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { plan: true },
+  });
+  if (!owner || owner.plan !== "ELITE") {
+    throw new ClanError("Somente assinantes Elite podem criar clãs.", 403);
+  }
 
   if (!CLAN_TAG_REGEX.test(tag)) {
     throw new ClanError("Tag inválida (2-6 letras/números).", 400);
@@ -176,6 +200,7 @@ export async function createClan(
       tag,
       name,
       description,
+      joinMode,
       ownerId: userId,
       members: { create: { userId, role: "OWNER" } },
     },
@@ -184,12 +209,40 @@ export async function createClan(
   return getClanDetail(clan.id, userId);
 }
 
-export async function joinClan(userId: string, clanId: string): Promise<ClanDetail> {
-  const existingMembership = await getUserClanId(userId);
-  if (existingMembership) {
-    throw new ClanError("Você já faz parte de um clã.");
+export async function updateClanSettings(
+  actorId: string,
+  clanId: string,
+  input: { description?: string; joinMode?: "OPEN" | "CLOSED" },
+): Promise<ClanDetail> {
+  const clan = await prisma.clan.findUnique({ where: { id: clanId }, select: { ownerId: true } });
+  if (!clan) throw new ClanError("Clã não encontrado.", 404);
+  if (clan.ownerId !== actorId) {
+    throw new ClanError("Apenas o líder pode alterar as configurações.", 403);
   }
 
+  await prisma.clan.update({
+    where: { id: clanId },
+    data: {
+      description: input.description?.trim().slice(0, 500),
+      joinMode: input.joinMode,
+    },
+  });
+
+  return getClanDetail(clanId, actorId);
+}
+
+export async function updateClanAvatar(actorId: string, clanId: string, avatarUrl: string): Promise<ClanDetail> {
+  const clan = await prisma.clan.findUnique({ where: { id: clanId }, select: { ownerId: true } });
+  if (!clan) throw new ClanError("Clã não encontrado.", 404);
+  if (clan.ownerId !== actorId) {
+    throw new ClanError("Apenas o líder pode alterar a foto do clã.", 403);
+  }
+
+  await prisma.clan.update({ where: { id: clanId }, data: { avatarUrl } });
+  return getClanDetail(clanId, actorId);
+}
+
+async function addMemberToClan(clanId: string, userId: string): Promise<void> {
   const clan = await prisma.clan.findUnique({
     where: { id: clanId },
     select: { id: true, _count: { select: { members: true } } },
@@ -199,8 +252,142 @@ export async function joinClan(userId: string, clanId: string): Promise<ClanDeta
     throw new ClanError("Este clã está cheio.");
   }
 
+  const existingMembership = await getUserClanId(userId);
+  if (existingMembership) {
+    throw new ClanError("Este jogador já faz parte de um clã.");
+  }
+
   await prisma.clanMember.create({ data: { clanId, userId, role: "MEMBER" } });
+}
+
+export async function joinClan(userId: string, clanId: string): Promise<ClanDetail | { pending: true }> {
+  const existingMembership = await getUserClanId(userId);
+  if (existingMembership) {
+    throw new ClanError("Você já faz parte de um clã.");
+  }
+
+  const clan = await prisma.clan.findUnique({
+    where: { id: clanId },
+    select: { id: true, joinMode: true, _count: { select: { members: true } } },
+  });
+  if (!clan) throw new ClanError("Clã não encontrado.", 404);
+  if (clan._count.members >= CLAN_MAX_MEMBERS) {
+    throw new ClanError("Este clã está cheio.");
+  }
+
+  if (clan.joinMode === "CLOSED") {
+    const existing = await prisma.clanJoinRequest.findUnique({
+      where: { clanId_userId: { clanId, userId } },
+    });
+    if (existing?.status === "PENDING") {
+      throw new ClanError("Solicitação já enviada. Aguarde aprovação.");
+    }
+    await prisma.clanJoinRequest.upsert({
+      where: { clanId_userId: { clanId, userId } },
+      create: { clanId, userId, status: "PENDING" },
+      update: { status: "PENDING", message: "" },
+    });
+    return { pending: true };
+  }
+
+  await addMemberToClan(clanId, userId);
   return getClanDetail(clanId, userId);
+}
+
+export async function requestJoinClan(
+  userId: string,
+  clanId: string,
+  message?: string,
+): Promise<{ pending: true }> {
+  const existingMembership = await getUserClanId(userId);
+  if (existingMembership) {
+    throw new ClanError("Você já faz parte de um clã.");
+  }
+
+  const clan = await prisma.clan.findUnique({ where: { id: clanId }, select: { id: true } });
+  if (!clan) throw new ClanError("Clã não encontrado.", 404);
+
+  await prisma.clanJoinRequest.upsert({
+    where: { clanId_userId: { clanId, userId } },
+    create: {
+      clanId,
+      userId,
+      status: "PENDING",
+      message: (message ?? "").trim().slice(0, 200),
+    },
+    update: {
+      status: "PENDING",
+      message: (message ?? "").trim().slice(0, 200),
+    },
+  });
+
+  return { pending: true };
+}
+
+export async function reviewJoinRequest(
+  actorId: string,
+  clanId: string,
+  requestId: string,
+  approve: boolean,
+): Promise<ClanDetail> {
+  await requireManager(actorId, clanId);
+
+  const request = await prisma.clanJoinRequest.findUnique({
+    where: { id: requestId },
+    include: { user: { select: { id: true } } },
+  });
+  if (!request || request.clanId !== clanId || request.status !== "PENDING") {
+    throw new ClanError("Solicitação não encontrada.", 404);
+  }
+
+  if (!approve) {
+    await prisma.clanJoinRequest.update({
+      where: { id: requestId },
+      data: { status: "REJECTED" },
+    });
+    return getClanDetail(clanId, actorId);
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.clanJoinRequest.update({
+      where: { id: requestId },
+      data: { status: "APPROVED" },
+    });
+
+    const memberCount = await tx.clanMember.count({ where: { clanId } });
+    if (memberCount >= CLAN_MAX_MEMBERS) {
+      throw new ClanError("Clã cheio.", 409);
+    }
+
+    const alreadyInClan = await tx.clanMember.findUnique({ where: { userId: request.userId } });
+    if (alreadyInClan) {
+      throw new ClanError("Jogador já entrou em outro clã.", 409);
+    }
+
+    await tx.clanMember.create({
+      data: { clanId, userId: request.userId, role: "MEMBER" },
+    });
+  });
+
+  return getClanDetail(clanId, actorId);
+}
+
+export async function inviteMemberByNickname(
+  actorId: string,
+  clanId: string,
+  nickname: string,
+): Promise<ClanDetail> {
+  await requireManager(actorId, clanId);
+
+  const target = await prisma.user.findFirst({
+    where: { nickname: { equals: nickname.trim(), mode: "insensitive" } },
+    select: { id: true },
+  });
+  if (!target) throw new ClanError("Jogador não encontrado.", 404);
+  if (target.id === actorId) throw new ClanError("Você já está no clã.", 400);
+
+  await addMemberToClan(clanId, target.id);
+  return getClanDetail(clanId, actorId);
 }
 
 export async function leaveClan(userId: string): Promise<void> {
@@ -302,7 +489,27 @@ export async function getClanDetail(
 ): Promise<ClanDetail> {
   const clan = await prisma.clan.findUnique({
     where: { id: clanId },
-    include: { members: { include: { user: { select: MEMBER_USER_SELECT } } } },
+    include: {
+      members: { include: { user: { select: MEMBER_USER_SELECT } } },
+      joinRequests: {
+        where: { status: "PENDING" },
+        include: {
+          user: {
+            select: {
+              id: true,
+              nickname: true,
+              country: true,
+              avatarUrl: true,
+              avatarPreset: true,
+              steamAvatarUrl: true,
+              level: true,
+              elo: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "asc" },
+      },
+    },
   });
   if (!clan) throw new ClanError("Clã não encontrado.", 404);
 
@@ -318,17 +525,34 @@ export async function getClanDetail(
     ? clan.members.find((m) => m.userId === viewerId)?.role ?? null
     : null;
 
+  const canSeeRequests = viewerRole === "OWNER" || viewerRole === "OFFICER";
+  const pendingRequests: ClanJoinRequestView[] = canSeeRequests
+    ? clan.joinRequests.map((req) => ({
+        id: req.id,
+        userId: req.userId,
+        nickname: req.user.nickname,
+        country: req.user.country,
+        avatarUrl: resolveUserAvatarUrl(req.user),
+        level: req.user.level,
+        elo: req.user.elo,
+        message: req.message,
+        createdAt: req.createdAt.toISOString(),
+      }))
+    : [];
+
   return {
     id: clan.id,
     tag: clan.tag,
     name: clan.name,
     description: clan.description,
     avatarUrl: clan.avatarUrl,
+    joinMode: clan.joinMode,
     ownerId: clan.ownerId,
     createdAt: clan.createdAt.toISOString(),
     stats: computeStats(clan),
     members,
     viewerRole,
+    pendingRequests,
   };
 }
 
@@ -351,6 +575,7 @@ export async function listClanRanking(limit = 50): Promise<ClanRankingEntry[]> {
         tag: clan.tag,
         name: clan.name,
         avatarUrl: clan.avatarUrl,
+        joinMode: clan.joinMode,
         rank: 0,
         memberCount: stats.memberCount,
         totalPoints: stats.totalPoints,

@@ -1,4 +1,5 @@
 import type { UserProfile } from "@/lib/serializers";
+import type { PublicProfileCustomization } from "@/lib/profile/serialize-customization";
 import type { LobbyRoomSettings } from "@/lib/lobby/schemas";
 
 export type { LobbyRoomSettings };
@@ -29,6 +30,7 @@ export type LobbyPlayer = {
   avatarUrl: string | null;
   avatarInitials: string;
   steamVerified: boolean;
+  customization: PublicProfileCustomization | null;
 };
 
 export type LobbyPlayerSlot = LobbyPlayer | null;

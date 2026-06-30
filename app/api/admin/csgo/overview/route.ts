@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth/admin";
 import { prisma } from "@/lib/prisma";
 import { cached } from "@/lib/csgo-api/request-cache";
-import { csgoBackendFetch, listAllCsgoApiServers } from "@/lib/csgo-api/client";
+import { csgoBackendFetch, listAllCsgoApiServersWithStatus } from "@/lib/csgo-api/client";
 import { queryCsgoServersLive } from "@/lib/csgo-api/query-live-server";
 import type { CsgoGameServer, CsgoMatchSummary } from "@/lib/csgo-api/server-types";
 import { formatConnectCommand } from "@/lib/servers/connect";
@@ -50,14 +50,38 @@ async function resolveServerApiStatus(
 }
 
 async function buildOverview(syncApiStatus = false) {
-  const servers = await cached("csgo:api-servers", 10_000, async () => {
+  const backend = await cached("csgo:api-servers-backend", 10_000, async () => {
     try {
-      const merged = await listAllCsgoApiServers();
-      return merged.map(({ apiBaseUrl: _, ...server }) => server);
-    } catch {
-      return [];
+      const result = await listAllCsgoApiServersWithStatus();
+      return {
+        servers: result.servers.map(({ apiBaseUrl: _, ...server }) => server),
+        errors: result.errors,
+        anyReachable: result.anyReachable,
+        configured: result.configured,
+      };
+    } catch (err) {
+      return {
+        servers: [] as CsgoGameServer[],
+        errors: [
+          {
+            baseUrl: "config",
+            message: err instanceof Error ? err.message : "Falha ao consultar backend CS:GO.",
+          },
+        ],
+        anyReachable: false,
+        configured: 0,
+      };
     }
   });
+
+  const servers = Array.isArray(backend) ? backend : (backend.servers ?? []);
+  const backendMeta = Array.isArray(backend)
+    ? { configured: 1, anyReachable: true, errors: [] as { baseUrl: string; message: string }[] }
+    : {
+        configured: backend.configured ?? 0,
+        anyReachable: backend.anyReachable ?? false,
+        errors: backend.errors ?? [],
+      };
 
   const liveByKey = await queryCsgoServersLive(
     servers.map((server) => ({ host: server.host, port: server.port })),
@@ -100,6 +124,7 @@ async function buildOverview(syncApiStatus = false) {
   });
 
   return {
+    backend: backendMeta,
     servers: await Promise.all(
       servers.map(async (server) => {
         const live = liveByKey.get(`${server.host}:${server.port}`);

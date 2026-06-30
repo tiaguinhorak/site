@@ -121,16 +121,59 @@ export function ButtonLink({
   onClick,
   ...props
 }: CommonProps & ComponentProps<typeof Link>) {
-  const router = useRouter();
-  const { confirm: requestConfirm } = useConfirm();
   const hrefString = hrefToString(href);
   const classNames = cn(base, variants[variant], sizes[size], className);
 
-  const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
-    if (!confirm) {
-      onClick?.(e);
-      return;
+  if (!confirm) {
+    if (!isAppInternalHref(hrefString)) {
+      return (
+        <a href={hrefString} className={classNames} onClick={onClick} {...props}>
+          {children}
+        </a>
+      );
     }
+
+    return (
+      <Link href={href} className={classNames} onClick={onClick} {...props}>
+        {children}
+      </Link>
+    );
+  }
+
+  return (
+    <ButtonLinkWithConfirm
+      variant={variant}
+      size={size}
+      className={className}
+      href={href}
+      hrefString={hrefString}
+      classNames={classNames}
+      confirm={confirm}
+      onClick={onClick}
+      {...props}
+    >
+      {children}
+    </ButtonLinkWithConfirm>
+  );
+}
+
+function ButtonLinkWithConfirm({
+  href,
+  hrefString,
+  classNames,
+  confirm,
+  onClick,
+  children,
+  ...props
+}: CommonProps &
+  ComponentProps<typeof Link> & {
+    hrefString: string;
+    classNames: string;
+  }) {
+  const router = useRouter();
+  const { confirm: requestConfirm } = useConfirm();
+
+  const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
     runWithConfirm(
       confirm,
       requestConfirm,

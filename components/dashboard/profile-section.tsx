@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -13,16 +13,23 @@ import {
   UserRound,
   Shield,
   Bell,
+  Palette,
+  MessageCircle,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SteamIcon } from "@/components/ui/icons";
-import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
 import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button";
 import { ProfileAvatarPicker } from "@/components/dashboard/profile-avatar-picker";
+import { ProfileCustomizationHero } from "@/components/profile/profile-customization-hero";
+import { ProfileDisplayName } from "@/components/profile/profile-display-name";
+import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
+import { PlanBadge } from "@/components/profile/plan-badge";
 import { ProfileBasicForm } from "@/components/dashboard/profile-basic-form";
 import { ProfileSecuritySection } from "@/components/dashboard/profile-security-section";
 import { ProfileSteamSection } from "@/components/dashboard/profile-steam-section";
+import { ProfileDiscordSection } from "@/components/dashboard/profile-discord-section";
+import { ProfileCustomizationSection } from "@/components/dashboard/profile-customization-section";
 import { NotificationSettingsSection } from "@/components/dashboard/notification-settings-section";
 import { getCountryFlag } from "@/lib/profile";
 import type { UserProfile } from "@/lib/serializers";
@@ -43,13 +50,23 @@ import { ALLOWED_AVATAR_TYPES } from "@/lib/security/constants";
 import { cn } from "@/lib/utils";
 import { ProfilePageSkeleton } from "@/components/loading/page-skeletons";
 
-const planBadge = {
-  free: "bg-muted/20 text-muted",
-  premium: "bg-primary/20 text-primary",
-  elite: "bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-400",
-};
+type ProfileTab = "general" | "customization" | "security" | "steam" | "notifications" | "discord";
 
-type ProfileTab = "general" | "security" | "steam" | "notifications";
+const PROFILE_TABS = new Set<ProfileTab>([
+  "general",
+  "customization",
+  "security",
+  "steam",
+  "notifications",
+  "discord",
+]);
+
+function parseProfileTab(value: string | null): ProfileTab {
+  if (value && PROFILE_TABS.has(value as ProfileTab)) {
+    return value as ProfileTab;
+  }
+  return "general";
+}
 
 function profileFieldsEqual(a: UserProfile, b: UserProfile): boolean {
   return (
@@ -64,6 +81,8 @@ function profileFieldsEqual(a: UserProfile, b: UserProfile): boolean {
 }
 
 export function ProfileSection() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const t = useTranslations("profile");
   const tForm = useTranslations("profileForm");
@@ -72,11 +91,15 @@ export function ProfileSection() {
   const { user: profile, setUser, loading, refresh } = useUser();
   const tabs: { id: ProfileTab; label: string; icon: LucideIcon | typeof SteamIcon }[] = [
     { id: "general", label: t("tabGeneral"), icon: UserRound },
+    { id: "customization", label: t("tabCustomization"), icon: Palette },
     { id: "security", label: t("tabSecurity"), icon: Shield },
     { id: "notifications", label: t("tabNotifications"), icon: Bell },
     { id: "steam", label: t("tabSteam"), icon: SteamIcon },
+    { id: "discord", label: t("tabDiscord"), icon: MessageCircle },
   ];
-  const [activeTab, setActiveTab] = useState<ProfileTab>("general");
+  const [activeTab, setActiveTab] = useState<ProfileTab>(() =>
+    parseProfileTab(searchParams.get("tab")),
+  );
   const [draft, setDraft] = useState<UserProfile | null>(null);
   const [avatarDraft, setAvatarDraft] = useState<AvatarDraft>(unchangedAvatarDraft);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -98,9 +121,20 @@ export function ProfileSection() {
   }, [profile, draft, avatarDraft]);
 
   useEffect(() => {
-    const tab = searchParams.get("tab");
-    if (tab === "notifications") setActiveTab("notifications");
+    setActiveTab(parseProfileTab(searchParams.get("tab")));
   }, [searchParams]);
+
+  function selectTab(tab: ProfileTab) {
+    setActiveTab(tab);
+    const params = new URLSearchParams(searchParams.toString());
+    if (tab === "general") {
+      params.delete("tab");
+    } else {
+      params.set("tab", tab);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }
 
   useEffect(() => {
     const steamStatus = searchParams.get("steam");
@@ -108,10 +142,10 @@ export function ProfileSection() {
 
     if (steamStatus === "linked") {
       refresh();
-      setActiveTab("steam");
+      selectTab("steam");
       toast.success(t("steamLinkedSuccess"));
     } else if (steamError === "steam_already_linked") {
-      setActiveTab("steam");
+      selectTab("steam");
       toast.error(t("steamAlreadyLinked"));
     }
   }, [searchParams, refresh, t]);
@@ -238,44 +272,35 @@ export function ProfileSection() {
     return <ProfilePageSkeleton />;
   }
 
+  const showProfileHero = activeTab === "general";
+
   return (
     <div className="space-y-8">
+      {showProfileHero ? (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="rounded-card glass-strong"
       >
-        <div className="relative p-6 sm:p-8">
-          <div
-            className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full opacity-40 blur-3xl"
-            style={{ background: "var(--glow-1)" }}
-            aria-hidden
-          />
-
-          <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center">
-            <div className="flex h-20 w-20 shrink-0 overflow-hidden rounded-2xl shadow-lg">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={profile.avatarUrl ?? getDefaultAvatarPresetUrl()}
-                alt=""
-                className="h-full w-full object-cover"
-              />
-            </div>
+        <ProfileCustomizationHero customization={profile.customization} ownerPreview>
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
+            <UserProfileAvatar
+              avatarUrl={profile.avatarUrl}
+              nickname={profile.nickname}
+              customization={profile.customization}
+              size="md"
+              priority
+            />
 
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
-                  {profile.nickname}
-                </h2>
-                <span
-                  className={cn(
-                    "rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider",
-                    planBadge[profile.plan],
-                  )}
-                >
-                  {profile.plan}
-                </span>
+                <ProfileDisplayName
+                  nickname={profile.nickname}
+                  plan={profile.plan}
+                  customization={profile.customization}
+                  nameClassName="font-display text-2xl font-bold text-foreground sm:text-3xl"
+                  badgeSize="sm"
+                />
                 {profile.mfaEnabled && (
                   <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
                     {t("mfaActive")}
@@ -363,8 +388,9 @@ export function ProfileSection() {
               </ButtonLink>
             </div>
           )}
-        </div>
+        </ProfileCustomizationHero>
       </motion.div>
+      ) : null}
 
       <div className="rounded-card glass-strong">
         <div className="border-b border-border px-4 sm:px-6">
@@ -376,7 +402,7 @@ export function ProfileSection() {
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => selectTab(tab.id)}
                   className={cn(
                     "flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors",
                     active
@@ -427,6 +453,8 @@ export function ProfileSection() {
             </div>
           )}
 
+          {activeTab === "customization" && <ProfileCustomizationSection />}
+
           {activeTab === "security" && (
             <ProfileSecuritySection
               mfaEnabled={profile.mfaEnabled}
@@ -438,6 +466,14 @@ export function ProfileSection() {
 
           {activeTab === "steam" && (
             <ProfileSteamSection profile={profile} onSteamUnlink={setUser} />
+          )}
+
+          {activeTab === "discord" && (
+            <ProfileDiscordSection
+              profile={profile}
+              onUpdate={setUser}
+              initialCode={searchParams.get("discord_link")}
+            />
           )}
         </div>
       </div>

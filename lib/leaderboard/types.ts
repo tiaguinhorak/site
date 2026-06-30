@@ -1,3 +1,5 @@
+import type { PublicProfileCustomization } from "@/lib/profile/serialize-customization";
+
 export type LeaderboardSort =
   | "points"
   | "elo"
@@ -35,6 +37,7 @@ export type LeaderboardPlayer = {
   utilityDamage: number;
   awpKills: number;
   level: number;
+  customization: PublicProfileCustomization | null;
 };
 
 export type LeaderboardPageResult = {

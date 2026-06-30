@@ -21,6 +21,7 @@ import { confirmPresets } from "@/lib/confirm-presets";
 import { punishmentTypeLabel, punishmentServerLabel } from "@/lib/admin/punishment-labels";
 import { AdminRankedQueuePanel } from "@/components/admin/admin-ranked-queue-panel";
 import { AdminUserInventoryPanel } from "@/components/admin/admin-user-inventory-panel";
+import { AdminSmurfPanel } from "@/components/admin/admin-smurf-panel";
 import type { PunishmentType } from "@/lib/generated/prisma/client";
 import { cn } from "@/lib/utils";
 
@@ -412,18 +413,21 @@ export function AdminUserDetail({ userId }: { userId: string }) {
         )}
 
         {tab === "resumo" && (
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { label: "Rank", value: `#${user.rank}` },
-              { label: "ELO", value: user.elo },
-              { label: "K/D", value: user.kd.toFixed(2) },
-              { label: "Partidas", value: user.matches },
-            ].map((s) => (
-              <div key={s.label} className="rounded-xl border border-border p-4">
-                <p className="text-xs uppercase text-muted">{s.label}</p>
-                <p className="mt-2 font-display text-xl font-bold">{s.value}</p>
-              </div>
-            ))}
+          <div className="mt-6 space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                { label: "Rank", value: `#${user.rank}` },
+                { label: "ELO", value: user.elo },
+                { label: "K/D", value: user.kd.toFixed(2) },
+                { label: "Partidas", value: user.matches },
+              ].map((s) => (
+                <div key={s.label} className="rounded-xl border border-border p-4">
+                  <p className="text-xs uppercase text-muted">{s.label}</p>
+                  <p className="mt-2 font-display text-xl font-bold">{s.value}</p>
+                </div>
+              ))}
+            </div>
+            <AdminSmurfPanel userId={user.id} />
           </div>
         )}
 

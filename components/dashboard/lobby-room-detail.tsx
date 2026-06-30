@@ -16,8 +16,8 @@ import { LobbyPageSkeleton } from "@/components/loading/page-skeletons";
 import { Spinner } from "@/components/ui/spinner";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { AvatarImage } from "@/components/ui/avatar-image";
-import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
+import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { MapPicker } from "@/components/admin/pickers/map-picker";
 import { secureApi } from "@/lib/api/client";
@@ -286,13 +286,12 @@ export function LobbyRoomDetail({ roomId }: { roomId: string }) {
                     key={member.id}
                     className="flex items-center gap-3 rounded-xl border border-border px-3 py-2"
                   >
-                    <div className="flex h-9 w-9 overflow-hidden rounded-full">
-                      <AvatarImage
-                        src={member.avatarUrl ?? getDefaultAvatarPresetUrl()}
-                        size={36}
-                        className="rounded-full"
-                      />
-                    </div>
+                    <UserProfileAvatar
+                      avatarUrl={member.avatarUrl}
+                      nickname={member.nickname}
+                      customization={member.customization}
+                      size="sm"
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{member.nickname}</p>
                       <p className="text-xs text-muted">{t("levelLabel", { level: member.level })}</p>

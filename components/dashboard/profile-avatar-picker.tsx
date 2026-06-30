@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Camera, Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { SteamIcon } from "@/components/ui/icons";
+import { ImageCropModal, type ImageCropSource } from "@/components/ui/image-crop-modal";
 import {
   DEFAULT_AVATAR_PRESET,
   avatarPresets,
@@ -35,7 +36,9 @@ export function ProfileAvatarPicker({
   disabled = false,
 }: ProfileAvatarPickerProps) {
   const t = useTranslations("avatar");
+  const tCrop = useTranslations("mediaCrop");
   const inputRef = useRef<HTMLInputElement>(null);
+  const [cropSource, setCropSource] = useState<ImageCropSource | null>(null);
   const preview = getAvatarPreview(profile, draft);
   const activePresetId =
     draft.kind === "preset"
@@ -51,12 +54,23 @@ export function ProfileAvatarPicker({
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-
-    const previewUrl = URL.createObjectURL(file);
-    onDraftChange({ kind: "upload", file, previewUrl });
+    setCropSource({ kind: "file", file });
   }
 
+  const canEditCurrentPhoto =
+    profile.customAvatarUrl ||
+    draft.kind === "upload" ||
+    (draft.kind === "unchanged" && profile.avatarSource === "custom" && profile.avatarUrl);
+
+  const editPhotoUrl =
+    draft.kind === "upload"
+      ? draft.previewUrl
+      : profile.avatarUrl
+        ? `${profile.avatarUrl.split("?")[0]}?v=${Date.now()}`
+        : null;
+
   return (
+    <>
     <div className="space-y-5">
       <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
         <div className="relative">
@@ -117,6 +131,17 @@ export function ProfileAvatarPicker({
               <Camera className="h-4 w-4" />
               {t("upload")}
             </Button>
+            {canEditCurrentPhoto && editPhotoUrl && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={disabled}
+                onClick={() => setCropSource({ kind: "url", url: editPhotoUrl })}
+              >
+                {tCrop("editPhoto")}
+              </Button>
+            )}
             {profile.steamLinked && (
               <Button
                 type="button"
@@ -196,5 +221,22 @@ export function ProfileAvatarPicker({
         </div>
       </div>
     </div>
+    <ImageCropModal
+      open={Boolean(cropSource)}
+      source={cropSource}
+      aspect="square"
+      title={tCrop("avatarTitle")}
+      description={tCrop("avatarDesc")}
+      onClose={() => setCropSource(null)}
+      onConfirm={async (blob, previewUrl) => {
+        onDraftChange({
+          kind: "upload",
+          file: new File([blob], "avatar.webp", { type: "image/webp" }),
+          previewUrl,
+        });
+        setCropSource(null);
+      }}
+    />
+    </>
   );
 }

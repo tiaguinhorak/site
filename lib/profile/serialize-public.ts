@@ -1,7 +1,11 @@
 import type { User } from "@/lib/generated/prisma/client";
 import type { UserProfile } from "@/lib/serializers";
-import { resolveUserAvatarUrl } from "@/lib/profile/avatar";
+import { resolveUserAvatarUrl, resolveAvatarIsAnimated } from "@/lib/profile/avatar";
 import { getCountryFlag, getCountry } from "@/lib/profile/countries";
+import {
+  serializeProfileCustomization,
+  type PublicProfileCustomization,
+} from "@/lib/profile/serialize-customization";
 import {
   computeAdr,
   computeHsPct,
@@ -18,9 +22,12 @@ export type PublicPlayerProfile = {
   countryName: string;
   countryFlag: string;
   avatarUrl: string | null;
+  avatarAnimated: boolean;
   plan: "free" | "premium" | "elite";
   rank: number;
   elo: number;
+  eloRankName: string;
+  eloGroupName: string;
   kd: number;
   matches: number;
   winRate: number;
@@ -50,6 +57,7 @@ export type PublicPlayerProfile = {
   steamPersonaName: string | null;
   steamProfileUrl: string | null;
   anticheatInstalled: boolean;
+  customization: PublicProfileCustomization | null;
 };
 
 function planToClient(plan: User["plan"]): PublicPlayerProfile["plan"] {
@@ -117,9 +125,12 @@ export function userProfileToPublic(user: UserProfile): PublicPlayerProfile {
     countryName: countryMeta?.name ?? user.country,
     countryFlag: getCountryFlag(user.country),
     avatarUrl: user.avatarUrl,
+    avatarAnimated: false,
     plan: user.plan,
     rank: user.rank,
     elo: user.elo,
+    eloRankName: "",
+    eloGroupName: "",
     kd: user.kd,
     matches: user.matches,
     winRate: user.winRate,
@@ -149,6 +160,7 @@ export function userProfileToPublic(user: UserProfile): PublicPlayerProfile {
     steamPersonaName: user.steamPersonaName,
     steamProfileUrl: user.steamProfileUrl,
     anticheatInstalled: user.anticheatInstalled,
+    customization: null,
   };
 }
 
@@ -162,10 +174,13 @@ export function serializePublicPlayer(user: User): PublicPlayerProfile {
     country: user.country,
     countryName: countryMeta?.name ?? user.country,
     countryFlag: getCountryFlag(user.country),
-    avatarUrl: resolveUserAvatarUrl(user),
+    avatarUrl: resolveUserAvatarUrl(user, { publicView: true }),
+    avatarAnimated: resolveAvatarIsAnimated(user, { publicView: true }),
     plan: planToClient(user.plan),
     rank: user.rank,
     elo: user.elo,
+    eloRankName: "",
+    eloGroupName: "",
     kd: user.kd,
     matches: user.matches,
     winRate: user.winRate,
@@ -179,6 +194,7 @@ export function serializePublicPlayer(user: User): PublicPlayerProfile {
     steamPersonaName: user.steamPersonaName,
     steamProfileUrl: user.steamProfileUrl,
     anticheatInstalled: user.anticheatInstalled,
+    customization: serializeProfileCustomization(user),
     ...buildAdvancedFields(user),
   };
 }

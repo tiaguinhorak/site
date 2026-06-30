@@ -10,9 +10,10 @@ function parsePoolFilter(value: string | null): "ranked" | "warmup" | undefined 
 
 export async function GET(request: NextRequest) {
   const poolFilter = parsePoolFilter(request.nextUrl.searchParams.get("pool"));
+  const forceSync = request.nextUrl.searchParams.get("sync") === "1";
 
   const [servers, user] = await Promise.all([
-    fetchLiveServerStats({ pool: poolFilter }),
+    fetchLiveServerStats({ pool: poolFilter, forceSync }),
     getSessionUser(request),
   ]);
 

@@ -63,9 +63,22 @@ export async function getNewsArticleBySlug(slug: string) {
   });
 }
 
-export async function getStoreItems(enabledOnly = true) {
+export async function getStoreItems(options?: {
+  enabledOnly?: boolean;
+  coinShopOnly?: boolean;
+}) {
+  const enabledOnly = options?.enabledOnly !== false;
+  const coinShopOnly = options?.coinShopOnly;
+
   return prisma.storeItem.findMany({
-    where: enabledOnly ? { enabled: true } : undefined,
+    where: {
+      ...(enabledOnly ? { enabled: true } : {}),
+      ...(coinShopOnly === true
+        ? { coinShopOnly: true }
+        : coinShopOnly === false
+          ? { coinShopOnly: false }
+          : {}),
+    },
     orderBy: { sortOrder: "asc" },
     include: {
       rewards: {

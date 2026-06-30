@@ -11,6 +11,8 @@ import { formatZodErrors } from "@/lib/security/schemas";
 import { sessionOptionsFromUser } from "@/lib/auth/session-options";
 import { createSessionToken, applySessionCookie } from "@/lib/security/session";
 import { isUserBanned } from "@/lib/admin/punishments";
+import { recordAccountFingerprint } from "@/lib/anti-smurf/fingerprint";
+import { refreshSmurfProfile } from "@/lib/anti-smurf/service";
 import {
   jsonErrorKey,
   validationSchemasForRequest,
@@ -54,5 +56,6 @@ export async function POST(request: NextRequest) {
 
   const token = createSessionToken(user.id, sessionOptionsFromUser(user));
   const response = NextResponse.json({ ok: true });
+  void recordAccountFingerprint(user.id, request).then(() => refreshSmurfProfile(user.id));
   return applySessionCookie(response, token, request);
 }

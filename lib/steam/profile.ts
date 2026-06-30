@@ -9,6 +9,7 @@ type SteamPlayerSummary = {
   avatarfull: string;
   realname?: string;
   loccountrycode?: string;
+  timecreated?: number;
 };
 
 const STEAM_SUMMARY_BATCH_SIZE = 100;
@@ -22,6 +23,10 @@ function mapSteamPlayer(player: SteamPlayerSummary): SteamProfileData {
     profileUrl: player.profileurl || null,
     realName: player.realname?.trim() || null,
     countryCode: player.loccountrycode?.trim() || null,
+    accountCreatedAt:
+      player.timecreated && player.timecreated > 0
+        ? new Date(player.timecreated * 1000)
+        : null,
   };
 }
 

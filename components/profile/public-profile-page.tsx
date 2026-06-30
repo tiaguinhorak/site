@@ -2,42 +2,45 @@
 
 import { useMemo } from "react";
 import { PublicProfileView } from "@/components/profile/public-profile-view";
-import {
-  type PublicPlayerProfile,
-} from "@/lib/profile/serialize-public";
-import { useUser } from "@/lib/hooks/use-user";
+import { useOptionalUserContext } from "@/components/providers/user-provider";
+import { type PublicPlayerProfile } from "@/lib/profile/serialize-public";
+import type { PublicProfileLabels } from "@/lib/profile/public-profile-labels.shared";
 
 export function PublicProfilePage({
   initialPlayer,
+  labels,
 }: {
   initialPlayer: PublicPlayerProfile;
+  labels: PublicProfileLabels;
 }) {
-  const { user } = useUser();
+  const sessionUser = useOptionalUserContext()?.user ?? null;
 
   const player = useMemo(() => {
-    if (user && user.nickname === initialPlayer.nickname) {
-      return {
-        ...initialPlayer,
-        avatarUrl: user.avatarUrl,
-        bio: user.bio,
-        plan: user.plan,
-        rank: user.rank,
-        elo: user.elo,
-        kd: user.kd,
-        matches: user.matches,
-        winRate: user.winRate,
-        level: user.level,
-        xp: user.xp,
-        competitivePoints: user.competitivePoints,
-        rankedWins: user.rankedWins,
-        rankedLosses: user.rankedLosses,
-        rankedKills: user.rankedKills,
-        rankedDeaths: user.rankedDeaths,
-        rankedAssists: user.rankedAssists,
-      };
+    if (!sessionUser || sessionUser.nickname !== initialPlayer.nickname) {
+      return initialPlayer;
     }
-    return initialPlayer;
-  }, [user, initialPlayer]);
 
-  return <PublicProfileView player={player} />;
+    return {
+      ...initialPlayer,
+      avatarUrl: sessionUser.avatarUrl,
+      bio: sessionUser.bio,
+      plan: sessionUser.plan,
+      customization: sessionUser.customization ?? initialPlayer.customization,
+      rank: sessionUser.rank,
+      elo: sessionUser.elo,
+      kd: sessionUser.kd,
+      matches: sessionUser.matches,
+      winRate: sessionUser.winRate,
+      level: sessionUser.level,
+      xp: sessionUser.xp,
+      competitivePoints: sessionUser.competitivePoints,
+      rankedWins: sessionUser.rankedWins,
+      rankedLosses: sessionUser.rankedLosses,
+      rankedKills: sessionUser.rankedKills,
+      rankedDeaths: sessionUser.rankedDeaths,
+      rankedAssists: sessionUser.rankedAssists,
+    };
+  }, [sessionUser, initialPlayer]);
+
+  return <PublicProfileView player={player} labels={labels} />;
 }

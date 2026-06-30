@@ -145,8 +145,9 @@ export function AdminWarmupProbePanel() {
         <div>
           <h2 className="font-display text-lg font-bold">Teste Warmup (antes do registro)</h2>
           <p className="mt-1 text-sm text-muted">
-            Valida A2S, RCON, plugins e sync do site sem registrar o servidor na API ranked.
-            Depois de OK, publique no dashboard para testar connect com jogadores.
+            Só <strong>testa</strong> um servidor que já está rodando (A2S + RCON). Abrir portas no
+            firewall não inicia o CS — para criar uma nova sala use{" "}
+            <strong>Controle de servidores → Registrar e subir</strong> (porta 27016, 27017…).
           </p>
         </div>
         <Button variant="outline" size="sm" disabled={busy} onClick={() => void runProbe()}>

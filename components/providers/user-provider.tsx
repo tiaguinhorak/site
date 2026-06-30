@@ -12,6 +12,10 @@ import {
 import type { UserProfile } from "@/lib/serializers";
 import { getAvatarInitials } from "@/lib/profile";
 import { AUTH_SESSION_CHANGED_EVENT } from "@/lib/auth/auth-events";
+import {
+  PROFILE_CUSTOMIZATION_CHANGED_EVENT,
+  type ProfileCustomizationChangedDetail,
+} from "@/lib/profile/customization-events";
 
 type UserContextValue = {
   user: UserProfile | null;
@@ -58,6 +62,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, onAuthChange);
   }, [refresh]);
 
+  useEffect(() => {
+    const onCustomizationChange = (event: Event) => {
+      const detail = (event as CustomEvent<ProfileCustomizationChangedDetail>).detail;
+      setUserState((prev) =>
+        prev ? { ...prev, customization: detail.customization } : prev,
+      );
+    };
+    window.addEventListener(PROFILE_CUSTOMIZATION_CHANGED_EVENT, onCustomizationChange);
+    return () =>
+      window.removeEventListener(PROFILE_CUSTOMIZATION_CHANGED_EVENT, onCustomizationChange);
+  }, []);
+
   const setUser = useCallback((next: UserProfile | null) => {
     setUserState(next);
   }, []);
@@ -103,4 +119,9 @@ export function useUserContext() {
     throw new Error("useUserContext must be used within UserProvider");
   }
   return ctx;
+}
+
+/** Safe when rendered outside UserProvider (e.g. public marketing pages during SSR). */
+export function useOptionalUserContext() {
+  return useContext(UserContext);
 }

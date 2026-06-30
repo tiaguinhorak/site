@@ -10,8 +10,7 @@ import {
   type LobbyPlayer,
   type LobbyRoomEnriched,
 } from "@/lib/lobby";
-import { AvatarImage } from "@/components/ui/avatar-image";
-import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
+import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
 import { cn } from "@/lib/utils";
 
 function LevelBadge({ level, tier }: { level: number; tier: "low" | "mid" | "high" }) {
@@ -32,18 +31,12 @@ function LevelBadge({ level, tier }: { level: number; tier: "low" | "mid" | "hig
 function PlayerAvatar({ player }: { player: LobbyPlayer }) {
   return (
     <div className="relative">
-      <div
-        className={cn(
-          "flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border-2 bg-[color-mix(in_srgb,var(--foreground)_8%,transparent)] text-[11px] font-bold text-foreground shadow-[0_0_16px_-4px_var(--primary)]",
-          player.steamVerified ? "border-primary" : "border-border",
-        )}
-      >
-        <AvatarImage
-          src={player.avatarUrl ?? getDefaultAvatarPresetUrl()}
-          size={44}
-          className="rounded-full"
-        />
-      </div>
+      <UserProfileAvatar
+        avatarUrl={player.avatarUrl}
+        nickname={player.nickname}
+        customization={player.customization}
+        size="md"
+      />
       {player.steamVerified && (
         <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
           <BadgeCheck className="h-2.5 w-2.5" />

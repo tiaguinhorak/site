@@ -11,7 +11,6 @@ import { NavigationProgress } from "@/components/providers/navigation-progress";
 import { IntlClientProvider } from "@/components/providers/intl-client-provider";
 import { SITE_NAME, SITE_TAGLINE } from "@/lib/brand";
 import { BRAND_ASSETS } from "@/lib/brand-assets";
-import { THEME_INIT_SCRIPT } from "@/lib/theme-script";
 
 const chakra = Chakra_Petch({
   variable: "--font-chakra",
@@ -112,13 +111,7 @@ export default async function RootLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale} suppressHydrationWarning>
-      <head>
-        <script
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
-        />
-      </head>
+    <html lang={locale} className="dark" suppressHydrationWarning>
       <body
         className={`${chakra.variable} ${manrope.variable} min-h-dvh antialiased`}
       >

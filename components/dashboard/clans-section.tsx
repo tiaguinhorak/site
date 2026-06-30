@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import {
@@ -14,15 +14,22 @@ import {
   Trash2,
   Trophy,
   UserMinus,
+  UserPlus,
   Users,
+  Camera,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { AvatarImage } from "@/components/ui/avatar-image";
 import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { EloRankBadgeI18n } from "@/components/ranked/elo-rank-badge-i18n";
 import { getCountryFlag } from "@/lib/profile";
 import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
 import { secureApi } from "@/lib/api/client";
+import { useUser } from "@/lib/hooks/use-user";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
@@ -53,17 +60,31 @@ type ClanStats = {
   avgElo: number;
 };
 
+type ClanJoinRequestView = {
+  id: string;
+  userId: string;
+  nickname: string;
+  avatarUrl: string | null;
+  country: string;
+  level: number;
+  elo: number;
+  message: string;
+  createdAt: string;
+};
+
 type ClanDetail = {
   id: string;
   tag: string;
   name: string;
   description: string;
   avatarUrl: string | null;
+  joinMode: "OPEN" | "CLOSED";
   ownerId: string;
   createdAt: string;
   stats: ClanStats;
   members: ClanMemberView[];
   viewerRole: ClanRole | null;
+  pendingRequests: ClanJoinRequestView[];
 };
 
 type ClanRankingEntry = {
@@ -71,6 +92,7 @@ type ClanRankingEntry = {
   tag: string;
   name: string;
   avatarUrl: string | null;
+  joinMode: "OPEN" | "CLOSED";
   rank: number;
   memberCount: number;
   totalPoints: number;
@@ -86,6 +108,7 @@ const roleIcon: Record<ClanRole, typeof Crown> = {
 
 export function ClansSection() {
   const t = useTranslations("clans");
+  const { user } = useUser();
   const [ranking, setRanking] = useState<ClanRankingEntry[]>([]);
   const [myClan, setMyClan] = useState<ClanDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,6 +116,7 @@ export function ClansSection() {
   const [tag, setTag] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [joinMode, setJoinMode] = useState<"OPEN" | "CLOSED">("OPEN");
 
   const load = useCallback(() => {
     setLoading(true);
@@ -118,7 +142,7 @@ export function ClansSection() {
     setBusy(true);
     const result = await secureApi("/api/clans", {
       method: "POST",
-      json: { tag, name, description },
+      json: { tag, name, description, joinMode },
     });
     setBusy(false);
     if (!result.ok) {
@@ -139,6 +163,11 @@ export function ClansSection() {
     setBusy(false);
     if (!result.ok) {
       toast.error(result.error);
+      return;
+    }
+    const data = result.data as { pending?: boolean; clan?: ClanDetail };
+    if (data.pending) {
+      toast.success(t("requestSent"));
       return;
     }
     toast.success(t("joined"));
@@ -190,6 +219,7 @@ export function ClansSection() {
           busy={busy}
           onLeave={handleLeave}
           onManage={manage}
+          onRefresh={load}
           t={t}
         />
       ) : (
@@ -197,10 +227,13 @@ export function ClansSection() {
           tag={tag}
           name={name}
           description={description}
+          joinMode={joinMode}
+          isElite={user?.plan === "elite"}
           busy={busy}
           setTag={setTag}
           setName={setName}
           setDescription={setDescription}
+          setJoinMode={setJoinMode}
           onCreate={handleCreate}
           t={t}
         />
@@ -242,7 +275,8 @@ export function ClansSection() {
                     <span className="text-primary">[{clan.tag}]</span> {clan.name}
                   </p>
                   <p className="text-xs text-muted">
-                    {t("memberCount", { count: clan.memberCount })} · {t("avgElo")} {clan.avgElo}
+                    {t("memberCount", { count: clan.memberCount })} ·{" "}
+                    <EloRankBadgeI18n elo={clan.avgElo} size="sm" />
                   </p>
                 </div>
                 <div className="text-right">
@@ -259,7 +293,7 @@ export function ClansSection() {
                     disabled={busy}
                     onClick={() => handleJoin(clan.id)}
                   >
-                    {t("join")}
+                    {clan.joinMode === "CLOSED" ? t("requestJoin") : t("join")}
                   </Button>
                 )}
               </li>
@@ -275,23 +309,46 @@ function CreateClanCard({
   tag,
   name,
   description,
+  joinMode,
+  isElite,
   busy,
   setTag,
   setName,
   setDescription,
+  setJoinMode,
   onCreate,
   t,
 }: {
   tag: string;
   name: string;
   description: string;
+  joinMode: "OPEN" | "CLOSED";
+  isElite: boolean;
   busy: boolean;
   setTag: (v: string) => void;
   setName: (v: string) => void;
   setDescription: (v: string) => void;
+  setJoinMode: (v: "OPEN" | "CLOSED") => void;
   onCreate: () => void;
   t: ReturnType<typeof useTranslations<"clans">>;
 }) {
+  if (!isElite) {
+    return (
+      <div className="rounded-card glass-strong p-5 sm:p-6">
+        <div className="flex items-center gap-2">
+          <Crown className="h-5 w-5 text-amber-400" />
+          <h2 className="font-display text-lg font-bold text-foreground">{t("eliteRequiredTitle")}</h2>
+        </div>
+        <p className="mt-2 text-sm text-muted">{t("eliteRequiredDesc")}</p>
+        <div className="mt-4">
+          <ButtonLink href="/dashboard/premium" variant="primary">
+            {t("upgradeElite")}
+          </ButtonLink>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-card glass-strong p-5 sm:p-6">
       <div className="flex items-center gap-2">
@@ -325,6 +382,30 @@ function CreateClanCard({
         />
       </div>
       <div className="mt-4">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">{t("joinModeLabel")}</p>
+        <div className="flex flex-wrap gap-2">
+          {(["OPEN", "CLOSED"] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setJoinMode(mode)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
+                joinMode === mode
+                  ? "bg-[color-mix(in_srgb,var(--primary)_16%,transparent)] text-primary"
+                  : "border border-border text-muted hover:text-foreground",
+              )}
+            >
+              {mode === "OPEN" ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+              {mode === "OPEN" ? t("joinModeOpen") : t("joinModeClosed")}
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-muted">
+          {joinMode === "OPEN" ? t("joinModeOpenHint") : t("joinModeClosedHint")}
+        </p>
+      </div>
+      <div className="mt-4">
         <Button
           type="button"
           variant="primary"
@@ -344,21 +425,42 @@ function ClanDashboard({
   busy,
   onLeave,
   onManage,
+  onRefresh,
   t,
 }: {
   clan: ClanDetail;
   busy: boolean;
   onLeave: () => void;
   onManage: (body: Record<string, unknown>, successMsg: string) => void;
+  onRefresh: () => void;
   t: ReturnType<typeof useTranslations<"clans">>;
 }) {
   const canManage = clan.viewerRole === "OWNER" || clan.viewerRole === "OFFICER";
   const isOwner = clan.viewerRole === "OWNER";
+  const [inviteNick, setInviteNick] = useState("");
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  async function uploadAvatar(file: File) {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`/api/clans/${clan.id}/avatar`, {
+      method: "POST",
+      credentials: "same-origin",
+      body: form,
+    });
+    if (!res.ok) {
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      toast.error(data.error ?? t("avatarError"));
+      return;
+    }
+    toast.success(t("avatarUpdated"));
+    onRefresh();
+  }
 
   const stats = [
     { label: t("statMembers"), value: `${clan.stats.memberCount}/20` },
     { label: t("points"), value: clan.stats.totalPoints.toLocaleString("pt-BR") },
-    { label: t("avgElo"), value: String(clan.stats.avgElo) },
+    { label: t("avgElo"), value: <EloRankBadgeI18n elo={clan.stats.avgElo} size="sm" /> },
     { label: t("statKills"), value: clan.stats.totalKills.toLocaleString("pt-BR") },
     { label: t("statWins"), value: clan.stats.totalWins.toLocaleString("pt-BR") },
     { label: t("statMvps"), value: clan.stats.totalMvps.toLocaleString("pt-BR") },
@@ -369,15 +471,64 @@ function ClanDashboard({
       <div className="rounded-card glass-strong p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-border">
+            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-border">
               <AvatarImage src={clan.avatarUrl ?? getDefaultAvatarPresetUrl()} alt="" size={64} />
+              {isOwner && (
+                <>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void uploadAvatar(file);
+                      e.target.value = "";
+                    }}
+                  />
+                  <button
+                    type="button"
+                    aria-label={t("changeAvatar")}
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="absolute inset-0 flex items-end justify-center bg-black/40 opacity-0 transition-opacity hover:opacity-100"
+                  >
+                    <Camera className="mb-1 h-4 w-4 text-white" />
+                  </button>
+                </>
+              )}
             </div>
             <div>
               <p className="font-display text-2xl font-bold text-foreground">
                 <span className="text-primary">[{clan.tag}]</span> {clan.name}
               </p>
-              {clan.description && (
-                <p className="mt-1 max-w-lg text-sm text-muted">{clan.description}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
+                {clan.joinMode === "OPEN" ? (
+                  <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 text-emerald-400">
+                    <Unlock className="h-3 w-3" /> {t("joinModeOpen")}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-0.5 text-amber-400">
+                    <Lock className="h-3 w-3" /> {t("joinModeClosed")}
+                  </span>
+                )}
+              </div>
+              {isOwner && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(["OPEN", "CLOSED"] as const).map((mode) => (
+                    <Button
+                      key={mode}
+                      type="button"
+                      size="sm"
+                      variant={clan.joinMode === mode ? "primary" : "outline"}
+                      disabled={busy || clan.joinMode === mode}
+                      onClick={() =>
+                        onManage({ action: "settings", joinMode: mode }, t("settingsSaved"))
+                      }
+                    >
+                      {mode === "OPEN" ? t("joinModeOpen") : t("joinModeClosed")}
+                    </Button>
+                  ))}
+                </div>
               )}
             </div>
           </div>
@@ -410,6 +561,92 @@ function ClanDashboard({
           ))}
         </div>
       </div>
+
+      {canManage && (
+        <div className="rounded-card glass p-4 sm:p-5">
+          <h3 className="flex items-center gap-2 font-display text-sm font-bold text-foreground">
+            <UserPlus className="h-4 w-4 text-primary" />
+            {t("inviteTitle")}
+          </h3>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <Input
+              label={t("invitePlaceholder")}
+              value={inviteNick}
+              onChange={(e) => setInviteNick(e.target.value)}
+              placeholder={t("invitePlaceholder")}
+            />
+            <Button
+              type="button"
+              variant="primary"
+              disabled={busy || inviteNick.trim().length < 2}
+              onClick={() => {
+                onManage({ action: "invite", nickname: inviteNick.trim() }, t("invited"));
+                setInviteNick("");
+              }}
+            >
+              {t("inviteButton")}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {canManage && clan.pendingRequests.length > 0 && (
+        <section>
+          <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-foreground">
+            <Users className="h-5 w-5 text-primary" />
+            {t("requestsTitle", { count: clan.pendingRequests.length })}
+          </h2>
+          <ul className="overflow-hidden rounded-card glass">
+            {clan.pendingRequests.map((req) => (
+              <li
+                key={req.id}
+                className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-0"
+              >
+                <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-border">
+                  <AvatarImage src={req.avatarUrl ?? getDefaultAvatarPresetUrl()} alt="" size={40} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-display text-sm font-semibold text-foreground">{req.nickname}</p>
+                  <p className="text-xs text-muted">
+                    {getCountryFlag(req.country)} · <EloRankBadgeI18n elo={req.elo} size="sm" />
+                  </p>
+                  {req.message && <p className="mt-1 text-xs text-muted">{req.message}</p>}
+                </div>
+                <div className="flex shrink-0 gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="primary"
+                    disabled={busy}
+                    onClick={() =>
+                      onManage(
+                        { action: "review_request", requestId: req.id, approve: true },
+                        t("requestApproved"),
+                      )
+                    }
+                  >
+                    {t("approve")}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() =>
+                      onManage(
+                        { action: "review_request", requestId: req.id, approve: false },
+                        t("requestRejected"),
+                      )
+                    }
+                  >
+                    {t("reject")}
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section>
         <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-foreground">

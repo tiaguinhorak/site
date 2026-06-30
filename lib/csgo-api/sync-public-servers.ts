@@ -31,7 +31,7 @@ async function fetchLiveMatchesByServer(): Promise<Map<string, CsgoMatchSummary>
 }
 
 async function listCsgoApiServers(): Promise<CsgoGameServer[]> {
-  return cached("csgo:api-servers", 10_000, async () => {
+  const raw = await cached("csgo:api-servers", 10_000, async () => {
     try {
       const merged = await listAllCsgoApiServers();
       return merged.map(({ apiBaseUrl: _, ...server }) => server);
@@ -39,6 +39,13 @@ async function listCsgoApiServers(): Promise<CsgoGameServer[]> {
       return [];
     }
   });
+
+  if (Array.isArray(raw)) return raw;
+  if (raw && typeof raw === "object" && "servers" in raw) {
+    const nested = (raw as { servers?: CsgoGameServer[] }).servers;
+    return Array.isArray(nested) ? nested : [];
+  }
+  return [];
 }
 
 async function syncCsgoPublicServersNow(): Promise<void> {
@@ -65,13 +72,7 @@ async function syncCsgoPublicServersNow(): Promise<void> {
       ping: 0,
     };
 
-    const apiOnline = server.status !== "offline";
     const reachable = live.online;
-
-    if (!apiOnline && !reachable) {
-      await prisma.publicServer.deleteMany({ where: { csgoServerId: server.id } });
-      continue;
-    }
 
     seenIds.add(server.id);
     const liveMatch = liveByServer.get(server.id);
@@ -89,6 +90,7 @@ async function syncCsgoPublicServersNow(): Promise<void> {
       mode = existing.mode;
     }
     const map = reachable ? (live.mapRaw ?? live.map) : "offline";
+    const defaultSlots = reachable ? live.slots : 10;
 
     upserts.push(
       prisma.publicServer.upsert({
@@ -100,9 +102,9 @@ async function syncCsgoPublicServersNow(): Promise<void> {
           port: server.port,
           map,
           mode,
-          players: live.players,
-          slots: reachable ? live.slots : 10,
-          ping: live.ping,
+          players: reachable ? live.players : 0,
+          slots: defaultSlots,
+          ping: reachable ? live.ping : 0,
           sortOrder: LIVE_SYNC_SORT_BASE + index,
           isLiveSynced: true,
           pool,
@@ -113,9 +115,9 @@ async function syncCsgoPublicServersNow(): Promise<void> {
           port: server.port,
           map,
           mode,
-          players: live.players,
-          slots: reachable ? live.slots : 10,
-          ping: live.ping,
+          players: reachable ? live.players : 0,
+          slots: defaultSlots,
+          ping: reachable ? live.ping : 0,
           isLiveSynced: true,
           pool,
         },
@@ -125,12 +127,7 @@ async function syncCsgoPublicServersNow(): Promise<void> {
 
   await Promise.all(upserts);
 
-  if (seenIds.size === 0 && servers.length === 0) {
-    return;
-  }
-
-  if (seenIds.size === 0) {
-    await prisma.publicServer.deleteMany({ where: { isLiveSynced: true } });
+  if (servers.length === 0) {
     return;
   }
 

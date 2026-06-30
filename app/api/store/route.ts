@@ -17,7 +17,11 @@ import {
 
 export async function GET(request: NextRequest) {
   const userId = await getSessionUserId(request);
-  const items = await getStoreItems(true);
+  const coinShop = request.nextUrl.searchParams.get("coinShop") === "1";
+  const items = await getStoreItems({
+    enabledOnly: true,
+    coinShopOnly: coinShop,
+  });
 
   const itemIds = items.map((item) => item.id);
   const [ownedSkinIds, purchaseCounts, agentByDef, stickerByDef, cartStoreItemIds] = await Promise.all([
@@ -31,14 +35,20 @@ export async function GET(request: NextRequest) {
   ]);
 
   return NextResponse.json({
-    items: items.map((item) =>
-      serializePublicStoreItem(item, {
-        purchaseCount: purchaseCounts.get(item.id) ?? 0,
-        ownedSkinIds,
-        agentByDef,
-        stickerByDef,
-        cartStoreItemIds,
+    items: items
+      .map((item) =>
+        serializePublicStoreItem(item, {
+          purchaseCount: purchaseCounts.get(item.id) ?? 0,
+          ownedSkinIds,
+          agentByDef,
+          stickerByDef,
+          cartStoreItemIds,
+        }),
+      )
+      .filter((item) => {
+        if (coinShop) return item.canBuyWithCoins;
+        const coinOnly = request.nextUrl.searchParams.get("coinOnly") === "1";
+        return coinOnly ? item.canBuyWithCoins : true;
       }),
-    ),
   });
 }

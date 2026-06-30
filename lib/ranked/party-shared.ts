@@ -1,9 +1,12 @@
+import type { PublicProfileCustomization } from "@/lib/profile/serialize-customization";
+
 export type RankedPartyMemberView = {
   id: string;
   nickname: string;
   elo: number;
   avatarUrl: string | null;
   avatarInitials: string;
+  customization: PublicProfileCustomization | null;
   slotIndex: number;
   isLeader: boolean;
   isYou: boolean;

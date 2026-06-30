@@ -9,6 +9,7 @@ export type SteamProfileData = {
   profileUrl: string | null;
   realName: string | null;
   countryCode: string | null;
+  accountCreatedAt: Date | null;
 };
 
 const STEAM_COUNTRY_MAP: Record<string, string> = Object.fromEntries(
@@ -56,6 +57,10 @@ export function buildUserSteamUpdate(
     update.steamLinkedAt = new Date();
   }
 
+  if (steam.accountCreatedAt) {
+    update.steamAccountCreatedAt = steam.accountCreatedAt;
+  }
+
   const usingSteamAvatar =
     !user?.avatarUrl && !user?.avatarPreset;
   if (usingSteamAvatar && steam.avatarUrl) {
@@ -93,6 +98,7 @@ export function buildUserSteamCreate(
     lastName: "",
     country: mapSteamCountry(steam.countryCode) ?? "BR",
     steamLinkedAt: new Date(),
+    steamAccountCreatedAt: steam.accountCreatedAt,
   };
 }
 

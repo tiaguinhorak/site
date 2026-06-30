@@ -14,6 +14,7 @@ import { notifyStorePurchaseCompleted } from "@/lib/store/store-notifications";
 import type { GrantedStoreReward, StorePurchaseResult } from "@/lib/store/types";
 import { prisma } from "@/lib/prisma";
 import { creditCoins, debitCoins, InsufficientCoinsError } from "@/lib/economy/wallet";
+import { notifyDiscordPlanSyncForUser } from "@/lib/discord/sync-user";
 
 export type StorePurchaseCurrency = "brl" | "coins";
 
@@ -166,6 +167,8 @@ async function fulfillSubscriptionPurchase(
     where: { id: userId },
     data: { plan: item.grantPlan },
   });
+
+  void notifyDiscordPlanSyncForUser(userId);
 
   const label = item.grantPlan === "ELITE" ? "Elite" : "Premium";
   return [{ kind: "STICKER", name: `Assinatura ${label}` }];

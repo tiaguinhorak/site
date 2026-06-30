@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -77,6 +78,9 @@ type ThemeProviderProps = {
   disableTransitionOnChange?: boolean;
 };
 
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
 export function ThemeProvider({
   children,
   defaultTheme = "dark",
@@ -104,7 +108,7 @@ export function ThemeProvider({
     }
   }, []);
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     applyTheme(resolvedTheme, disableTransitionOnChange);
   }, [resolvedTheme, disableTransitionOnChange]);
 

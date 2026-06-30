@@ -13,6 +13,33 @@ enum Plan {
   ELITE
 }
 
+enum AvatarModerationStatus {
+  APPROVED
+  PENDING
+  REJECTED
+}
+
+enum AvatarMediaType {
+  STATIC
+  GIF
+}
+
+enum SmurfStatus {
+  CLEAR
+  REVIEW
+  FLAGGED
+  CONFIRMED
+}
+
+enum SmurfSignalType {
+  NEW_STEAM_ACCOUNT
+  LOW_STEAM_AGE
+  SHARED_IP
+  STAT_ANOMALY
+  STEAM_RELINK
+  RAPID_RANK_CLIMB
+}
+
 enum NotificationType {
   SYSTEM
   MATCH
@@ -89,6 +116,7 @@ enum CoinTransactionKind {
   GIFT_RECEIVED
   ADMIN_ADJUST
   REFUND
+  COIN_TOPUP
 }
 
 enum MissionPeriod {
@@ -141,6 +169,24 @@ enum ClanRole {
   MEMBER
 }
 
+enum ClanJoinMode {
+  OPEN
+  CLOSED
+}
+
+enum ClanJoinRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum CoinPackCheckoutStatus {
+  PENDING
+  PAID
+  CANCELLED
+  DELINQUENT
+}
+
 enum FriendshipStatus {
   PENDING
   ACCEPTED
@@ -183,6 +229,9 @@ model User {
   steamAvatarUrl        String?
   steamProfileUrl       String?
   steamCountryCode      String?
+  discordUserId         String?   @unique
+  discordUsername       String?
+  discordLinkedAt       DateTime?
   isAdmin               Boolean   @default(false)
   rankedQueueDodges     Int       @default(0)
   rankedRestrictedUntil DateTime?
@@ -202,7 +251,27 @@ model User {
   rankedAwpKills        Int       @default(0)
   profileTag            String?
   profileMedalCode      String?
-  mapPlayCounts         Json      @default("{}")
+  profileBannerUrl      String?
+  profileBannerMediaType AvatarMediaType       @default(STATIC)
+  profileBannerModerationStatus AvatarModerationStatus @default(APPROVED)
+  profileBackgroundId   String                @default("default")
+  profileFrameId        String                @default("none")
+  profileFrameColor     String?
+  profileAccentColor    String?
+  profileThemeId        String                @default("aurora")
+  profileThemeColor     String?
+  profileBorderId       String                @default("none")
+  profileBorderColor    String?
+  profileBackgroundColor String?
+  profileShowPlanBadge  Boolean               @default(true)
+  profileShowAchievements Boolean             @default(true)
+  avatarModerationStatus AvatarModerationStatus @default(APPROVED)
+  avatarMediaType       AvatarMediaType       @default(STATIC)
+  steamAccountCreatedAt DateTime?
+  rankedSmurfHoldUntil  DateTime?
+  smurfRiskScore        Int                   @default(0)
+  smurfStatus           SmurfStatus           @default(CLEAR)
+  mapPlayCounts         Json                  @default("{}")
   weaponKillCounts      Json      @default("{}")
   competitivePoints     Int       @default(0)
   xp                    Int       @default(0)
@@ -240,8 +309,12 @@ model User {
   battlePassClaims        UserBattlePassClaim[]
   clanMembership          ClanMember?
   clansOwned              Clan[]                       @relation("ClanOwner")
+  clanJoinRequests        ClanJoinRequest[]
+  coinPackCheckouts       CoinPackCheckout[]
   friendRequestsSent      Friendship[]                 @relation("FriendRequester")
   friendRequestsReceived  Friendship[]                 @relation("FriendAddressee")
+  smurfSignals            SmurfSignal[]
+  accountFingerprints     AccountFingerprint[]
 
   @@index([rank])
   @@index([elo])
@@ -254,6 +327,39 @@ model User {
   @@index([rankedClutches])
   @@index([rankedUtilityDamage])
   @@index([rankedAwpKills])
+  @@index([smurfStatus])
+  @@index([smurfRiskScore])
+  @@index([avatarModerationStatus])
+}
+
+model SmurfSignal {
+  id         String          @id @default(cuid())
+  userId     String
+  signalType SmurfSignalType
+  score      Int             @default(1)
+  metadata   Json            @default("{}")
+  resolved   Boolean         @default(false)
+  createdAt  DateTime        @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, resolved])
+  @@index([signalType, createdAt])
+}
+
+model AccountFingerprint {
+  id            String   @id @default(cuid())
+  userId        String
+  ipHash        String
+  userAgentHash String
+  firstSeenAt   DateTime @default(now())
+  lastSeenAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, ipHash, userAgentHash])
+  @@index([ipHash])
+  @@index([userAgentHash])
 }
 
 model CoinTransaction {
@@ -881,6 +987,7 @@ model StoreItem {
   priceCents    Int
   originalCents Int?
   coinPrice     Int?
+  coinShopOnly  Boolean          @default(false)
   badge         String
   description   String
   accent        String
@@ -1085,6 +1192,46 @@ model SiteStat {
   sortOrder Int    @default(0)
 }
 
+model DiscordLinkCode {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  discordUserId   String
+  discordUsername String    @default("")
+  expiresAt       DateTime
+  usedAt          DateTime?
+  userId          String?
+  createdAt       DateTime  @default(now())
+
+  @@index([discordUserId])
+  @@index([expiresAt])
+}
+
+model DiscordFeedPublishLog {
+  id          String   @id @default(cuid())
+  feedType    String
+  itemKey     String
+  publishedAt DateTime @default(now())
+
+  @@unique([feedType, itemKey])
+  @@index([feedType])
+}
+
+model DiscordBotFeedChannel {
+  id              String    @id @default(cuid())
+  guildId         String
+  feedType        String
+  channelId       String
+  enabled         Boolean   @default(true)
+  intervalMinutes Int       @default(60)
+  lastRunAt       DateTime?
+  lastMessageId   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([guildId, feedType])
+  @@index([guildId])
+}
+
 // --- CS:GO REST API (integração servidor / partidas / skins) ---
 
 enum CsgoSkinWear {
@@ -1269,19 +1416,55 @@ model CsgoPlayerAgent {
 }
 
 model Clan {
-  id          String   @id @default(cuid())
-  tag         String   @unique
-  name        String   @unique
-  description String   @default("")
+  id          String       @id @default(cuid())
+  tag         String       @unique
+  name        String       @unique
+  description String       @default("")
   avatarUrl   String?
+  joinMode    ClanJoinMode @default(OPEN)
   ownerId     String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
-  owner   User         @relation("ClanOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  members ClanMember[]
+  owner        User              @relation("ClanOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members      ClanMember[]
+  joinRequests ClanJoinRequest[]
 
   @@index([ownerId])
+}
+
+model ClanJoinRequest {
+  id        String                @id @default(cuid())
+  clanId    String
+  userId    String
+  status    ClanJoinRequestStatus @default(PENDING)
+  message   String                @default("")
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+
+  clan Clan @relation(fields: [clanId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([clanId, userId])
+  @@index([clanId, status])
+  @@index([userId])
+}
+
+model CoinPackCheckout {
+  id         String                 @id @default(cuid())
+  userId     String
+  packId     String
+  coins      Int
+  priceCents Int
+  status     CoinPackCheckoutStatus @default(PENDING)
+  dueAt      DateTime
+  paidAt     DateTime?
+  createdAt  DateTime               @default(now())
+  updatedAt  DateTime               @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
 }
 
 model ClanMember {

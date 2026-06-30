@@ -172,7 +172,7 @@ export const adminNewsUpdateSchema = adminNewsCreateSchema.partial().extend({
   archived: z.boolean().optional(),
 });
 
-export const adminStoreCreateSchema = z.object({
+const adminStoreBaseSchema = z.object({
   name: z.string().min(2).max(80).transform((v) => sanitizeText(v, 80)),
   type: z.string().min(2).max(40).transform((v) => sanitizeText(v, 40)),
   productKind: z.enum(["SKIN", "PACKAGE", "CASE", "AGENT"]).default("SKIN"),
@@ -193,9 +193,20 @@ export const adminStoreCreateSchema = z.object({
   featured: z.boolean().default(false),
   sortOrder: z.number().int().min(0).max(9999).default(0),
   maxPerUser: z.number().int().min(1).max(9999).optional().nullable(),
+  coinShopOnly: z.boolean().default(false),
 });
 
-export const adminStoreUpdateSchema = adminStoreCreateSchema.partial();
+export const adminStoreCreateSchema = adminStoreBaseSchema.superRefine((data, ctx) => {
+  if (data.coinShopOnly && (!data.coinPrice || data.coinPrice <= 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Itens exclusivos da loja de moedas precisam de preço em moedas.",
+      path: ["coinPrice"],
+    });
+  }
+});
+
+export const adminStoreUpdateSchema = adminStoreBaseSchema.partial();
 
 export const adminStoreRewardSchema = z.object({
   kind: z.enum(["CATALOG_SKIN", "AGENT", "STICKER"]),

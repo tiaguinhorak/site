@@ -17,6 +17,8 @@ import {
 import { sessionOptionsFromUser } from "@/lib/auth/session-options";
 import { createSessionToken, applySessionCookie } from "@/lib/security/session";
 import { isUserBanned } from "@/lib/admin/punishments";
+import { onSteamLinked } from "@/lib/anti-smurf/service";
+import { recordAccountFingerprint } from "@/lib/anti-smurf/fingerprint";
 
 function fallbackSteamProfile(steamId: string): SteamProfileData {
   return {
@@ -26,6 +28,7 @@ function fallbackSteamProfile(steamId: string): SteamProfileData {
     profileUrl: `https://steamcommunity.com/profiles/${steamId}`,
     realName: null,
     countryCode: null,
+    accountCreatedAt: null,
   };
 }
 
@@ -114,6 +117,8 @@ export async function GET(request: NextRequest) {
       where: { id: userId },
       data: buildUserSteamUpdate(currentUser, steamProfile),
     });
+    void onSteamLinked(userId, steamProfile.accountCreatedAt);
+    void recordAccountFingerprint(userId, request);
 
     return NextResponse.redirect(
       new URL("/dashboard/perfil?steam=linked", getAppUrl(request)),
@@ -131,6 +136,8 @@ export async function GET(request: NextRequest) {
     user = await prisma.user.create({
       data: buildUserSteamCreate(steamProfile, nickname),
     });
+    void onSteamLinked(user.id, steamProfile.accountCreatedAt);
+    void recordAccountFingerprint(user.id, request);
   } else {
     const steamUpdate = buildUserSteamUpdate(user, steamProfile);
     const syncedNick = await syncNicknameFromSteam(
@@ -146,6 +153,8 @@ export async function GET(request: NextRequest) {
       where: { id: user.id },
       data: steamUpdate,
     });
+    void onSteamLinked(user.id, steamProfile.accountCreatedAt);
+    void recordAccountFingerprint(user.id, request);
 
     if (await isUserBanned(user.id)) {
       return NextResponse.redirect(

@@ -15,6 +15,8 @@ import {
   Moon,
   Sun,
   Medal,
+  ExternalLink,
+  UserRoundPen,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -26,7 +28,7 @@ import { notifyAuthSessionChanged } from "@/lib/auth/auth-events";
 import { useUser } from "@/lib/hooks/use-user";
 import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
 import { useTheme } from "@/lib/theme";
-import { AvatarImage } from "@/components/ui/avatar-image";
+import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
 import { cn } from "@/lib/utils";
 
 type UserMenuDropdownProps = {
@@ -59,7 +61,12 @@ export function UserMenuDropdown({ align = "right", className }: UserMenuDropdow
   const isDark = resolvedTheme === "dark";
 
   const menuItems = [
-    { href: "/dashboard/perfil", label: t("myProfile"), icon: UserRound },
+    {
+      href: `/player/${encodeURIComponent(user.nickname)}`,
+      label: tAccount("publicProfile"),
+      icon: ExternalLink,
+    },
+    { href: "/dashboard/perfil", label: tAccount("configureProfile"), icon: UserRoundPen },
     { href: "/dashboard/lobby", label: tNav("lobby"), icon: Users },
     { href: "/dashboard/ranked", label: t("ranked"), icon: Trophy },
     { href: "/dashboard/ranking", label: tNav("ranking"), icon: Medal },
@@ -80,9 +87,12 @@ export function UserMenuDropdown({ align = "right", className }: UserMenuDropdow
           className?.includes("w-full") && "w-full justify-between",
         )}
       >
-        <div className="flex h-8 w-8 shrink-0 overflow-hidden rounded-lg">
-          <AvatarImage src={avatarSrc} size={32} className="rounded-lg" />
-        </div>
+        <UserProfileAvatar
+          avatarUrl={avatarSrc}
+          nickname={user.nickname}
+          customization={user.customization}
+          size="sm"
+        />
         <span className="hidden max-w-[100px] truncate font-display text-sm font-semibold text-foreground sm:block">
           {user.nickname}
         </span>
@@ -104,9 +114,12 @@ export function UserMenuDropdown({ align = "right", className }: UserMenuDropdow
       >
         <div className="border-b border-border/80 p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 overflow-hidden rounded-xl">
-              <AvatarImage src={avatarSrc} size={44} className="rounded-xl" />
-            </div>
+            <UserProfileAvatar
+              avatarUrl={avatarSrc}
+              nickname={user.nickname}
+              customization={user.customization}
+              size="md"
+            />
             <div className="min-w-0">
               <p className="truncate font-display text-sm font-bold text-foreground">
                 {user.nickname}

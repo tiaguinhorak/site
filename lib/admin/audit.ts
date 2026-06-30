@@ -51,7 +51,12 @@ export type AuditAction =
   | "AGENT_CATALOG_ENABLE"
   | "AGENT_CATALOG_DISABLE"
   | "AGENT_CATALOG_DELETE"
-  | "AGENT_CATALOG_IMPORT_ALL";
+  | "AGENT_CATALOG_IMPORT_ALL"
+  | "AVATAR_APPROVE"
+  | "AVATAR_REJECT"
+  | "BANNER_APPROVE"
+  | "BANNER_REJECT"
+  | "SMURF_STATUS_UPDATE";
 
 export async function logAdminAction(params: {
   adminId: string;

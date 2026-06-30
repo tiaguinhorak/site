@@ -54,6 +54,12 @@ export async function addStoreItemToCart(userId: string, storeItemId: string, qu
   if (!item || !item.enabled) {
     throw new CsgoApiError("Item não disponível na loja.", 404);
   }
+  if (item.coinShopOnly) {
+    throw new CsgoApiError(
+      "Este item só pode ser comprado com moedas na Loja de Moedas.",
+      409,
+    );
+  }
   if (item.rewards.length === 0) {
     throw new CsgoApiError("Item sem recompensas configuradas.", 400);
   }

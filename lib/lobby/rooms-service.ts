@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { getAvatarInitials } from "@/lib/profile";
 import { resolveUserAvatarUrl } from "@/lib/profile/avatar";
+import { serializeProfileCustomization, type PublicProfileCustomization } from "@/lib/profile/serialize-customization";
 import { planPriorityWeight } from "@/lib/plan-priority";
 import { assertCanJoinLobby, PlayStateError } from "@/lib/play-state";
 import {
@@ -92,6 +93,24 @@ const lobbyInclude = {
           elo: true,
           country: true,
           steamCountryCode: true,
+          plan: true,
+          profileBannerUrl: true,
+          profileBannerMediaType: true,
+          profileBannerModerationStatus: true,
+          profileBackgroundId: true,
+          profileBackgroundColor: true,
+          profileFrameId: true,
+          profileFrameColor: true,
+          profileAccentColor: true,
+          profileThemeId: true,
+          profileThemeColor: true,
+          profileBorderId: true,
+          profileBorderColor: true,
+          profileShowPlanBadge: true,
+          profileShowAchievements: true,
+          avatarMediaType: true,
+          avatarModerationStatus: true,
+          isAdmin: true,
         },
       },
     },
@@ -114,6 +133,7 @@ export type SerializedMember = {
   level: number;
   avatarUrl: string | null;
   avatarInitials: string;
+  customization: PublicProfileCustomization | null;
   steamVerified: boolean;
   slotIndex: number;
   isReady: boolean;
@@ -155,6 +175,7 @@ function serializeLobbyRoom(
     level: eloToLobbyLevel(m.user.elo),
     avatarUrl: resolveUserAvatarUrl(m.user),
     avatarInitials: getAvatarInitials("", "", m.user.nickname),
+    customization: serializeProfileCustomization(m.user),
     steamVerified: Boolean(m.user.steamLinkedAt),
     slotIndex: m.slotIndex,
     isReady: m.isReady,

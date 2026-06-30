@@ -24,8 +24,11 @@ export async function POST(
 
   const { id } = await context.params;
   try {
-    const clan = await joinClan(userId, id);
-    return NextResponse.json({ ok: true, clan });
+    const result = await joinClan(userId, id);
+    if ("pending" in result) {
+      return NextResponse.json({ ok: true, pending: true });
+    }
+    return NextResponse.json({ ok: true, clan: result });
   } catch (err) {
     if (err instanceof ClanError) {
       return NextResponse.json({ error: err.message }, { status: err.status });

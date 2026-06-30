@@ -21,8 +21,7 @@ import {
 } from "@/components/providers/ranked-party-provider";
 import { RANKED_MAP_LABELS } from "@/lib/ranked/constants";
 import type { RankedPartyMemberView, RankedPartyView } from "@/lib/ranked/party-shared";
-import { AvatarImage } from "@/components/ui/avatar-image";
-import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
+import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
 import { cn } from "@/lib/utils";
 import { textWarningClass, textWarningSoftClass } from "@/lib/ui/theme-surfaces";
 
@@ -41,25 +40,23 @@ function CompactSlot({
 }) {
   return (
     <div className="relative flex flex-col items-center gap-1.5">
-      <div
-        className={cn(
-          "flex items-center justify-center overflow-hidden rounded-xl text-[10px] font-bold ring-2",
-          large ? "h-12 w-12 rounded-xl text-xs" : "h-10 w-10 rounded-lg",
-          player
-            ? "bg-[linear-gradient(135deg,var(--primary-soft),var(--primary))] text-white ring-primary/40"
-            : "bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)] text-muted ring-border/50 ring-dashed",
-        )}
-      >
-        {player ? (
-          <AvatarImage
-            src={player.avatarUrl ?? getDefaultAvatarPresetUrl()}
-            size={large ? 48 : 40}
-            className={large ? "rounded-xl" : "rounded-lg"}
-          />
-        ) : (
+      {player ? (
+        <UserProfileAvatar
+          avatarUrl={player.avatarUrl}
+          nickname={player.nickname}
+          customization={player.customization}
+          size={large ? "md" : "sm"}
+        />
+      ) : (
+        <div
+          className={cn(
+            "flex items-center justify-center bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)] text-muted ring-2 ring-border/50 ring-dashed",
+            large ? "h-12 w-12 rounded-xl" : "h-10 w-10 rounded-lg",
+          )}
+        >
           <Users className="h-3.5 w-3.5" />
-        )}
-      </div>
+        </div>
+      )}
       <p
         className={cn(
           "truncate font-medium text-foreground",

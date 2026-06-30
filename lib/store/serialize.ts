@@ -161,7 +161,9 @@ export function serializePublicStoreItem(
   const atLimit =
     item.maxPerUser != null && context.purchaseCount >= item.maxPerUser;
   const inCart = context.cartStoreItemIds?.has(item.id) ?? false;
+  const coinShopExclusive = item.coinShopOnly === true;
   const canPurchase =
+    !coinShopExclusive &&
     item.enabled &&
     rewards.length > 0 &&
     !atLimit &&

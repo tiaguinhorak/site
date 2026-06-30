@@ -2,17 +2,25 @@
 
 import { useCallback, useState } from "react";
 import { Check, Link2 } from "lucide-react";
-import { useTranslations } from "next-intl";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 type PublicProfileShareButtonProps = {
   nickname: string;
+  labels: {
+    shareProfile: string;
+    shareCopied: string;
+    shareCopiedShort: string;
+    shareFailed: string;
+  };
   className?: string;
 };
 
-export function PublicProfileShareButton({ nickname, className }: PublicProfileShareButtonProps) {
-  const t = useTranslations("publicProfile");
+export function PublicProfileShareButton({
+  nickname,
+  labels,
+  className,
+}: PublicProfileShareButtonProps) {
   const [copied, setCopied] = useState(false);
 
   const share = useCallback(async () => {
@@ -28,12 +36,12 @@ export function PublicProfileShareButton({ nickname, className }: PublicProfileS
       }
       await navigator.clipboard.writeText(url);
       setCopied(true);
-      toast.success(t("shareCopied"));
+      toast.success(labels.shareCopied);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error(t("shareFailed"));
+      toast.error(labels.shareFailed);
     }
-  }, [nickname, t]);
+  }, [labels.shareCopied, labels.shareFailed, nickname]);
 
   return (
     <button
@@ -45,7 +53,7 @@ export function PublicProfileShareButton({ nickname, className }: PublicProfileS
       )}
     >
       {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Link2 className="h-4 w-4 text-primary" />}
-      {copied ? t("shareCopiedShort") : t("shareProfile")}
+      {copied ? labels.shareCopiedShort : labels.shareProfile}
     </button>
   );
 }

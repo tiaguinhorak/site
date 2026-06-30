@@ -13,11 +13,12 @@ import {
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { AvatarImage } from "@/components/ui/avatar-image";
+import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
+import { ProfileDisplayName } from "@/components/profile/profile-display-name";
+import type { PublicProfileCustomization } from "@/lib/profile/serialize-customization";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getCountryFlag } from "@/lib/profile";
-import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
 import { useUser } from "@/lib/hooks/use-user";
 import { secureApi } from "@/lib/api/client";
 import { toast } from "@/lib/toast";
@@ -31,6 +32,7 @@ type FriendUser = {
   plan: string;
   level: number;
   elo: number;
+  customization: PublicProfileCustomization | null;
 };
 
 type FriendEntry = FriendUser & { friendshipId: string };
@@ -56,13 +58,14 @@ type StoreItemLite = {
 type Tab = "friends" | "requests" | "add";
 
 function Avatar({ user, size = 40 }: { user: FriendUser; size?: number }) {
+  const avatarSize = size <= 32 ? "sm" : size <= 44 ? "md" : "lg";
   return (
-    <div
-      className="shrink-0 overflow-hidden rounded-xl border border-border"
-      style={{ width: size, height: size }}
-    >
-      <AvatarImage src={user.avatarUrl ?? getDefaultAvatarPresetUrl()} alt="" size={size} />
-    </div>
+    <UserProfileAvatar
+      avatarUrl={user.avatarUrl}
+      nickname={user.nickname}
+      customization={user.customization}
+      size={avatarSize}
+    />
   );
 }
 

@@ -69,6 +69,21 @@ type ControlResponse = {
   orphanProcess?: boolean;
 };
 
+type BackendStatus = {
+  configured: number;
+  anyReachable: boolean;
+  errors: { baseUrl: string; message: string }[];
+};
+
+type ApiDiagnostic = {
+  baseUrl: string;
+  healthOk: boolean;
+  authOk: boolean;
+  serverCount: number | null;
+  latencyMs: number | null;
+  error: string | null;
+};
+
 type RankedSimulateResponse = {
   ok: boolean;
   message: string;
@@ -80,18 +95,21 @@ type RankedSimulateResponse = {
 };
 
 const DEFAULT_REGISTER = {
-  name: "Clutch #1",
+  name: "Ranked #2",
   host: "188.220.168.233",
-  port: "27015",
-  rconPort: "27015",
+  port: "27016",
+  rconPort: "27016",
   rconPassword: "",
   csgoDir: "/home/csgo/server",
   tickrate: "128",
+  map: "de_dust2",
   pool: "ranked" as "ranked" | "warmup" | "public",
 };
 
 export function AdminCsgoInfraSection() {
   const [servers, setServers] = useState<CsgoServerRow[]>([]);
+  const [backend, setBackend] = useState<BackendStatus | null>(null);
+  const [diagnostics, setDiagnostics] = useState<ApiDiagnostic[] | null>(null);
   const [matches, setMatches] = useState<CsgoMatchRow[]>([]);
   const [rankedSessions, setRankedSessions] = useState<RankedSessionRow[]>([]);
   const [serverMaps, setServerMaps] = useState<Record<string, string>>({});
@@ -137,10 +155,12 @@ export function AdminCsgoInfraSection() {
         servers: CsgoServerRow[];
         matches: CsgoMatchRow[];
         rankedSessions: RankedSessionRow[];
+        backend?: BackendStatus;
       };
       if (controller.signal.aborted) return;
 
       setServers(data.servers);
+      setBackend(data.backend ?? null);
       setMatches(data.matches);
       setRankedSessions(data.rankedSessions ?? []);
       setServerMaps((prev) => {
@@ -249,13 +269,23 @@ export function AdminCsgoInfraSection() {
     );
   }
 
-  async function registerServer() {
+  async function registerServer(autoStart: boolean) {
     if (!registerForm.name.trim() || !registerForm.host.trim() || !registerForm.rconPassword.trim()) {
       setError("Preencha nome, host e senha RCON.");
       return;
     }
 
-    const ok = await runControl("register", () =>
+    const portNum = Number(registerForm.port);
+    const rconPortNum = Number(registerForm.rconPort);
+    const portClash = servers.find((s) => s.port === portNum || s.port === rconPortNum);
+    if (portClash) {
+      setError(
+        `A porta ${portNum === portClash.port ? portNum : rconPortNum} já está em uso por "${portClash.name}".`,
+      );
+      return;
+    }
+
+    const ok = await runControl(autoStart ? "register-start" : "register", () =>
       secureApi<ControlResponse>("/api/admin/csgo/servers", {
         method: "POST",
         json: {
@@ -267,11 +297,35 @@ export function AdminCsgoInfraSection() {
           csgoDir: registerForm.csgoDir.trim(),
           tickrate: Number(registerForm.tickrate),
           pool: registerForm.pool,
+          autoStart,
+          map: registerForm.map.trim() || "de_dust2",
         },
       }),
     );
 
     if (ok) setShowRegister(false);
+  }
+
+  async function testConnection() {
+    setBusyId("diagnostics");
+    setDiagnostics(null);
+    clearFeedback();
+    try {
+      const res = await fetch("/api/admin/csgo/diagnostics", { credentials: "same-origin" });
+      if (!res.ok) {
+        setError("Falha ao executar diagnóstico.");
+        return;
+      }
+      const data = (await res.json()) as { apis: ApiDiagnostic[]; configured: number };
+      setDiagnostics(data.apis);
+      if (data.configured === 0) {
+        setError("Nenhuma API CS:GO configurada (defina CSGO_API_URL no .env do site).");
+      }
+    } catch {
+      setError("Falha ao executar diagnóstico.");
+    } finally {
+      setBusyId(null);
+    }
   }
 
   async function bootstrapServerFromEnv() {
@@ -426,7 +480,8 @@ export function AdminCsgoInfraSection() {
           <div>
             <h2 className="font-display text-lg font-bold">Controle de servidores</h2>
             <p className="mt-1 text-sm text-muted">
-              Subir, trocar mapa ou derrubar na VPS. Use &quot;Atualizar&quot; para recarregar status.
+              Registrar na API e subir o srcds na VPS (cada porta = uma instância screen). Abrir firewall
+              sozinho não inicia o jogo — use <strong>Registrar e subir</strong>.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -438,6 +493,19 @@ export function AdminCsgoInfraSection() {
             >
               <RefreshCw className="h-4 w-4" />
               Atualizar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busyId != null}
+              onClick={() => void testConnection()}
+            >
+              {busyId === "diagnostics" ? (
+                <Loader2 className="h-4 w-4 motion-safe-spin" />
+              ) : (
+                <Server className="h-4 w-4" />
+              )}
+              Testar conexão
             </Button>
             <Button variant="outline" size="sm" onClick={() => setShowRegister((v) => !v)}>
               <Plus className="h-4 w-4" />
@@ -464,6 +532,37 @@ export function AdminCsgoInfraSection() {
         {showRegister && (
           <div className="mb-6 rounded-xl border border-border p-4">
             <h3 className="mb-3 font-display font-semibold">Novo registro na API CS:GO</h3>
+            <p className="mb-3 text-xs text-muted">
+              Portas sugeridas: 27015 (principal), 27016, 27017… Mesmo diretório CS (
+              <code className="text-xs">/home/csgo/server</code>
+              ), screen e RCON diferentes por instância. Segunda instância pode precisar de outro GSLT
+              no Steam.
+            </p>
+            <div className="mb-3 flex flex-wrap gap-2">
+              {[
+                { label: "27016 ranked", port: "27016", name: "Ranked #2" },
+                { label: "27017 ranked", port: "27017", name: "Ranked #3" },
+                { label: "27018 warmup", port: "27018", name: "Warmup #1", pool: "warmup" as const },
+              ].map((preset) => (
+                <Button
+                  key={preset.port}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setRegisterForm((f) => ({
+                      ...f,
+                      name: preset.name,
+                      port: preset.port,
+                      rconPort: preset.port,
+                      pool: preset.pool ?? "ranked",
+                    }))
+                  }
+                >
+                  {preset.label}
+                </Button>
+              ))}
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <Input
                 label="Nome"
@@ -496,6 +595,14 @@ export function AdminCsgoInfraSection() {
                 value={registerForm.csgoDir}
                 onChange={(e) => setRegisterForm((f) => ({ ...f, csgoDir: e.target.value }))}
               />
+              <div className="sm:col-span-2">
+                <MapPicker
+                  label="Mapa inicial (ao subir)"
+                  value={registerForm.map}
+                  onChange={(map) => setRegisterForm((f) => ({ ...f, map }))}
+                  allowCustom={false}
+                />
+              </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-muted">Pool</label>
                 <select
@@ -514,22 +621,91 @@ export function AdminCsgoInfraSection() {
                 </select>
               </div>
             </div>
-            <div className="mt-4">
+            <div className="mt-4 flex flex-wrap gap-2">
               <Button
                 variant="primary"
                 size="sm"
                 disabled={busyId != null}
-                confirm={confirmPresets.csgoRegisterServer(registerForm.name || "servidor")}
-                onClick={() => void registerServer()}
+                confirm={confirmPresets.csgoRegisterServer(
+                  `${registerForm.name || "servidor"} (porta ${registerForm.port})`,
+                )}
+                onClick={() => void registerServer(true)}
+              >
+                {busyId === "register-start" ? (
+                  <Loader2 className="h-4 w-4 motion-safe-spin" />
+                ) : (
+                  <Play className="h-4 w-4" />
+                )}
+                Registrar e subir
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={busyId != null}
+                onClick={() => void registerServer(false)}
               >
                 {busyId === "register" ? (
                   <Loader2 className="h-4 w-4 motion-safe-spin" />
                 ) : (
                   <Plus className="h-4 w-4" />
                 )}
-                Registrar na API
+                Só registrar
               </Button>
             </div>
+          </div>
+        )}
+
+        {backend && (backend.configured === 0 || !backend.anyReachable) && (
+          <div className="mb-4 rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+            <p className="font-semibold">
+              {backend.configured === 0
+                ? "Nenhuma API CS:GO configurada"
+                : "API CS:GO inacessível"}
+            </p>
+            <p className="mt-1 text-rose-200/90">
+              {backend.configured === 0
+                ? "Defina CSGO_API_URL no .env do site (ex.: http://188.220.168.233:3001) e reinicie."
+                : "O site não conseguiu falar com o api-csgo da VPS. Botões de subir/derrubar/trocar não vão funcionar até isto normalizar."}
+            </p>
+            {backend.errors.length > 0 && (
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-rose-200/80">
+                {backend.errors.map((e, i) => (
+                  <li key={i}>
+                    <span className="font-mono">{e.baseUrl}</span>: {e.message}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {diagnostics && (
+          <div className="mb-4 rounded-lg border border-border bg-[color-mix(in_srgb,var(--foreground)_3%,transparent)] px-4 py-3 text-sm">
+            <p className="mb-2 font-display font-semibold">Diagnóstico de conexão</p>
+            {diagnostics.length === 0 ? (
+              <p className="text-muted">Nenhuma API CS:GO configurada no .env do site.</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {diagnostics.map((api, i) => (
+                  <li key={i} className="flex flex-wrap items-center gap-2 text-xs">
+                    <span
+                      className={cn(
+                        "h-2 w-2 rounded-full",
+                        api.authOk ? "bg-emerald-400" : "bg-rose-400",
+                      )}
+                    />
+                    <span className="font-mono">{api.baseUrl}</span>
+                    <span className="text-muted">
+                      {api.authOk
+                        ? `OK · ${api.serverCount ?? 0} servidor(es) · ${api.latencyMs}ms`
+                        : api.healthOk
+                          ? `online mas ${api.error ?? "auth falhou"}`
+                          : `inacessível: ${api.error ?? "sem resposta"}`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
 

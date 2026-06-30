@@ -4,8 +4,7 @@ import { Crown, Loader2, Lock, Swords, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import type { RankedPartyMemberView, RankedPartyView } from "@/lib/ranked/party-shared";
-import { AvatarImage } from "@/components/ui/avatar-image";
-import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
+import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
 import { cn } from "@/lib/utils";
 import { textWarningSoftClass } from "@/lib/ui/theme-surfaces";
 
@@ -29,24 +28,18 @@ function MemberAvatar({
 }) {
   return (
     <div className="relative h-10 w-10" title={player?.nickname ?? emptyLabel}>
-      <div
-        className={cn(
-          "flex h-full w-full items-center justify-center overflow-hidden rounded-full text-[11px] font-bold ring-2",
-          player
-            ? "bg-[linear-gradient(135deg,var(--primary-soft),var(--primary))] text-white ring-primary/40"
-            : "bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)] text-muted ring-border/60",
-        )}
-      >
-        {player ? (
-          <AvatarImage
-            src={player.avatarUrl ?? getDefaultAvatarPresetUrl()}
-            size={40}
-            className="rounded-full"
-          />
-        ) : (
+      {player ? (
+        <UserProfileAvatar
+          avatarUrl={player.avatarUrl}
+          nickname={player.nickname}
+          customization={player.customization}
+          size="md"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)] text-muted ring-2 ring-border/60">
           <Users className="h-4 w-4" />
-        )}
-      </div>
+        </div>
+      )}
       {player?.isLeader && (
         <span className="absolute -bottom-1 -right-1 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[8px] text-black ring-2 ring-background">
           <Crown className="h-2.5 w-2.5" />
