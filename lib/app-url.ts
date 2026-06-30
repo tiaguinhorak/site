@@ -64,11 +64,13 @@ export function getAppUrl(request?: NextRequest): string {
 }
 
 export function isHttpsAppUrl(): boolean {
-  const url =
-    process.env.TUNNEL_URL ??
-    process.env.NGROK_URL ??
-    process.env.APP_URL ??
-    process.env.NEXT_PUBLIC_APP_URL ??
-    "";
+  const isProd = process.env.NODE_ENV === "production";
+  const url = isProd
+    ? (process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "")
+    : (process.env.TUNNEL_URL ??
+      process.env.NGROK_URL ??
+      process.env.APP_URL ??
+      process.env.NEXT_PUBLIC_APP_URL ??
+      "");
   return url.startsWith("https://");
 }

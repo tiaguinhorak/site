@@ -7,32 +7,41 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
+const appUrl = process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
+const isHttpsDeployment = appUrl.startsWith("https://");
+
+const csp = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://*.steamstatic.com https://steamcdn-a.akamaihd.net https://*.githubusercontent.com",
+  "font-src 'self'",
+  "connect-src 'self' https://api.steampowered.com https://steamcommunity.com",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join("; ");
+
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-DNS-Prefetch-Control", value: "off" },
-  {
-    key: "Strict-Transport-Security",
-    value: "max-age=63072000; includeSubDomains; preload",
-  },
+  ...(isHttpsDeployment
+    ? [
+        {
+          key: "Strict-Transport-Security",
+          value: "max-age=63072000; includeSubDomains; preload",
+        },
+      ]
+    : []),
   {
     key: "Permissions-Policy",
     value: "camera=(), microphone=(), geolocation=(), payment=()",
   },
   {
     key: "Content-Security-Policy",
-    value: [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://cdn.steamstatic.com https://avatars.steamstatic.com https://steamcdn-a.akamaihd.net https://community.akamai.steamstatic.com https://community.cloudflare.steamstatic.com https://raw.githubusercontent.com",
-      "font-src 'self'",
-      "connect-src 'self' https://api.steampowered.com https://steamcommunity.com",
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-    ].join("; "),
+    value: csp,
   },
 ];
 
@@ -56,12 +65,9 @@ const nextConfig: NextConfig = {
     // Steam skin/agent images never change — cache them aggressively (30 days)
     minimumCacheTTL: 60 * 60 * 24 * 30,
     remotePatterns: [
-      { protocol: "https", hostname: "cdn.steamstatic.com", pathname: "/**" },
-      { protocol: "https", hostname: "avatars.steamstatic.com", pathname: "/**" },
+      { protocol: "https", hostname: "**.steamstatic.com", pathname: "/**" },
       { protocol: "https", hostname: "steamcdn-a.akamaihd.net", pathname: "/**" },
-      { protocol: "https", hostname: "community.akamai.steamstatic.com", pathname: "/**" },
-      { protocol: "https", hostname: "community.cloudflare.steamstatic.com", pathname: "/**" },
-      { protocol: "https", hostname: "raw.githubusercontent.com", pathname: "/**" },
+      { protocol: "https", hostname: "**.githubusercontent.com", pathname: "/**" },
     ],
     localPatterns: [
       { pathname: "/logo-clutchclube.png" },

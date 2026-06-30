@@ -1,11 +1,4 @@
-const ALLOWED_STICKER_IMAGE_HOSTS = new Set([
-  "cdn.steamstatic.com",
-  "steamcdn-a.akamaihd.net",
-  "community.akamai.steamstatic.com",
-  "community.cloudflare.steamstatic.com",
-  "avatars.steamstatic.com",
-  "raw.githubusercontent.com",
-]);
+import { isAllowedRemoteImageHost } from "@/lib/steam/cdn-hosts";
 
 /** Normalize CSGO-API / catalog sticker icon URLs for CSP-safe loading. */
 export function normalizeStickerImageUrl(
@@ -16,7 +9,7 @@ export function normalizeStickerImageUrl(
 
   try {
     const parsed = new URL(trimmed);
-    if (!ALLOWED_STICKER_IMAGE_HOSTS.has(parsed.hostname)) {
+    if (!isAllowedRemoteImageHost(parsed.hostname)) {
       return null;
     }
     return parsed.toString();
