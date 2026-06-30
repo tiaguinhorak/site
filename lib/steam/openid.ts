@@ -1,8 +1,10 @@
 import { createHmac, randomBytes } from "crypto";
 import type { NextRequest } from "next/server";
 import { getAppUrl } from "@/lib/app-url";
+import { fetchWithTimeout } from "@/lib/steam/fetch-with-timeout";
 
 const STEAM_OPENID_ENDPOINT = "https://steamcommunity.com/openid/login";
+const OPENID_VERIFY_TIMEOUT_MS = 12_000;
 
 export function buildSteamLoginUrl(
   mode: "login" | "register" | "link" | "switch",
@@ -24,6 +26,10 @@ export function buildSteamLoginUrl(
 export async function verifySteamOpenId(
   searchParams: URLSearchParams,
 ): Promise<string | null> {
+  const mode = searchParams.get("openid.mode");
+  const claimedId = searchParams.get("openid.claimed_id");
+  if (mode !== "id_res" || !claimedId) return null;
+
   const verifyParams = new URLSearchParams();
   for (const [key, value] of searchParams.entries()) {
     if (key.startsWith("openid.")) {
@@ -32,18 +38,27 @@ export async function verifySteamOpenId(
   }
   verifyParams.set("openid.mode", "check_authentication");
 
-  const response = await fetch(STEAM_OPENID_ENDPOINT, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: verifyParams.toString(),
-  });
+  try {
+    const response = await fetchWithTimeout(
+      STEAM_OPENID_ENDPOINT,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: verifyParams.toString(),
+        cache: "no-store",
+      },
+      OPENID_VERIFY_TIMEOUT_MS,
+    );
 
-  const body = await response.text();
-  if (!body.includes("is_valid:true")) return null;
+    const body = await response.text();
+    if (!body.includes("is_valid:true")) return null;
 
-  const claimedId = searchParams.get("openid.claimed_id");
-  const match = claimedId?.match(/\/openid\/id\/(\d+)$/);
-  return match?.[1] ?? null;
+    const match = claimedId.match(/\/openid\/id\/(\d+)$/);
+    return match?.[1] ?? null;
+  } catch (error) {
+    console.error("[steam/openid] verify failed:", error);
+    return null;
+  }
 }
 
 export function createSteamStateToken(mode: string): string {

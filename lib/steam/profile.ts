@@ -1,4 +1,5 @@
 import type { SteamProfileData } from "@/lib/steam/sync-user";
+import { fetchWithTimeout } from "@/lib/steam/fetch-with-timeout";
 
 type SteamPlayerSummary = {
   steamid: string;
@@ -43,9 +44,7 @@ async function fetchSteamPlayerSummaryBatch(
   url.searchParams.set("key", apiKey);
   url.searchParams.set("steamids", steamIds.join(","));
 
-  const response = await fetch(url.toString(), {
-    next: { revalidate: 300 },
-  });
+  const response = await fetchWithTimeout(url.toString(), { cache: "no-store" }, 12_000);
   if (!response.ok) return result;
 
   const data = (await response.json()) as {
