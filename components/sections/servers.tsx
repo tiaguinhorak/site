@@ -13,6 +13,8 @@ import {
   serverConnectHref,
 } from "@/lib/servers/connect-eligibility";
 import { formatMapLabel } from "@/lib/servers/maps";
+import { resolveMapId } from "@/lib/servers/map-images";
+import { MapThumbnail } from "@/components/ui/map-thumbnail";
 import { useLiveServerStats } from "@/lib/hooks/use-live-server-stats";
 import { cn } from "@/lib/utils";
 
@@ -107,6 +109,9 @@ export function Servers({
               const slots = liveStat?.slots ?? server.slots;
               const ping = liveStat?.ping ?? server.ping;
               const mapLabel = formatMapLabel(liveStat?.map ?? server.map);
+              const mapId =
+                (liveStat?.mapId ??
+                  resolveMapId(liveStat?.map ?? server.map)) || null;
               const isOffline = liveStat ? !liveStat.online : server.map === "offline";
               const full = players >= slots && slots > 0;
               const pct = slots > 0 ? Math.min((players / slots) * 100, 100) : 0;
@@ -142,7 +147,10 @@ export function Servers({
                     )}
                   </div>
 
-                  <span className="hidden font-mono text-sm text-muted md:block">
+                  <span className="hidden items-center gap-2 font-mono text-sm text-muted md:flex">
+                    {mapId && !isOffline && (
+                      <MapThumbnail mapId={mapId} label={mapLabel} size={28} rounded="md" />
+                    )}
                     {mapLabel}
                   </span>
 

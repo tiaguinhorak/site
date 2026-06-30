@@ -21,6 +21,7 @@ import { IconPicker } from "@/components/admin/pickers/icon-picker";
 import { MapPicker } from "@/components/admin/pickers/map-picker";
 import { resolveIcon } from "@/lib/icon-map";
 import { formatMapLabel } from "@/lib/servers/maps";
+import { MapThumbnail } from "@/components/ui/map-thumbnail";
 import type { WarmupModeDef } from "@/lib/warmup/modes";
 
 type AdminWarmupMode = WarmupModeDef & { dbId: string; sortOrder: number };
@@ -226,8 +227,9 @@ export function AdminWarmupModesSection() {
               {form.maps.map((mapId) => (
                 <li
                   key={mapId}
-                  className="flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs"
+                  className="flex items-center gap-1.5 rounded-lg border border-border px-2 py-1 text-xs"
                 >
+                  <MapThumbnail mapId={mapId} label={formatMapLabel(mapId)} size={22} rounded="md" />
                   {formatMapLabel(mapId)}
                   <button
                     type="button"

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { isDiscordBotRequest } from "@/lib/discord/bot-auth";
-import { createDiscordLinkCode } from "@/lib/discord/link-service";
+import { createDiscordLinkCode, DiscordLinkError } from "@/lib/discord/link-service";
 
 const bodySchema = z.object({
   discordUserId: z.string().min(1),
@@ -26,10 +26,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  const { code, expiresAt } = await createDiscordLinkCode(parsed.data);
+  try {
+    const { code, expiresAt } = await createDiscordLinkCode(parsed.data);
 
-  return NextResponse.json({
-    code,
-    expiresAt: expiresAt.toISOString(),
-  });
+    return NextResponse.json({
+      code,
+      expiresAt: expiresAt.toISOString(),
+    });
+  } catch (error) {
+    if (error instanceof DiscordLinkError) {
+      return NextResponse.json({ error: error.message, code: "ALREADY_LINKED" }, { status: error.status });
+    }
+    console.error("[discord/link-codes]", error);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
 }

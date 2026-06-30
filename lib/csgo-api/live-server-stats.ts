@@ -6,6 +6,12 @@ import { queryCsgoServersLive } from "@/lib/csgo-api/query-live-server";
 import { syncCsgoPublicServers } from "@/lib/csgo-api/sync-public-servers";
 import type { LiveServerQueryResult } from "@/lib/csgo-api/query-live-server";
 import { formatConnectCommand } from "@/lib/servers/connect";
+import { resolveMapId } from "@/lib/servers/map-images";
+
+function resolveStoredMapId(stored: string): string | null {
+  const id = resolveMapId(stored);
+  return id || null;
+}
 
 export type LiveServerPool = "ranked" | "warmup" | "public";
 
@@ -13,6 +19,7 @@ export type LiveServerStatPayload = {
   id: string;
   name: string;
   map: string;
+  mapId: string | null;
   mode: string;
   host: string;
   port: number;
@@ -37,6 +44,7 @@ function toPayload(
     mode: string;
     host: string;
     port: number;
+    map: string;
     csgoServerId: string | null;
     pool: string;
   },
@@ -52,6 +60,7 @@ function toPayload(
     host: row.host,
     port: row.port,
     map: live.online ? live.map : "Offline",
+    mapId: live.online ? (live.mapRaw ?? resolveStoredMapId(row.map)) : null,
     players: live.players,
     slots: live.online ? live.slots : 0,
     ping: live.online ? live.ping : 0,

@@ -8,6 +8,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const users = await listLinkedDiscordUsers();
-  return NextResponse.json({ users });
+  try {
+    const users = await listLinkedDiscordUsers();
+    return NextResponse.json({ users });
+  } catch (error) {
+    console.error("[discord/linked-users]", error);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
 }

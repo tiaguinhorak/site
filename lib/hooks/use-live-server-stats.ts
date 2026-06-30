@@ -7,6 +7,7 @@ export type LiveServerStatView = {
   id: string;
   name: string;
   map: string;
+  mapId?: string | null;
   mode: string;
   host: string;
   port: number;

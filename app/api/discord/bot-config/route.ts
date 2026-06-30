@@ -30,8 +30,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "guildId required" }, { status: 400 });
   }
 
-  const channels = await listDiscordBotFeedChannels(guildId);
-  return NextResponse.json({ channels });
+  try {
+    const channels = await listDiscordBotFeedChannels(guildId);
+    return NextResponse.json({ channels });
+  } catch (error) {
+    console.error("[discord/bot-config GET]", error);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
 }
 
 export async function PUT(request: NextRequest) {

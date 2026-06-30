@@ -36,6 +36,17 @@ export async function createDiscordLinkCode(input: {
   discordUserId: string;
   discordUsername: string;
 }): Promise<{ code: string; expiresAt: Date }> {
+  const alreadyLinked = await prisma.user.findFirst({
+    where: { discordUserId: input.discordUserId },
+    select: { nickname: true },
+  });
+  if (alreadyLinked) {
+    throw new DiscordLinkError(
+      "Esta conta Discord já está vinculada ao site. Desvincule em Perfil → Discord.",
+      409,
+    );
+  }
+
   await prisma.discordLinkCode.deleteMany({
     where: {
       OR: [

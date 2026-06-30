@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Loader2,
   Pencil,
@@ -18,6 +18,8 @@ import { confirmPresets } from "@/lib/confirm-presets";
 import type { LiveServerStatView } from "@/lib/hooks/use-live-server-stats";
 import { useWarmupModes } from "@/lib/hooks/use-warmup-modes";
 import { formatMapLabel } from "@/lib/servers/maps";
+import { resolveMapId } from "@/lib/servers/map-images";
+import { MapThumbnail } from "@/components/ui/map-thumbnail";
 import { cn } from "@/lib/utils";
 
 type ControlResponse = {
@@ -54,6 +56,9 @@ export function LiveServerCard({
           <p className="text-xs text-muted">
             {server.mode} · {server.map}
           </p>
+          {server.mapId && server.online && (
+            <MapThumbnail mapId={server.mapId} label={server.map} size={36} className="mt-2" />
+          )}
         </div>
         <div className="flex items-center gap-3 text-xs">
           <span className="font-mono text-foreground">
@@ -90,13 +95,20 @@ export function LiveServerManagePanel({ server, onActionComplete }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [name, setName] = useState(server.name);
   const [mode, setMode] = useState(server.mode);
-  const [map, setMap] = useState(server.map === "Offline" ? "de_dust2" : server.map);
+  const [map, setMap] = useState(
+    () => (server.mapId ?? resolveMapId(server.map)) || "de_dust2",
+  );
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const isWarmup = server.pool === "warmup";
   const { modes: warmupModes } = useWarmupModes(false);
+  const suggestedMapIds = useMemo(() => {
+    if (!isWarmup) return undefined;
+    const entry = warmupModes.find((m) => m.modeLabel === mode);
+    return entry?.maps?.length ? entry.maps : undefined;
+  }, [isWarmup, warmupModes, mode]);
   const mapLabel = formatMapLabel(map);
 
   async function saveMetadata() {
@@ -236,6 +248,7 @@ export function LiveServerManagePanel({ server, onActionComplete }: Props) {
             value={map}
             onChange={setMap}
             label={`Mapa alvo — ${server.name}`}
+            suggestedMapIds={suggestedMapIds}
           />
           <div className="flex flex-wrap gap-2">
             <Button
