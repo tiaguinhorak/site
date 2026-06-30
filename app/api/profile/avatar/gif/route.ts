@@ -1,5 +1,3 @@
-import { mkdir, writeFile, unlink } from "fs/promises";
-import path from "path";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -12,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { RATE_LIMITS } from "@/lib/security/constants";
 import { canCustomizeProfile } from "@/lib/profile/plan-profile-access";
 import { validateGifBuffer } from "@/lib/profile/gif-avatar";
+import { storeUserAvatarGif, versionedPublicPath } from "@/lib/storage";
 
 export async function POST(request: NextRequest) {
   const guardError = await applyApiGuards(
@@ -47,25 +46,13 @@ export async function POST(request: NextRequest) {
     return jsonError(400, validation.error);
   }
 
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "avatars");
-  await mkdir(uploadDir, { recursive: true });
-
-  const filename = `${session!.userId}.gif`;
-  const filepath = path.join(uploadDir, filename);
-  await writeFile(filepath, buffer);
-
-  try {
-    await unlink(path.join(uploadDir, `${session!.userId}.webp`));
-  } catch {
-    // ignore
-  }
-
+  const stored = await storeUserAvatarGif(session!.userId, buffer);
   const moderationStatus = user.isAdmin ? "APPROVED" : "PENDING";
 
   await prisma.user.update({
     where: { id: session!.userId },
     data: {
-      avatarUrl: `/uploads/avatars/${filename}`,
+      avatarUrl: stored.publicPath,
       avatarPreset: null,
       avatarMediaType: "GIF",
       avatarModerationStatus: moderationStatus,
@@ -76,7 +63,7 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    url: `/uploads/avatars/${filename}?v=${Date.now()}`,
+    url: versionedPublicPath(stored.publicPath),
     moderationStatus,
     message: user.isAdmin
       ? "GIF enviado e aprovado automaticamente (conta admin)."

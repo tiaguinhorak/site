@@ -55,7 +55,7 @@ const brandAssetCacheHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  serverExternalPackages: ["pg", "ssh2", "rcon-client"],
+  serverExternalPackages: ["pg", "ssh2", "rcon-client", "sharp"],
   turbopack: {
     root: projectRoot,
   },

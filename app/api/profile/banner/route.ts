@@ -1,5 +1,3 @@
-import { mkdir, writeFile, unlink } from "fs/promises";
-import path from "path";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -11,6 +9,12 @@ import {
 import { prisma } from "@/lib/prisma";
 import { RATE_LIMITS } from "@/lib/security/constants";
 import { canCustomizeProfile } from "@/lib/profile/plan-profile-access";
+import {
+  deleteByPublicUrl,
+  deleteUserBannerVariants,
+  storeUserBanner,
+  versionedPublicPath,
+} from "@/lib/storage";
 
 const MAX_BANNER_BYTES = 1_024_000;
 const ALLOWED_TYPES = new Set(["image/webp", "image/jpeg", "image/png"]);
@@ -46,38 +50,14 @@ export async function POST(request: NextRequest) {
     return jsonError(400, "Banner muito grande (máx. 1 MB).");
   }
 
-  const ext = file.type === "image/png" ? "png" : file.type === "image/jpeg" ? "jpg" : "webp";
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "banners");
-  await mkdir(uploadDir, { recursive: true });
+  await deleteByPublicUrl(user.profileBannerUrl);
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const stored = await storeUserBanner(session!.userId, buffer);
 
-  if (user.profileBannerUrl?.startsWith("/uploads/banners/")) {
-    const oldPath = path.join(
-      process.cwd(),
-      "public",
-      user.profileBannerUrl.split("?")[0]!,
-    );
-    try {
-      await unlink(oldPath);
-    } catch {
-      // ignore
-    }
-  }
-
-  const filename = `${session!.userId}.${ext}`;
-  const filepath = path.join(uploadDir, filename);
-  await writeFile(filepath, Buffer.from(await file.arrayBuffer()));
-
-  try {
-    await unlink(path.join(uploadDir, `${session!.userId}.gif`));
-  } catch {
-    // ignore
-  }
-
-  const url = `/uploads/banners/${filename}?v=${Date.now()}`;
   await prisma.user.update({
     where: { id: session!.userId },
     data: {
-      profileBannerUrl: `/uploads/banners/${filename}`,
+      profileBannerUrl: stored.publicPath,
       profileBannerMediaType: "STATIC",
       profileBannerModerationStatus: "APPROVED",
     },
@@ -85,7 +65,11 @@ export async function POST(request: NextRequest) {
 
   revalidatePath(`/player/${user.nickname}`);
 
-  return NextResponse.json({ ok: true, url, moderationStatus: "APPROVED" });
+  return NextResponse.json({
+    ok: true,
+    url: versionedPublicPath(stored.publicPath),
+    moderationStatus: "APPROVED",
+  });
 }
 
 export async function DELETE(request: NextRequest) {
@@ -109,14 +93,8 @@ export async function DELETE(request: NextRequest) {
     return jsonError(403, "Banner exclusivo para assinantes Elite.");
   }
 
-  if (user.profileBannerUrl?.startsWith("/uploads/banners/")) {
-    const filepath = path.join(process.cwd(), "public", user.profileBannerUrl.split("?")[0]!);
-    try {
-      await unlink(filepath);
-    } catch {
-      // ignore
-    }
-  }
+  await deleteByPublicUrl(user.profileBannerUrl);
+  await deleteUserBannerVariants(session!.userId);
 
   await prisma.user.update({
     where: { id: session!.userId },

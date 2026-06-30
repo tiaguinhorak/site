@@ -1,6 +1,3 @@
-import { randomUUID } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
@@ -10,6 +7,7 @@ import {
 import { requireAdmin } from "@/lib/auth/admin";
 import { RATE_LIMITS } from "@/lib/security/constants";
 import { logAdminAction } from "@/lib/admin/audit";
+import { storeAdminUpload } from "@/lib/storage";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_TYPES = new Set([
@@ -18,13 +16,6 @@ const ALLOWED_TYPES = new Set([
   "image/webp",
   "image/gif",
 ]);
-
-const EXT_MAP: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "image/gif": "gif",
-};
 
 export async function POST(request: NextRequest) {
   const guardError = await applyApiGuards(
@@ -56,23 +47,16 @@ export async function POST(request: NextRequest) {
 
   const folder =
     folderRaw === "news" || folderRaw === "store" ? folderRaw : "general";
-  const ext = EXT_MAP[file.type] ?? "bin";
-  const filename = `${randomUUID()}.${ext}`;
-  const uploadDir = path.join(process.cwd(), "public", "uploads", folder);
-
-  await mkdir(uploadDir, { recursive: true });
   const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(uploadDir, filename), buffer);
-
-  const url = `/uploads/${folder}/${filename}`;
+  const stored = await storeAdminUpload(folder, buffer, file.type);
 
   await logAdminAction({
     adminId: admin!.id,
     action: "MEDIA_UPLOAD",
     targetType: "upload",
     summary: `Upload de imagem (${folder})`,
-    metadata: { url, size: file.size },
+    metadata: { url: stored.publicPath, size: stored.size },
   });
 
-  return NextResponse.json({ ok: true, url });
+  return NextResponse.json({ ok: true, url: stored.publicPath });
 }

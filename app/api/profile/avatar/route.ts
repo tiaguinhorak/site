@@ -1,10 +1,7 @@
-import { mkdir, writeFile, unlink } from "fs/promises";
-import path from "path";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
   applyApiGuards,
-  jsonError,
   parseJsonBody,
   requireSession,
 } from "@/lib/security/api-guard";
@@ -13,6 +10,11 @@ import { RATE_LIMITS } from "@/lib/security/constants";
 import { avatarSourceSchema, firstZodError } from "@/lib/security/schemas";
 import { jsonErrorKey } from "@/lib/i18n/api-route";
 import { serializeUser } from "@/lib/serializers";
+import {
+  deleteUserAvatarVariants,
+  storeUserAvatar,
+  versionedPublicPath,
+} from "@/lib/storage";
 
 const MAX_AVATAR_BYTES = 512_000;
 const ALLOWED_TYPES = new Set(["image/webp", "image/jpeg", "image/png"]);
@@ -44,27 +46,24 @@ export async function POST(request: NextRequest) {
     return jsonErrorKey(request, 400, "avatarTooLarge");
   }
 
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "avatars");
-  await mkdir(uploadDir, { recursive: true });
-
-  const filename = `${session!.userId}.webp`;
-  const filepath = path.join(uploadDir, filename);
   const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(filepath, buffer);
-
-  const url = `/uploads/avatars/${filename}?v=${Date.now()}`;
+  const stored = await storeUserAvatar(session!.userId, buffer);
 
   const user = await prisma.user.update({
     where: { id: session!.userId },
     data: {
-      avatarUrl: `/uploads/avatars/${filename}`,
+      avatarUrl: stored.publicPath,
       avatarPreset: null,
       avatarMediaType: "STATIC",
       avatarModerationStatus: "APPROVED",
     },
   });
 
-  return NextResponse.json({ ok: true, url, user: serializeUser(user) });
+  return NextResponse.json({
+    ok: true,
+    url: versionedPublicPath(stored.publicPath),
+    user: serializeUser(user),
+  });
 }
 
 export async function PATCH(request: NextRequest) {
@@ -121,19 +120,7 @@ export async function DELETE(request: NextRequest) {
   const { session, error: sessionError } = requireSession(request);
   if (sessionError) return sessionError;
 
-  const filepath = path.join(
-    process.cwd(),
-    "public",
-    "uploads",
-    "avatars",
-    `${session!.userId}.webp`,
-  );
-
-  try {
-    await unlink(filepath);
-  } catch {
-    // file may not exist
-  }
+  await deleteUserAvatarVariants(session!.userId);
 
   const user = await prisma.user.update({
     where: { id: session!.userId },

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { probeOutboundUrl } from "@/lib/steam/fetch-with-timeout";
+import { checkStorageHealth, getStorageConfig } from "@/lib/storage";
 
 function appUrlWarnings(appUrl: string): string[] {
   const warnings: string[] = [];
@@ -47,11 +48,13 @@ export async function GET() {
     databaseError = error instanceof Error ? error.message : String(error);
   }
 
-  const [steamCommunity, steamApi] = await Promise.all([
+  const [steamCommunity, steamApi, storage] = await Promise.all([
     probeOutboundUrl("https://steamcommunity.com/openid/login", 5_000),
     probeOutboundUrl("https://api.steampowered.com/", 5_000),
+    checkStorageHealth(),
   ]);
 
+  const storageConfig = getStorageConfig();
   const outboundOk = steamCommunity.ok && steamApi.ok;
 
   const ok =
@@ -59,7 +62,8 @@ export async function GET() {
     env.hasDatabaseUrl &&
     Boolean(env.appUrl) &&
     databaseOk &&
-    outboundOk;
+    outboundOk &&
+    storage.ok;
 
   return NextResponse.json(
     {
@@ -72,6 +76,12 @@ export async function GET() {
         hint: outboundOk
           ? null
           : "O VPS precisa de HTTPS de saída para steamcommunity.com e api.steampowered.com (login Steam).",
+      },
+      storage: {
+        ok: storage.ok,
+        driver: storageConfig.driver,
+        uploadRoot: storageConfig.uploadRoot,
+        error: storage.error ?? null,
       },
     },
     { status: ok ? 200 : 503 },

@@ -13,6 +13,7 @@ import { firstZodError } from "@/lib/security/schemas";
 import { logAdminAction } from "@/lib/admin/audit";
 import { notifyGifModerationResult } from "@/lib/profile/gif-moderation-notifications";
 import { revalidatePath } from "next/cache";
+import { deleteByPublicUrl } from "@/lib/storage";
 
 const patchSchema = z.object({
   userId: z.string().min(1),
@@ -62,11 +63,16 @@ export async function PATCH(request: NextRequest) {
 
   const target = await prisma.user.findUnique({
     where: { id: parsed.data.userId },
-    select: { id: true, nickname: true, avatarMediaType: true },
+    select: { id: true, nickname: true, avatarMediaType: true, avatarUrl: true },
   });
   if (!target) return jsonError(404, "Usuário não encontrado.");
 
   const status = parsed.data.action === "approve" ? "APPROVED" : "REJECTED";
+
+  if (status === "REJECTED") {
+    await deleteByPublicUrl(target.avatarUrl);
+  }
+
   const updated = await prisma.user.update({
     where: { id: target.id },
     data: {

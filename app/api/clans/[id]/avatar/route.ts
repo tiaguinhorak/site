@@ -1,5 +1,3 @@
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
@@ -9,6 +7,8 @@ import {
 } from "@/lib/security/api-guard";
 import { RATE_LIMITS } from "@/lib/security/constants";
 import { updateClanAvatar, ClanError } from "@/lib/clans/service";
+import { prisma } from "@/lib/prisma";
+import { deleteByPublicUrl, storeClanAvatar, versionedPublicPath } from "@/lib/storage";
 
 const MAX_BYTES = 512_000;
 const ALLOWED_TYPES = new Set(["image/webp", "image/jpeg", "image/png"]);
@@ -42,19 +42,22 @@ export async function POST(
     return jsonError(400, "Arquivo muito grande (máx. 512 KB).");
   }
 
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "clans");
-  await mkdir(uploadDir, { recursive: true });
+  const existing = await prisma.clan.findUnique({
+    where: { id },
+    select: { avatarUrl: true },
+  });
+  await deleteByPublicUrl(existing?.avatarUrl);
 
-  const filename = `${id}.webp`;
-  const filepath = path.join(uploadDir, filename);
   const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(filepath, buffer);
-
-  const url = `/uploads/clans/${filename}?v=${Date.now()}`;
+  const stored = await storeClanAvatar(id, buffer);
 
   try {
-    const clan = await updateClanAvatar(session!.userId, id, `/uploads/clans/${filename}`);
-    return NextResponse.json({ ok: true, url, clan });
+    const clan = await updateClanAvatar(session!.userId, id, stored.publicPath);
+    return NextResponse.json({
+      ok: true,
+      url: versionedPublicPath(stored.publicPath),
+      clan,
+    });
   } catch (err) {
     if (err instanceof ClanError) {
       return NextResponse.json({ error: err.message }, { status: err.status });

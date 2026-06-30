@@ -1,5 +1,3 @@
-import { mkdir, writeFile, unlink } from "fs/promises";
-import path from "path";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -12,6 +10,11 @@ import { prisma } from "@/lib/prisma";
 import { RATE_LIMITS } from "@/lib/security/constants";
 import { canCustomizeProfile } from "@/lib/profile/plan-profile-access";
 import { validateBannerGifBuffer } from "@/lib/profile/gif-banner";
+import {
+  deleteByPublicUrl,
+  storeUserBannerGif,
+  versionedPublicPath,
+} from "@/lib/storage";
 
 export async function POST(request: NextRequest) {
   const guardError = await applyApiGuards(
@@ -47,40 +50,14 @@ export async function POST(request: NextRequest) {
     return jsonError(400, validation.error);
   }
 
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "banners");
-  await mkdir(uploadDir, { recursive: true });
-
-  if (user.profileBannerUrl?.startsWith("/uploads/banners/")) {
-    const oldPath = path.join(
-      process.cwd(),
-      "public",
-      user.profileBannerUrl.split("?")[0]!,
-    );
-    try {
-      await unlink(oldPath);
-    } catch {
-      // ignore
-    }
-  }
-
-  const filename = `${session!.userId}.gif`;
-  const filepath = path.join(uploadDir, filename);
-  await writeFile(filepath, buffer);
-
-  for (const ext of ["webp", "png", "jpg", "jpeg"]) {
-    try {
-      await unlink(path.join(uploadDir, `${session!.userId}.${ext}`));
-    } catch {
-      // ignore
-    }
-  }
-
+  await deleteByPublicUrl(user.profileBannerUrl);
+  const stored = await storeUserBannerGif(session!.userId, buffer);
   const moderationStatus = user.isAdmin ? "APPROVED" : "PENDING";
 
   await prisma.user.update({
     where: { id: session!.userId },
     data: {
-      profileBannerUrl: `/uploads/banners/${filename}`,
+      profileBannerUrl: stored.publicPath,
       profileBannerMediaType: "GIF",
       profileBannerModerationStatus: moderationStatus,
     },
@@ -90,7 +67,7 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    url: `/uploads/banners/${filename}?v=${Date.now()}`,
+    url: versionedPublicPath(stored.publicPath),
     moderationStatus,
     message: user.isAdmin
       ? "Banner GIF enviado e aprovado automaticamente (conta admin)."
