@@ -14,6 +14,7 @@ import {
 } from "@/lib/security/schemas";
 import { logAdminAction } from "@/lib/admin/audit";
 import { adminGameModeCreateSchema } from "@/lib/admin/schemas";
+import { refreshGameModeTranslations } from "@/lib/lobby/localize-game-modes";
 
 export async function GET(request: NextRequest) {
   const { error } = await requireAdmin(request);
@@ -68,6 +69,10 @@ export async function POST(request: NextRequest) {
     },
     include: { rooms: true },
   });
+
+  void refreshGameModeTranslations(mode).catch((err) =>
+    console.error("[admin/game-modes] auto-translate failed", err),
+  );
 
   await logAdminAction({
     adminId: admin!.id,

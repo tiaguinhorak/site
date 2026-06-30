@@ -5,6 +5,8 @@ import { Premium } from "@/components/sections/premium";
 import { PremiumFaq } from "@/components/marketing/premium-faq";
 import { CallToAction } from "@/components/sections/cta";
 import { getSubscriptionPlans } from "@/lib/queries";
+import { localizeSubscriptionPlans } from "@/lib/marketing/localize-content";
+import { getRequestLocale } from "@/lib/i18n/server";
 
 export const metadata: Metadata = {
   title: "Premium — clutchclube",
@@ -13,7 +15,8 @@ export const metadata: Metadata = {
 
 export default async function PremiumPage() {
   const t = await getTranslations("marketing");
-  const plans = await getSubscriptionPlans();
+  const locale = await getRequestLocale();
+  const plans = await localizeSubscriptionPlans(await getSubscriptionPlans(), locale);
 
   return (
     <>

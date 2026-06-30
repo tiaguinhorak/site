@@ -4,6 +4,8 @@ import { MarketingPageShell } from "@/components/marketing/marketing-page-shell"
 import { Features } from "@/components/sections/features";
 import { CallToAction } from "@/components/sections/cta";
 import { getMarketingFeatures, getSiteStats } from "@/lib/queries";
+import { localizeMarketingFeatures, localizeSiteStats } from "@/lib/marketing/localize-content";
+import { getRequestLocale } from "@/lib/i18n/server";
 
 export const metadata: Metadata = {
   title: "Plataforma — clutchclube",
@@ -13,8 +15,9 @@ export const metadata: Metadata = {
 
 export default async function PlataformaPage() {
   const t = await getTranslations("marketing");
-  const features = await getMarketingFeatures();
-  const stats = await getSiteStats();
+  const locale = await getRequestLocale();
+  const features = await localizeMarketingFeatures(await getMarketingFeatures(), locale);
+  const stats = await localizeSiteStats(await getSiteStats(), locale);
 
   return (
     <>

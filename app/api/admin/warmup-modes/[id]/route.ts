@@ -11,7 +11,7 @@ import { RATE_LIMITS } from "@/lib/security/constants";
 import { formatZodErrors, firstZodError } from "@/lib/security/schemas";
 import { logAdminAction } from "@/lib/admin/audit";
 import { adminWarmupModeUpdateSchema } from "@/lib/admin/schemas";
-import { toWarmupModeDef } from "@/lib/warmup/modes-service";
+import { toWarmupModeDef, refreshWarmupModeTranslations } from "@/lib/warmup/modes-service";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -77,6 +77,19 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       include: { maps: { orderBy: { sortOrder: "asc" } } },
     });
   });
+
+  void refreshWarmupModeTranslations({
+    dbId: mode.id,
+    id: mode.slug,
+    slug: mode.slug,
+    label: mode.label,
+    modeLabel: mode.modeLabel,
+    icon: mode.iconKey,
+    accent: mode.accent,
+    enabled: mode.enabled,
+    sortOrder: mode.sortOrder,
+    maps: mode.maps.map((m) => m.mapId),
+  }).catch((err) => console.error("[admin/warmup-modes] auto-translate failed", err));
 
   await logAdminAction({
     adminId: admin!.id,

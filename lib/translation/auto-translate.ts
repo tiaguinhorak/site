@@ -100,3 +100,12 @@ export async function buildArticleTranslations(
   const es = await translateArticleBundle(title, excerpt, body, "es", "pt-BR");
   return { en, es };
 }
+
+export async function buildGenericTranslations(
+  fields: Record<string, string>,
+  source: Locale = "pt-BR",
+): Promise<{ en: Record<string, string>; es: Record<string, string> }> {
+  const en = await translateFields(fields, "en", source);
+  const es = await translateFields(fields, "es", source);
+  return { en, es };
+}

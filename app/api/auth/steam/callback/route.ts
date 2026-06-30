@@ -4,10 +4,10 @@ import { getSessionUserId } from "@/lib/auth/session-user";
 import {
   resolveSteamNickname,
   syncNicknameFromSteam,
-  steamPersonaToNickname,
 } from "@/lib/steam/nickname";
 import { prisma } from "@/lib/prisma";
 import { verifySteamOpenId, getAppUrl } from "@/lib/steam/openid";
+import { getRequestOrigin } from "@/lib/app-url";
 import { fetchSteamPlayerSummary } from "@/lib/steam/profile";
 import {
   buildUserSteamCreate,
@@ -32,14 +32,31 @@ function fallbackSteamProfile(steamId: string): SteamProfileData {
   };
 }
 
+function redirectUrl(request: NextRequest, path: string): URL {
+  try {
+    return new URL(path, getAppUrl(request));
+  } catch {
+    return new URL(path, getRequestOrigin(request));
+  }
+}
+
 export async function GET(request: NextRequest) {
+  try {
+    return await handleSteamCallback(request);
+  } catch (error) {
+    console.error("[auth/steam/callback]", error);
+    return NextResponse.redirect(redirectUrl(request, "/login?error=steam_server_error"));
+  }
+}
+
+async function handleSteamCallback(request: NextRequest) {
   const mode = request.nextUrl.searchParams.get("mode") ?? "login";
   const params = request.nextUrl.searchParams;
 
   const steamId = await verifySteamOpenId(params);
   if (!steamId) {
     return NextResponse.redirect(
-      new URL("/login?error=steam_auth_failed", getAppUrl(request)),
+      redirectUrl(request, "/login?error=steam_auth_failed"),
     );
   }
 
@@ -49,15 +66,15 @@ export async function GET(request: NextRequest) {
   if (mode === "switch") {
     const userId = await getSessionUserId(request);
     if (!userId) {
-      return NextResponse.redirect(new URL("/login", getAppUrl(request)));
+      return NextResponse.redirect(redirectUrl(request, "/login"));
     }
 
     const currentUser = await prisma.user.findUnique({ where: { id: userId } });
     if (!currentUser) {
-      return NextResponse.redirect(new URL("/login", getAppUrl(request)));
+      return NextResponse.redirect(redirectUrl(request, "/login"));
     }
     if (currentUser.email) {
-      return NextResponse.redirect(new URL("/dashboard", getAppUrl(request)));
+      return NextResponse.redirect(redirectUrl(request, "/dashboard"));
     }
 
     const existingSteam = await prisma.user.findUnique({
@@ -65,7 +82,7 @@ export async function GET(request: NextRequest) {
     });
     if (existingSteam && existingSteam.id !== userId) {
       return NextResponse.redirect(
-        new URL("/completar-perfil?error=steam_already_linked", getAppUrl(request)),
+        redirectUrl(request, "/completar-perfil?error=steam_already_linked"),
       );
     }
 
@@ -88,7 +105,7 @@ export async function GET(request: NextRequest) {
       isAdmin: currentUser.isAdmin,
     });
     const response = NextResponse.redirect(
-      new URL("/completar-perfil?steam=connected", getAppUrl(request)),
+      redirectUrl(request, "/completar-perfil?steam=connected"),
     );
     return applySessionCookie(response, token, request);
   }
@@ -96,7 +113,7 @@ export async function GET(request: NextRequest) {
   if (mode === "link") {
     const userId = await getSessionUserId(request);
     if (!userId) {
-      return NextResponse.redirect(new URL("/login", getAppUrl(request)));
+      return NextResponse.redirect(redirectUrl(request, "/login"));
     }
 
     const existingSteam = await prisma.user.findUnique({
@@ -104,13 +121,13 @@ export async function GET(request: NextRequest) {
     });
     if (existingSteam && existingSteam.id !== userId) {
       return NextResponse.redirect(
-        new URL("/dashboard/perfil?error=steam_already_linked", getAppUrl(request)),
+        redirectUrl(request, "/dashboard/perfil?error=steam_already_linked"),
       );
     }
 
     const currentUser = await prisma.user.findUnique({ where: { id: userId } });
     if (!currentUser) {
-      return NextResponse.redirect(new URL("/login", getAppUrl(request)));
+      return NextResponse.redirect(redirectUrl(request, "/login"));
     }
 
     await prisma.user.update({
@@ -121,7 +138,7 @@ export async function GET(request: NextRequest) {
     void recordAccountFingerprint(userId, request);
 
     return NextResponse.redirect(
-      new URL("/dashboard/perfil?steam=linked", getAppUrl(request)),
+      redirectUrl(request, "/dashboard/perfil?steam=linked"),
     );
   }
 
@@ -158,13 +175,13 @@ export async function GET(request: NextRequest) {
 
     if (await isUserBanned(user.id)) {
       return NextResponse.redirect(
-        new URL("/login?error=account_banned", getAppUrl(request)),
+        redirectUrl(request, "/login?error=account_banned"),
       );
     }
   }
 
   const token = createSessionToken(user.id, sessionOptionsFromUser(user));
   const redirectPath = user.email ? "/dashboard" : "/completar-perfil";
-  const response = NextResponse.redirect(new URL(redirectPath, getAppUrl(request)));
+  const response = NextResponse.redirect(redirectUrl(request, redirectPath));
   return applySessionCookie(response, token, request);
 }

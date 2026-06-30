@@ -5,6 +5,7 @@ import { getStoreItems } from "@/lib/queries";
 import { getOrCreateCart } from "@/lib/store/cart-service";
 import { getOwnedCatalogSkinIdsForUser } from "@/lib/inventory/inventory-ownership";
 import { getUserStorePurchaseCounts } from "@/lib/store/fulfill-purchase";
+import { localizeStoreItems } from "@/lib/store/localize-items";
 import { serializePublicStoreItem } from "@/lib/store/serialize";
 import {
   collectAgentDefIndexesFromStoreItems,
@@ -14,14 +15,19 @@ import {
   collectStickerDefIndexesFromStoreItems,
   loadStickerPreviewMap,
 } from "@/lib/store/sticker-preview-map";
+import { getRequestLocale } from "@/lib/i18n/server";
 
 export async function GET(request: NextRequest) {
   const userId = await getSessionUserId(request);
+  const locale = await getRequestLocale(request);
   const coinShop = request.nextUrl.searchParams.get("coinShop") === "1";
-  const items = await getStoreItems({
-    enabledOnly: true,
-    coinShopOnly: coinShop,
-  });
+  const items = await localizeStoreItems(
+    await getStoreItems({
+      enabledOnly: true,
+      coinShopOnly: coinShop,
+    }),
+    locale,
+  );
 
   const itemIds = items.map((item) => item.id);
   const [ownedSkinIds, purchaseCounts, agentByDef, stickerByDef, cartStoreItemIds] = await Promise.all([

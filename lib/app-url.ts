@@ -27,13 +27,16 @@ export function getRequestOrigin(request: NextRequest): string {
  * Em dev via ngrok, usa a origem da requisição automaticamente.
  */
 export function getAppUrl(request?: NextRequest): string {
-  const explicit =
-    process.env.TUNNEL_URL ??
-    process.env.NGROK_URL ??
-    process.env.APP_URL ??
-    process.env.NEXT_PUBLIC_APP_URL;
+  const isProd = process.env.NODE_ENV === "production";
 
-  if (request && process.env.NODE_ENV !== "production") {
+  const explicit = isProd
+    ? (process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL)
+    : (process.env.TUNNEL_URL ??
+      process.env.NGROK_URL ??
+      process.env.APP_URL ??
+      process.env.NEXT_PUBLIC_APP_URL);
+
+  if (!isProd && request) {
     const origin = getRequestOrigin(request);
     try {
       const { hostname } = new URL(origin);
@@ -49,11 +52,15 @@ export function getAppUrl(request?: NextRequest): string {
     return explicit.replace(/\/$/, "");
   }
 
-  if (process.env.NODE_ENV === "production") {
+  if (request) {
+    return getRequestOrigin(request).replace(/\/$/, "");
+  }
+
+  if (isProd) {
     throw new Error("APP_URL must be set in production.");
   }
 
-  return request ? getRequestOrigin(request).replace(/\/$/, "") : "http://localhost:3000";
+  return "http://localhost:3000";
 }
 
 export function isHttpsAppUrl(): boolean {

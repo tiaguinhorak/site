@@ -14,6 +14,7 @@ import {
 } from "@/lib/security/schemas";
 import { logAdminAction } from "@/lib/admin/audit";
 import { adminGameModeRoomUpdateSchema } from "@/lib/admin/schemas";
+import { refreshGameModeRoomTranslations } from "@/lib/lobby/localize-game-modes";
 
 export async function PATCH(
   request: NextRequest,
@@ -60,6 +61,10 @@ export async function PATCH(
     targetId: id,
     summary: `Atualizou sala ${room.name} (${existing.gameMode.name})`,
   });
+
+  void refreshGameModeRoomTranslations(room).catch((err) =>
+    console.error("[i18n] game mode room translate failed", err),
+  );
 
   return NextResponse.json({ ok: true, room });
 }

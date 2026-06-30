@@ -5,6 +5,8 @@ import { MarketingPageShell } from "@/components/marketing/marketing-page-shell"
 import { GameModes } from "@/components/sections/game-modes";
 import { CallToAction } from "@/components/sections/cta";
 import { ButtonLink } from "@/components/ui/button";
+import { localizeGameModesWithRooms } from "@/lib/lobby/localize-game-modes";
+import { getRequestLocale } from "@/lib/i18n/server";
 
 export const metadata: Metadata = {
   title: "Modos de jogo — clutchclube",
@@ -13,8 +15,13 @@ export const metadata: Metadata = {
 
 export default async function ModosPage() {
   const t = await getTranslations("marketing");
+  const locale = await getRequestLocale();
   const dbModes = await getMarketingGameModes();
-  const modes = dbModes.map((m) => ({
+  const localized = await localizeGameModesWithRooms(
+    dbModes.map((m) => ({ ...m, rooms: [] })),
+    locale,
+  );
+  const modes = localized.map((m) => ({
     name: m.name,
     tagline: m.tagline,
     description: m.description,

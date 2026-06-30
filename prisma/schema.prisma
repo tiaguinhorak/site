@@ -598,27 +598,29 @@ model UserNotificationPreferences {
 }
 
 model GameMode {
-  id          String         @id @default(cuid())
-  slug        String         @unique
-  name        String
-  accent      String
-  tagline     String         @default("")
-  description String         @default("")
-  iconKey     String         @default("Crosshair")
-  sortOrder   Int            @default(0)
-  rooms       GameModeRoom[]
-  lobbyRooms  LobbyRoom[]
+  id           String         @id @default(cuid())
+  slug         String         @unique
+  name         String
+  accent       String
+  tagline      String         @default("")
+  description  String         @default("")
+  iconKey      String         @default("Crosshair")
+  sortOrder    Int            @default(0)
+  translations Json?
+  rooms        GameModeRoom[]
+  lobbyRooms   LobbyRoom[]
 }
 
 model GameModeRoom {
-  id         String @id @default(cuid())
-  gameModeId String
-  name       String
-  map        String
-  players    Int    @default(0)
-  slots      Int
-  ping       Int    @default(0)
-  sortOrder  Int    @default(0)
+  id           String @id @default(cuid())
+  gameModeId   String
+  name         String
+  map          String
+  players      Int    @default(0)
+  slots        Int
+  ping         Int    @default(0)
+  sortOrder    Int    @default(0)
+  translations Json?
 
   gameMode  GameMode   @relation(fields: [gameModeId], references: [id], onDelete: Cascade)
   lobbyRoom LobbyRoom?
@@ -1000,6 +1002,7 @@ model StoreItem {
   tagText       String?
   medalCode     String?
   grantPlan     Plan?
+  translations  Json?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
@@ -1167,6 +1170,7 @@ model WarmupMode {
   sortOrder Int             @default(0)
   enabled   Boolean         @default(true)
   maps      WarmupModeMap[]
+  translations Json?
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 
@@ -1193,32 +1197,35 @@ model LeaderboardEntry {
 }
 
 model MarketingFeature {
-  id          String @id @default(cuid())
-  index       String
-  title       String
-  description String
-  iconKey     String
-  sortOrder   Int    @default(0)
+  id           String @id @default(cuid())
+  index        String
+  title        String
+  description  String
+  iconKey      String
+  sortOrder    Int    @default(0)
+  translations Json?
 }
 
 model SubscriptionPlan {
-  id         String  @id @default(cuid())
-  slug       String  @unique
-  name       String
-  priceCents Int
-  period     String
-  highlight  Boolean @default(false)
-  badge      String?
-  features   String
-  cta        String
-  sortOrder  Int     @default(0)
+  id           String  @id @default(cuid())
+  slug         String  @unique
+  name         String
+  priceCents   Int
+  period       String
+  highlight    Boolean @default(false)
+  badge        String?
+  features     String
+  cta          String
+  sortOrder    Int     @default(0)
+  translations Json?
 }
 
 model SiteStat {
-  id        String @id @default(cuid())
-  value     String
-  label     String
-  sortOrder Int    @default(0)
+  id           String @id @default(cuid())
+  value        String
+  label        String
+  sortOrder    Int    @default(0)
+  translations Json?
 }
 
 model DiscordLinkCode {

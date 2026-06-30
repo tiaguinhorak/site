@@ -15,6 +15,7 @@ import {
 import { processCheckoutDelinquencyForUser } from "@/lib/store/checkout-service";
 import { notifyCartAbandoned } from "@/lib/store/cart-notifications";
 import { zodErrorResponse } from "@/lib/i18n/api-route";
+import { getRequestLocale } from "@/lib/i18n/server";
 
 const addSchema = z.object({
   storeItemId: z.string().min(1),
@@ -28,7 +29,8 @@ export async function GET(request: NextRequest) {
   }
 
   await processCheckoutDelinquencyForUser(userId);
-  const cart = await getCartSummaryForUser(userId);
+  const locale = await getRequestLocale(request);
+  const cart = await getCartSummaryForUser(userId, locale);
 
   const staleMs = 24 * 60 * 60 * 1000;
   if (

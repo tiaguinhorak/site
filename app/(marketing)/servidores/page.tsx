@@ -5,6 +5,8 @@ import { InfrastructurePanel } from "@/components/marketing/infrastructure-panel
 import { Servers } from "@/components/sections/servers";
 import { CallToAction } from "@/components/sections/cta";
 import { getPublicServers, getSiteStats } from "@/lib/queries";
+import { localizeSiteStats } from "@/lib/marketing/localize-content";
+import { getRequestLocale } from "@/lib/i18n/server";
 import { formatMapLabel } from "@/lib/servers/maps";
 
 export const metadata: Metadata = {
@@ -15,8 +17,9 @@ export const metadata: Metadata = {
 
 export default async function ServidoresPage() {
   const t = await getTranslations("marketing");
+  const locale = await getRequestLocale();
   const servers = await getPublicServers();
-  const stats = await getSiteStats();
+  const stats = await localizeSiteStats(await getSiteStats(), locale);
   const serverCount = stats[0]?.value ?? "65+";
 
   return (

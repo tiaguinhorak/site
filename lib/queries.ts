@@ -209,6 +209,7 @@ export async function getSubscriptionPlans() {
         orderBy: { sortOrder: "asc" },
       });
       return plans.map((plan) => ({
+        id: plan.id,
         name: plan.name,
         price: plan.priceCents === 0 ? "R$0" : formatPriceCents(plan.priceCents),
         period: plan.period,

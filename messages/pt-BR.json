@@ -1528,6 +1528,12 @@
       "supreme": "Supremo",
       "global": "Global"
     },
+    "liveSessionStatus": {
+      "accepting": "Aceitando jogadores",
+      "voting": "Veto de mapas",
+      "starting": "Iniciando",
+      "live": "Ao vivo"
+    },
     "eloRanks": {
       "silver1": "Prata I",
       "silver2": "Prata II",

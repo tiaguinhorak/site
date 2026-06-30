@@ -15,6 +15,7 @@ import { logAdminAction } from "@/lib/admin/audit";
 import { adminStoreCreateSchema } from "@/lib/admin/schemas";
 import { storeItemWithRewardsInclude } from "@/lib/store/serialize";
 import { enrichStoreItemsForAdmin, enrichSingleStoreItemForAdmin } from "@/lib/store/enrich-admin-store";
+import { refreshStoreItemTranslations } from "@/lib/store/localize-items";
 
 export async function GET(request: NextRequest) {
   const { error } = await requireAdmin(request);
@@ -62,6 +63,10 @@ export async function POST(request: NextRequest) {
       },
       include: storeItemWithRewardsInclude,
     }),
+  );
+
+  void refreshStoreItemTranslations(item).catch((err) =>
+    console.error("[admin/store] auto-translate failed", err),
   );
 
   await logAdminAction({

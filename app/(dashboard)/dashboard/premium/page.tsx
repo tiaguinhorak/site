@@ -3,9 +3,12 @@ import { DashboardPageShell } from "@/components/dashboard/dashboard-page-shell"
 import { UpgradeSection } from "@/components/dashboard/upgrade-section";
 import { Premium } from "@/components/sections/premium";
 import { getSubscriptionPlans } from "@/lib/queries";
+import { localizeSubscriptionPlans } from "@/lib/marketing/localize-content";
+import { getRequestLocale } from "@/lib/i18n/server";
 
 export default async function PremiumPage() {
-  const plans = await getSubscriptionPlans();
+  const locale = await getRequestLocale();
+  const plans = await localizeSubscriptionPlans(await getSubscriptionPlans(), locale);
   const t = await getTranslations("pageHeaders");
 
   return (

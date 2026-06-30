@@ -15,6 +15,9 @@ import { getOwnedCatalogSkinIdsForUser } from "@/lib/inventory/inventory-ownersh
 import { validateAddToCart, validateCartQuantityUpdate } from "@/lib/store/cart-eligibility";
 import { getUserStorePurchaseCounts } from "@/lib/store/fulfill-purchase";
 import { notifyCartItemAdded } from "@/lib/store/cart-notifications";
+import type { Locale } from "@/lib/i18n";
+import { defaultLocale } from "@/lib/i18n";
+import { localizeStoreItems } from "@/lib/store/localize-items";
 
 const cartInclude = {
   items: {
@@ -132,8 +135,12 @@ export async function clearCart(userId: string) {
 export async function serializeCartForUser(
   userId: string,
   cart: Awaited<ReturnType<typeof getOrCreateCart>>,
+  locale: Locale = defaultLocale,
 ) {
   const storeItems = cart.items.map((row) => row.storeItem);
+  const localizedById = new Map(
+    (await localizeStoreItems(storeItems, locale)).map((item) => [item.id, item]),
+  );
   const itemIds = storeItems.map((item) => item.id);
   const [ownedSkinIds, purchaseCounts, agentByDef, stickerByDef] = await Promise.all([
     getOwnedCatalogSkinIdsForUser(userId),
@@ -146,7 +153,8 @@ export async function serializeCartForUser(
   let itemCount = 0;
 
   const items = cart.items.map((row) => {
-    const serialized = serializePublicStoreItem(row.storeItem, {
+    const storeItem = localizedById.get(row.storeItem.id) ?? row.storeItem;
+    const serialized = serializePublicStoreItem(storeItem, {
       purchaseCount: purchaseCounts.get(row.storeItem.id) ?? 0,
       ownedSkinIds,
       agentByDef,
@@ -174,9 +182,9 @@ export async function serializeCartForUser(
   };
 }
 
-export async function getCartSummaryForUser(userId: string) {
+export async function getCartSummaryForUser(userId: string, locale: Locale = defaultLocale) {
   const cart = await getOrCreateCart(userId);
-  return serializeCartForUser(userId, cart);
+  return serializeCartForUser(userId, cart, locale);
 }
 
 export async function getCartItemCount(userId: string): Promise<number> {

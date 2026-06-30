@@ -16,6 +16,7 @@ import { logAdminAction } from "@/lib/admin/audit";
 import { adminStoreUpdateSchema } from "@/lib/admin/schemas";
 import { storeItemWithRewardsInclude } from "@/lib/store/serialize";
 import { enrichSingleStoreItemForAdmin } from "@/lib/store/enrich-admin-store";
+import { refreshStoreItemTranslations } from "@/lib/store/localize-items";
 
 export async function PATCH(
   request: NextRequest,
@@ -77,6 +78,10 @@ export async function PATCH(
       },
       include: storeItemWithRewardsInclude,
     }),
+  );
+
+  void refreshStoreItemTranslations(item).catch((err) =>
+    console.error("[admin/store] auto-translate failed", err),
   );
 
   await logAdminAction({

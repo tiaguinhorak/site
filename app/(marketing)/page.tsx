@@ -3,9 +3,12 @@ import { HomeHighlights } from "@/components/marketing/home-highlights";
 import { ClutchClubeShowcase } from "@/components/marketing/clutchclube-showcase";
 import { CallToAction } from "@/components/sections/cta";
 import { getSiteStats } from "@/lib/queries";
+import { localizeSiteStats } from "@/lib/marketing/localize-content";
+import { getRequestLocale } from "@/lib/i18n/server";
 
 export default async function Home() {
-  const stats = await getSiteStats();
+  const locale = await getRequestLocale();
+  const stats = await localizeSiteStats(await getSiteStats(), locale);
 
   return (
     <>

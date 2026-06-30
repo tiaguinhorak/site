@@ -14,6 +14,7 @@ import {
 } from "@/lib/security/schemas";
 import { logAdminAction } from "@/lib/admin/audit";
 import { adminGameModeRoomCreateSchema } from "@/lib/admin/schemas";
+import { refreshGameModeRoomTranslations } from "@/lib/lobby/localize-game-modes";
 
 export async function POST(
   request: NextRequest,
@@ -56,6 +57,10 @@ export async function POST(
     targetId: room.id,
     summary: `Adicionou sala ${room.name} em ${mode.name}`,
   });
+
+  void refreshGameModeRoomTranslations(room).catch((err) =>
+    console.error("[i18n] game mode room translate failed", err),
+  );
 
   return NextResponse.json({ ok: true, room });
 }

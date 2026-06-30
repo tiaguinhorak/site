@@ -14,6 +14,7 @@ import {
 } from "@/lib/security/schemas";
 import { logAdminAction } from "@/lib/admin/audit";
 import { adminGameModeUpdateSchema } from "@/lib/admin/schemas";
+import { refreshGameModeTranslations } from "@/lib/lobby/localize-game-modes";
 
 export async function PATCH(
   request: NextRequest,
@@ -57,6 +58,10 @@ export async function PATCH(
     data: parsed.data,
     include: { rooms: { orderBy: { sortOrder: "asc" } } },
   });
+
+  void refreshGameModeTranslations(mode).catch((err) =>
+    console.error("[admin/game-modes] auto-translate failed", err),
+  );
 
   await logAdminAction({
     adminId: admin!.id,

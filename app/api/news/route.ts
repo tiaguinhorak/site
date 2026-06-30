@@ -6,6 +6,7 @@ import { getNewsArticles } from "@/lib/queries";
 import { parseArticleTranslations } from "@/lib/i18n-content";
 import { resolveArticleForLocale } from "@/lib/i18n/auto-resolve-content";
 import { formatNewsCategory } from "@/lib/i18n/news-category";
+import { prisma } from "@/lib/prisma";
 
 async function getLocale(): Promise<Locale> {
   const store = await cookies();
@@ -34,6 +35,13 @@ export async function GET() {
         a.body ?? "",
         storedTranslations,
       );
+
+      if (fields.translated && fields.translations) {
+        await prisma.newsArticle.update({
+          where: { id: a.id },
+          data: { translations: fields.translations },
+        });
+      }
 
       return {
         id: a.id,
