@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MapSelectButton } from "@/components/ui/map-select-button";
 import { useRankedParty } from "@/components/providers/ranked-party-provider";
 import {
   RANKED_REGION_OPTIONS,
@@ -270,24 +271,15 @@ export function RankedCreateTeamModal({ open, mode, team, onClose, onSubmit }: P
                   {t("mapsHint", { min: RANKED_MAP_POOL_MIN })}
                 </p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {RANKED_MAP_POOL.map((map) => {
-                    const active = selectedMaps.includes(map);
-                    return (
-                      <button
-                        key={map}
-                        type="button"
-                        onClick={() => toggleMap(map)}
-                        className={cn(
-                          "rounded-xl border px-2 py-2 text-xs font-semibold transition-colors",
-                          active
-                            ? "border-primary bg-primary/15 text-primary"
-                            : "border-border text-muted hover:border-primary/40",
-                        )}
-                      >
-                        {RANKED_MAP_LABELS[map]}
-                      </button>
-                    );
-                  })}
+                  {RANKED_MAP_POOL.map((map) => (
+                    <MapSelectButton
+                      key={map}
+                      mapId={map}
+                      label={RANKED_MAP_LABELS[map]}
+                      active={selectedMaps.includes(map)}
+                      onClick={() => toggleMap(map)}
+                    />
+                  ))}
                 </div>
               </div>
 

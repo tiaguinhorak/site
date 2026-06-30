@@ -19,7 +19,7 @@ import {
   useRankedParty,
   RANKED_TEAM_SIZE,
 } from "@/components/providers/ranked-party-provider";
-import { RANKED_MAP_LABELS } from "@/lib/ranked/constants";
+import { MapChip } from "@/components/ui/map-chip";
 import type { RankedPartyMemberView, RankedPartyView } from "@/lib/ranked/party-shared";
 import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
 import { cn } from "@/lib/utils";
@@ -190,12 +190,7 @@ export function RankedTeamCompact({
       {team.mapPool.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-1.5">
           {team.mapPool.slice(0, 5).map((map) => (
-            <span
-              key={map}
-              className="rounded-md bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold text-violet-300"
-            >
-              {RANKED_MAP_LABELS[map as keyof typeof RANKED_MAP_LABELS] ?? map}
-            </span>
+            <MapChip key={map} mapId={map} />
           ))}
           {team.mapPool.length > 5 && (
             <span className="text-[10px] text-muted">+{team.mapPool.length - 5}</span>

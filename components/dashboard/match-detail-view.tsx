@@ -14,11 +14,14 @@ import {
   Award,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { MapThumbnail } from "@/components/ui/map-thumbnail";
 import type {
   MatchDetail,
   MatchDetailDeath,
   MatchDetailPlayer,
 } from "@/lib/ranked/match-detail";
+import { formatMapLabel } from "@/lib/servers/maps";
+import { resolveMapId } from "@/lib/servers/map-images";
 import { cn } from "@/lib/utils";
 
 type MatchDetailViewProps = {
@@ -301,28 +304,35 @@ export function MatchDetailView({ match }: MatchDetailViewProps) {
 
   const teamAWon = match.winnerTeam === "A";
   const teamBWon = match.winnerTeam === "B";
+  const mapId = resolveMapId(match.map ?? "");
+  const mapLabel = match.map ? formatMapLabel(mapId || match.map) : "—";
 
   return (
     <div className="space-y-6">
       <div className="rounded-card glass-strong p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-wider text-muted">{match.map ?? "—"}</p>
-            <div className="mt-1 flex items-center gap-3 font-display text-3xl font-bold">
-              <span className={cn(teamAWon ? "text-sky-400" : "text-foreground")}>
-                {match.scoreTeamA ?? 0}
-              </span>
-              <span className="text-muted">:</span>
-              <span className={cn(teamBWon ? "text-rose-400" : "text-foreground")}>
-                {match.scoreTeamB ?? 0}
-              </span>
+          <div className="flex items-center gap-4">
+            {mapId ? (
+              <MapThumbnail mapId={mapId} label={mapLabel} size={72} rounded="xl" />
+            ) : null}
+            <div>
+              <p className="text-xs uppercase tracking-wider text-muted">{mapLabel}</p>
+              <div className="mt-1 flex items-center gap-3 font-display text-3xl font-bold">
+                <span className={cn(teamAWon ? "text-sky-400" : "text-foreground")}>
+                  {match.scoreTeamA ?? 0}
+                </span>
+                <span className="text-muted">:</span>
+                <span className={cn(teamBWon ? "text-rose-400" : "text-foreground")}>
+                  {match.scoreTeamB ?? 0}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-muted">
+                {match.finishedAt
+                  ? new Date(match.finishedAt).toLocaleString()
+                  : t("notFinished")}{" "}
+                · {formatDuration(match.durationSec)}
+              </p>
             </div>
-            <p className="mt-1 text-xs text-muted">
-              {match.finishedAt
-                ? new Date(match.finishedAt).toLocaleString()
-                : t("notFinished")}{" "}
-              · {formatDuration(match.durationSec)}
-            </p>
           </div>
           {match.demoUrl ? (
             <a

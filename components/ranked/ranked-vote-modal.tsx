@@ -5,26 +5,17 @@ import { motion } from "motion/react";
 import { Check, Loader2, MapPin, Timer, Vote, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { MapThumbnail } from "@/components/ui/map-thumbnail";
 import type {
   RankedMapVoteStateView,
   RankedMatchSessionView,
 } from "@/lib/ranked/party-shared";
+import { formatMapLabel } from "@/lib/servers/maps";
 import { cn } from "@/lib/utils";
-
-const MAP_LABELS: Record<string, string> = {
-  de_mirage: "Mirage",
-  de_inferno: "Inferno",
-  de_dust2: "Dust II",
-  de_nuke: "Nuke",
-  de_overpass: "Overpass",
-  de_ancient: "Ancient",
-  de_anubis: "Anubis",
-  de_vertigo: "Vertigo",
-};
 
 function mapLabel(map: string | null | undefined): string {
   if (!map) return "—";
-  return MAP_LABELS[map] ?? map;
+  return formatMapLabel(map);
 }
 
 type Props = {
@@ -177,7 +168,14 @@ export function RankedVoteModal({
                         style={{ height: `${(option.votes / maxVotes) * 100}%` }}
                         aria-hidden
                       />
-                      <span className="relative font-display text-sm font-bold text-foreground">
+                      <MapThumbnail
+                        mapId={option.map}
+                        label={mapLabel(option.map)}
+                        size={44}
+                        rounded="lg"
+                        className="relative z-[1]"
+                      />
+                      <span className="relative z-[1] font-display text-sm font-bold text-foreground">
                         {loading ? (
                           <Loader2 className="h-5 w-5 motion-safe-spin" />
                         ) : (
@@ -202,6 +200,14 @@ export function RankedVoteModal({
           {waitingServer && (
             <div className="mt-8 flex flex-col items-center gap-3 py-4 text-center">
               <Loader2 className="h-8 w-8 motion-safe-spin text-primary" />
+              {(session.selectedMap ?? vote.selectedMap) && (
+                <MapThumbnail
+                  mapId={session.selectedMap ?? vote.selectedMap ?? ""}
+                  label={mapLabel(session.selectedMap ?? vote.selectedMap)}
+                  size={56}
+                  rounded="xl"
+                />
+              )}
               <p className="text-sm text-emerald-300">
                 {mapLabel(session.selectedMap ?? vote.selectedMap)}
               </p>

@@ -9,7 +9,7 @@ import { ServerConnectActions } from "@/components/ui/server-connect-actions";
 import { useRankedParty } from "@/components/providers/ranked-party-provider";
 import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { useUser } from "@/lib/hooks/use-user";
-import { RANKED_MAP_LABELS } from "@/lib/ranked/constants";
+import { MapChip } from "@/components/ui/map-chip";
 import type { RankedPartyMemberView } from "@/lib/ranked/party-shared";
 
 function TeamBlock({
@@ -147,11 +147,9 @@ export function RankedMatchFlow() {
                 </p>
               )}
             {session.selectedMap && (
-              <p className="mt-2 text-sm">
-                {t("map")}{" "}
-                {RANKED_MAP_LABELS[session.selectedMap as keyof typeof RANKED_MAP_LABELS] ??
-                  session.selectedMap}
-              </p>
+              <div className="mt-2">
+                <MapChip mapId={session.selectedMap} className="text-sm" size={24} />
+              </div>
             )}
             {session.serverHost && session.serverPort && (
               <div className="mt-4">

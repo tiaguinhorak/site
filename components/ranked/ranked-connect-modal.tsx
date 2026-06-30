@@ -2,22 +2,13 @@
 
 import { useEffect } from "react";
 import { motion } from "motion/react";
-import { CheckCircle2, Map, X } from "lucide-react";
+import { CheckCircle2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { MapThumbnail } from "@/components/ui/map-thumbnail";
 import { ServerConnectActions } from "@/components/ui/server-connect-actions";
 import type { RankedMatchSessionView } from "@/lib/ranked/party-shared";
-
-const MAP_LABELS: Record<string, string> = {
-  de_mirage: "Mirage",
-  de_inferno: "Inferno",
-  de_dust2: "Dust II",
-  de_nuke: "Nuke",
-  de_overpass: "Overpass",
-  de_ancient: "Ancient",
-  de_anubis: "Anubis",
-  de_vertigo: "Vertigo",
-};
+import { formatMapLabel } from "@/lib/servers/maps";
 
 type Props = {
   open: boolean;
@@ -39,6 +30,9 @@ export function RankedConnectModal({ open, session, onClose, onFinish, finishLoa
   }, [open, onClose]);
 
   if (!open || !session.serverHost || !session.serverPort) return null;
+
+  const selectedMap = session.selectedMap ?? "";
+  const mapLabel = selectedMap ? formatMapLabel(selectedMap) : t("mapDefined");
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
@@ -80,8 +74,10 @@ export function RankedConnectModal({ open, session, onClose, onFinish, finishLoa
                 {t("ready")}
               </p>
               <p className="mt-1 flex items-center gap-2 text-sm text-muted">
-                <Map className="h-4 w-4" />
-                {MAP_LABELS[session.selectedMap ?? ""] ?? session.selectedMap ?? t("mapDefined")}
+                {selectedMap ? (
+                  <MapThumbnail mapId={selectedMap} label={mapLabel} size={28} rounded="md" />
+                ) : null}
+                {mapLabel}
               </p>
             </div>
           </div>
