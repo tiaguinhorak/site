@@ -8,6 +8,7 @@ import { savePlayerAgentsForUser } from "@/lib/inventory/player-agents";
 import { pushPlayerAgentsToGameServer } from "@/lib/inventory/push-agents-to-game-server";
 import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
 import { lookupAgentFromApi } from "@/lib/inventory/csgo-api-agent-index";
+import { lookupStickerFromApi } from "@/lib/inventory/csgo-api-sticker-index";
 import type { StoreItemReward } from "@/lib/generated/prisma/client";
 import type { GrantedStoreReward } from "@/lib/store/types";
 
@@ -37,7 +38,7 @@ export async function userOwnsCatalogSkin(
 export async function grantCatalogSkinReward(
   userId: string,
   catalogSkinId: string,
-  options?: { notify?: boolean },
+  options?: { notify?: boolean; fromStorePurchase?: boolean },
 ): Promise<GrantedStoreReward> {
   const catalog = await prisma.csgoSkinCatalog.findUnique({
     where: { id: catalogSkinId },
@@ -45,7 +46,7 @@ export async function grantCatalogSkinReward(
   if (!catalog) {
     throw new CsgoApiError("Skin não encontrada no catálogo.", 404);
   }
-  if (!catalog.enabled) {
+  if (!catalog.enabled && !options?.fromStorePurchase) {
     throw new CsgoApiError("Skin indisponível no catálogo.", 400);
   }
 
@@ -84,6 +85,7 @@ export async function grantCatalogSkinReward(
 export async function grantAgentReward(
   userId: string,
   agentDefIndex: number,
+  options?: { fromStorePurchase?: boolean },
 ): Promise<GrantedStoreReward> {
   if (agentDefIndex <= 0) {
     throw new CsgoApiError("Agente inválido.", 400);
@@ -92,7 +94,7 @@ export async function grantAgentReward(
   const catalog = await prisma.csgoAgentCatalog.findUnique({
     where: { defIndex: agentDefIndex },
   });
-  if (catalog && !catalog.enabled) {
+  if (catalog && !catalog.enabled && !options?.fromStorePurchase) {
     throw new CsgoApiError("Agente indisponível.", 400);
   }
 
@@ -116,11 +118,41 @@ export async function grantAgentReward(
   };
 }
 
+export async function grantStickerReward(
+  userId: string,
+  stickerDefIndex: number,
+  options?: { fromStorePurchase?: boolean },
+): Promise<GrantedStoreReward> {
+  void userId;
+  if (stickerDefIndex <= 0) {
+    throw new CsgoApiError("Sticker inválido.", 400);
+  }
+
+  const catalog = await prisma.csgoStickerCatalog.findUnique({
+    where: { defIndex: stickerDefIndex },
+  });
+  if (catalog && !catalog.enabled && !options?.fromStorePurchase) {
+    throw new CsgoApiError("Sticker indisponível.", 400);
+  }
+
+  const apiMeta = catalog ? null : await lookupStickerFromApi(stickerDefIndex);
+  const name = catalog?.name ?? apiMeta?.name ?? `Sticker ${stickerDefIndex}`;
+  const imageUrl = catalog?.imageUrl ?? apiMeta?.imageUrl ?? null;
+
+  return {
+    kind: "STICKER",
+    stickerDefIndex,
+    name,
+    imageUrl,
+  };
+}
+
 export async function grantStoreRewardRow(
   userId: string,
   reward: StoreItemReward,
   options?: { notifySkin?: boolean },
 ): Promise<GrantedStoreReward> {
+  const fromStorePurchase = true;
   switch (reward.kind) {
     case "CATALOG_SKIN": {
       if (!reward.catalogSkinId) {
@@ -128,13 +160,20 @@ export async function grantStoreRewardRow(
       }
       return grantCatalogSkinReward(userId, reward.catalogSkinId, {
         notify: options?.notifySkin,
+        fromStorePurchase,
       });
     }
     case "AGENT": {
       if (!reward.agentDefIndex) {
         throw new CsgoApiError("Recompensa de agente inválida.", 500);
       }
-      return grantAgentReward(userId, reward.agentDefIndex);
+      return grantAgentReward(userId, reward.agentDefIndex, { fromStorePurchase });
+    }
+    case "STICKER": {
+      if (!reward.stickerDefIndex) {
+        throw new CsgoApiError("Recompensa de sticker inválida.", 500);
+      }
+      return grantStickerReward(userId, reward.stickerDefIndex, { fromStorePurchase });
     }
     default: {
       const _exhaustive: never = reward.kind;

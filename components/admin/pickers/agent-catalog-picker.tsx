@@ -1,9 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Plus, Search } from "lucide-react";
+import { Loader2, Plus, Search, ZoomIn } from "lucide-react";
 import { RemoteImage } from "@/components/ui/remote-image";
 import { Button } from "@/components/ui/button";
+import {
+  StoreRewardPreviewModal,
+  type StoreRewardPreviewTarget,
+} from "@/components/store/reward-preview-modal";
 import { cn } from "@/lib/utils";
 
 export type AgentPickerItem = {
@@ -19,30 +23,30 @@ export type AgentPickerItem = {
 export function AgentCatalogPicker({
   onSelect,
   singleSelect = true,
+  excludeDefIndexes = [],
   className,
 }: {
   onSelect: (item: AgentPickerItem) => void;
   singleSelect?: boolean;
+  excludeDefIndexes?: number[];
   className?: string;
 }) {
   const [search, setSearch] = useState("");
   const [team, setTeam] = useState<"" | "T" | "CT">("");
-  const [enabledOnly, setEnabledOnly] = useState(true);
+  const [enabledOnly, setEnabledOnly] = useState(false);
   const [items, setItems] = useState<AgentPickerItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [previewTarget, setPreviewTarget] = useState<StoreRewardPreviewTarget | null>(null);
+
+  const excludedKey = excludeDefIndexes.join(",");
 
   const load = useCallback(async () => {
-    const q = search.trim();
-    if (q.length < 1 && !team) {
-      setItems([]);
-      return;
-    }
-
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), limit: "16" });
+      const q = search.trim();
       if (q) params.set("search", q);
       if (team) params.set("team", team);
       if (enabledOnly) params.set("enabledOnly", "1");
@@ -52,14 +56,21 @@ export function AgentCatalogPicker({
       });
       if (!res.ok) throw new Error("Busca falhou.");
       const data = await res.json();
-      setItems(data.items ?? []);
+      const excluded = new Set(
+        excludedKey ? excludedKey.split(",").map((v) => Number(v)).filter(Boolean) : [],
+      );
+      setItems(
+        (data.items ?? []).filter(
+          (row: AgentPickerItem) => !excluded.has(row.defIndex),
+        ),
+      );
       setTotalPages(data.totalPages ?? 1);
     } catch {
       setItems([]);
     } finally {
       setLoading(false);
     }
-  }, [search, team, enabledOnly, page]);
+  }, [search, team, enabledOnly, page, excludedKey]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 300);
@@ -70,9 +81,20 @@ export function AgentCatalogPicker({
     setPage(1);
   }, [search, team, enabledOnly]);
 
+  function openPreview(item: AgentPickerItem) {
+    setPreviewTarget({
+      type: "agent",
+      label: item.name,
+      imageUrl: item.imageUrl,
+      subLabel: item.team,
+    });
+  }
+
   return (
     <div className={cn("space-y-3 rounded-xl border border-border p-3", className)}>
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted">Buscar agente</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+        Buscar agente · clique na imagem para preview
+      </p>
 
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="relative sm:col-span-2">
@@ -108,16 +130,24 @@ export function AgentCatalogPicker({
           <Loader2 className="h-5 w-5 motion-safe-spin text-primary" />
         </div>
       ) : items.length === 0 ? (
-        <p className="py-4 text-center text-xs text-muted">Busque um agente pelo nome ou def_index.</p>
+        <p className="py-4 text-center text-xs text-muted">
+          Nenhum agente encontrado. Desmarque &quot;Só habilitados&quot; ou importe no catálogo de agentes.
+        </p>
       ) : (
         <>
+          <p className="text-[11px] text-muted">{items.length} nesta página</p>
           <ul className="grid max-h-72 gap-2 overflow-y-auto sm:grid-cols-2">
             {items.map((item) => (
               <li
                 key={item.id}
                 className="flex items-center gap-2 rounded-lg border border-border/60 p-2"
               >
-                <div className="flex h-14 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-black/30">
+                <button
+                  type="button"
+                  className="group relative flex h-14 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-black/30"
+                  onClick={() => openPreview(item)}
+                  title="Ver preview"
+                >
                   {item.imageUrl ? (
                     <RemoteImage
                       src={item.imageUrl}
@@ -129,7 +159,10 @@ export function AgentCatalogPicker({
                   ) : (
                     <span className="text-[10px] text-muted">#{item.defIndex}</span>
                   )}
-                </div>
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition group-hover:opacity-100">
+                    <ZoomIn className="h-3.5 w-3.5 text-white" />
+                  </span>
+                </button>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-medium">{item.name}</p>
                   <p className="text-[10px] text-muted">
@@ -180,6 +213,12 @@ export function AgentCatalogPicker({
           )}
         </>
       )}
+
+      <StoreRewardPreviewModal
+        open={previewTarget != null}
+        target={previewTarget}
+        onClose={() => setPreviewTarget(null)}
+      />
     </div>
   );
 }

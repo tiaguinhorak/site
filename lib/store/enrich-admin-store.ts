@@ -2,6 +2,10 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import { loadAgentPreviewMap, collectAgentDefIndexesFromStoreItems } from "@/lib/store/agent-preview-map";
+import {
+  collectStickerDefIndexesFromStoreItems,
+  loadStickerPreviewMap,
+} from "@/lib/store/sticker-preview-map";
 import { serializeStoreReward, storeItemWithRewardsInclude } from "@/lib/store/serialize";
 
 type StoreItemWithRewards = Awaited<
@@ -12,10 +16,13 @@ type StoreItemWithRewards = Awaited<
 
 export async function enrichStoreItemsForAdmin(items: StoreItemWithRewards[]) {
   const agentByDef = await loadAgentPreviewMap(collectAgentDefIndexesFromStoreItems(items));
+  const stickerByDef = await loadStickerPreviewMap(collectStickerDefIndexesFromStoreItems(items));
 
   return items.map((item) => ({
     ...item,
-    rewards: item.rewards.map((reward) => serializeStoreReward(reward, { agentByDef })),
+    rewards: item.rewards.map((reward) =>
+      serializeStoreReward(reward, { agentByDef, stickerByDef }),
+    ),
   }));
 }
 

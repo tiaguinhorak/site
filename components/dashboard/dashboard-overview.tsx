@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Flame } from "lucide-react";
+import { ArrowRight, Coins, Flame, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { ButtonLink } from "@/components/ui/button";
 import { PlayModePicker } from "@/components/dashboard/play-mode-picker";
 import { RANKED_ANTICHEAT_REQUIRED } from "@/lib/ranked";
 import { InventoryPreview } from "@/components/dashboard/inventory-section";
+import { PerformanceChart } from "@/components/dashboard/performance-chart";
 import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { useUser } from "@/lib/hooks/use-user";
 import { useNotifications } from "@/lib/hooks/use-notifications";
@@ -20,6 +21,7 @@ const notificationTypeStylesLocal = notificationTypeStyles;
 export function DashboardOverview() {
   const { user } = useUser();
   const t = useTranslations("overview");
+  const tProg = useTranslations("progression");
   const tNotif = useTranslations("notifications");
   const confirmPresets = useConfirmPresets();
   const notificationQuery = useMemo(() => ({ limit: 3, page: 1 }), []);
@@ -85,6 +87,55 @@ export function DashboardOverview() {
           ))}
         </div>
       )}
+
+      {user && (
+        <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+          <div className="rounded-card glass-strong p-5 sm:p-6">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 font-display text-sm font-bold text-primary">
+                  {user.level}
+                </span>
+                <div>
+                  <p className="font-display text-base font-bold text-foreground">
+                    {tProg("levelLabel", { level: user.level })}
+                  </p>
+                  <p className="text-xs text-muted">
+                    {user.isMaxLevel
+                      ? tProg("maxLevel")
+                      : tProg("xpToNext", { xp: user.xpToNext.toLocaleString("pt-BR") })}
+                  </p>
+                </div>
+              </div>
+              <Sparkles className="h-5 w-5 text-primary/70" />
+            </div>
+            <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-black/30">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-primary to-primary-soft transition-[width] duration-500"
+                style={{ width: `${Math.round(user.levelProgress * 100)}%` }}
+              />
+            </div>
+            <p className="mt-2 text-right text-xs text-muted">
+              {user.isMaxLevel
+                ? `${user.xp.toLocaleString("pt-BR")} XP`
+                : `${user.xpIntoLevel.toLocaleString("pt-BR")} / ${user.xpForLevel.toLocaleString("pt-BR")} XP`}
+            </p>
+          </div>
+
+          <div className="flex flex-col justify-between rounded-card glass-strong p-5 sm:p-6">
+            <div className="flex items-center gap-2 text-amber-300">
+              <Coins className="h-5 w-5" />
+              <p className="text-xs font-semibold uppercase tracking-wider">{tProg("walletLabel")}</p>
+            </div>
+            <p className="mt-2 font-display text-3xl font-bold text-foreground">
+              {user.coins.toLocaleString("pt-BR")}
+            </p>
+            <p className="mt-1 text-xs text-muted">{tProg("coinsHint")}</p>
+          </div>
+        </div>
+      )}
+
+      {user && <PerformanceChart nickname={user.nickname} />}
 
       <div>
         <PlayModePicker />

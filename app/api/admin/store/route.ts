@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
       data: {
         ...parsed.data,
         originalCents: parsed.data.originalCents ?? null,
+        coinPrice: parsed.data.coinPrice ?? null,
         imageUrl: parsed.data.imageUrl ?? null,
         maxPerUser: parsed.data.maxPerUser ?? null,
       },

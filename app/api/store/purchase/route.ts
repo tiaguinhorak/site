@@ -16,6 +16,7 @@ import { zodErrorResponse } from "@/lib/i18n/api-route";
 
 const purchaseSchema = z.object({
   storeItemId: z.string().min(1),
+  currency: z.enum(["brl", "coins"]).default("brl"),
 });
 
 export async function POST(request: NextRequest) {
@@ -41,7 +42,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await purchaseStoreItem(userId, parsed.data.storeItemId);
+    const result = await purchaseStoreItem(userId, parsed.data.storeItemId, {
+      currency: parsed.data.currency,
+    });
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
     const message =

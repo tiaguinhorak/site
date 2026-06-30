@@ -4,6 +4,7 @@ export type GrantedStoreReward = {
   kind: StoreRewardKind;
   catalogSkinId?: string;
   agentDefIndex?: number;
+  stickerDefIndex?: number;
   name: string;
   imageUrl?: string | null;
   alreadyOwned?: boolean;
@@ -22,11 +23,11 @@ export type StoreRewardPreview = {
   kind: StoreRewardKind;
   catalogSkinId: string | null;
   agentDefIndex: number | null;
+  stickerDefIndex: number | null;
   weight: number;
   quantity: number;
   sortOrder: number;
   label: string | null;
   imageUrl: string | null;
-  /** Rarity (skins) or team (agents). */
   subLabel: string | null;
 };

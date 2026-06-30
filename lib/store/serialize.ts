@@ -5,6 +5,7 @@ import { formatPriceCents } from "@/lib/serializers";
 import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
 import type { StoreRewardPreview } from "@/lib/store/types";
 import type { AgentPreviewMeta } from "@/lib/store/agent-preview-map";
+import type { StickerPreviewMeta } from "@/lib/store/sticker-preview-map";
 
 type StoreItemRow = StoreItem & {
   rewards?: (StoreItemReward & {
@@ -39,12 +40,22 @@ export function rewardPreviewLabel(
     };
   }
 
+  if (reward.kind === "STICKER" && reward.stickerDefIndex) {
+    return {
+      label: `Sticker #${reward.stickerDefIndex}`,
+      imageUrl: null,
+    };
+  }
+
   return { label: null, imageUrl: null };
 }
 
 export function serializeStoreReward(
   reward: NonNullable<StoreItemRow["rewards"]>[number],
-  context?: { agentByDef?: Map<number, AgentPreviewMeta> },
+  context?: {
+    agentByDef?: Map<number, AgentPreviewMeta>;
+    stickerByDef?: Map<number, StickerPreviewMeta>;
+  },
 ): StoreRewardPreview {
   const { label, imageUrl } = rewardPreviewLabel(reward);
 
@@ -55,12 +66,30 @@ export function serializeStoreReward(
       kind: reward.kind,
       catalogSkinId: reward.catalogSkinId,
       agentDefIndex: reward.agentDefIndex,
+      stickerDefIndex: reward.stickerDefIndex,
       weight: reward.weight,
       quantity: reward.quantity,
       sortOrder: reward.sortOrder,
       label: agent?.name ?? label,
       imageUrl: agent?.imageUrl ?? imageUrl,
       subLabel: agent?.team ?? null,
+    };
+  }
+
+  if (reward.kind === "STICKER" && reward.stickerDefIndex) {
+    const sticker = context?.stickerByDef?.get(reward.stickerDefIndex);
+    return {
+      id: reward.id,
+      kind: reward.kind,
+      catalogSkinId: reward.catalogSkinId,
+      agentDefIndex: reward.agentDefIndex,
+      stickerDefIndex: reward.stickerDefIndex,
+      weight: reward.weight,
+      quantity: reward.quantity,
+      sortOrder: reward.sortOrder,
+      label: sticker?.name ?? label,
+      imageUrl: sticker?.imageUrl ?? imageUrl,
+      subLabel: "Sticker",
     };
   }
 
@@ -74,6 +103,7 @@ export function serializeStoreReward(
     kind: reward.kind,
     catalogSkinId: reward.catalogSkinId,
     agentDefIndex: reward.agentDefIndex,
+    stickerDefIndex: reward.stickerDefIndex,
     weight: reward.weight,
     quantity: reward.quantity,
     sortOrder: reward.sortOrder,
@@ -91,6 +121,7 @@ export type PublicStoreItem = {
   price: string;
   priceCents: number;
   originalPrice?: string;
+  coinPrice: number | null;
   badge: string;
   description: string;
   accent: string;
@@ -100,7 +131,9 @@ export type PublicStoreItem = {
   maxPerUser: number | null;
   purchaseCount: number;
   canPurchase: boolean;
+  canBuyWithCoins: boolean;
   ownedSkin: boolean;
+  inCart: boolean;
   rewardsPreview: StoreRewardPreview[];
 };
 
@@ -110,17 +143,33 @@ export function serializePublicStoreItem(
     purchaseCount: number;
     ownedSkinIds: Set<string>;
     agentByDef?: Map<number, AgentPreviewMeta>;
+    stickerByDef?: Map<number, StickerPreviewMeta>;
+    cartStoreItemIds?: Set<string>;
   },
 ): PublicStoreItem {
   const rewards = item.rewards ?? [];
   const skinReward = rewards.find((row) => row.kind === "CATALOG_SKIN" && row.catalogSkinId);
-  const ownedSkin = skinReward?.catalogSkinId
-    ? context.ownedSkinIds.has(skinReward.catalogSkinId)
-    : false;
+  const skinOnlyReward =
+    item.productKind === "SKIN" &&
+    rewards.length === 1 &&
+    rewards[0]?.kind === "CATALOG_SKIN";
+  const ownedSkin =
+    skinOnlyReward && skinReward?.catalogSkinId
+      ? context.ownedSkinIds.has(skinReward.catalogSkinId)
+      : false;
 
   const atLimit =
     item.maxPerUser != null && context.purchaseCount >= item.maxPerUser;
+  const inCart = context.cartStoreItemIds?.has(item.id) ?? false;
   const canPurchase =
+    item.enabled &&
+    rewards.length > 0 &&
+    !atLimit &&
+    !inCart &&
+    !(item.productKind === "SKIN" && ownedSkin);
+  const canBuyWithCoins =
+    item.coinPrice != null &&
+    item.coinPrice > 0 &&
     item.enabled &&
     rewards.length > 0 &&
     !atLimit &&
@@ -134,6 +183,7 @@ export function serializePublicStoreItem(
     price: formatPriceCents(item.priceCents),
     priceCents: item.priceCents,
     originalPrice: item.originalCents ? formatPriceCents(item.originalCents) : undefined,
+    coinPrice: item.coinPrice ?? null,
     badge: item.badge,
     description: item.description,
     accent: item.accent,
@@ -143,7 +193,9 @@ export function serializePublicStoreItem(
     maxPerUser: item.maxPerUser,
     purchaseCount: context.purchaseCount,
     canPurchase,
+    canBuyWithCoins,
     ownedSkin,
+    inCart,
     rewardsPreview: rewards.map((row) => serializeStoreReward(row, context)),
   };
 }
@@ -154,6 +206,8 @@ export const storeItemWithRewardsInclude = {
     include: {
       catalogSkin: {
         select: {
+          weaponId: true,
+          paintkit: true,
           weaponName: true,
           paintkitName: true,
           imageUrl: true,

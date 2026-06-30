@@ -22,6 +22,10 @@ import {
   ChevronDown,
   MoreHorizontal,
   Medal,
+  Target,
+  Award,
+  Swords,
+  UserPlus,
   type LucideIcon,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -46,6 +50,10 @@ const iconMap: Record<string, LucideIcon> = {
   Zap,
   MoreHorizontal,
   Medal,
+  Target,
+  Award,
+  Swords,
+  UserPlus,
 };
 
 type NavLinkItem = {
@@ -88,11 +96,25 @@ const COMMERCE_GROUP: NavGroup = {
   ],
 };
 
+const PROGRESS_GROUP: NavGroup = {
+  id: "progress",
+  i18nKey: "progress",
+  icon: "Target",
+  items: [
+    { href: "/dashboard/passe", icon: "Crown", i18nKey: "battlePass" },
+    { href: "/dashboard/missoes", icon: "Target", i18nKey: "missions" },
+    { href: "/dashboard/conquistas", icon: "Award", i18nKey: "achievements" },
+    { href: "/dashboard/clas", icon: "Swords", i18nKey: "clans" },
+    { href: "/dashboard/ranking", icon: "Medal", i18nKey: "ranking" },
+  ],
+};
+
 const MORE_GROUP: NavGroup = {
   id: "more",
   i18nKey: "more",
   icon: "MoreHorizontal",
   items: [
+    { href: "/dashboard/amigos", icon: "UserPlus", i18nKey: "friends" },
     { href: "/dashboard/anticheat", icon: "ShieldCheck", i18nKey: "anticheat" },
     { href: "/dashboard/suporte", icon: "Headphones", i18nKey: "support" },
   ],
@@ -101,7 +123,6 @@ const MORE_GROUP: NavGroup = {
 const STANDALONE_NAV: NavLinkItem[] = [
   { href: "/dashboard/noticias", icon: "Newspaper", i18nKey: "news" },
   { href: "/dashboard/premium", icon: "Crown", i18nKey: "premium" },
-  { href: "/dashboard/ranking", icon: "Medal", i18nKey: "ranking" },
 ];
 
 const ADMIN_LINK: NavLinkItem = {
@@ -313,7 +334,7 @@ export function DashboardNavbar() {
     ? { ...MORE_GROUP, items: [...MORE_GROUP.items, ADMIN_LINK] }
     : MORE_GROUP;
 
-  const dropdownGroups = [PLAY_GROUP, COMMERCE_GROUP, moreGroup];
+  const dropdownGroups = [PLAY_GROUP, COMMERCE_GROUP, PROGRESS_GROUP, moreGroup];
 
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
@@ -356,7 +377,7 @@ export function DashboardNavbar() {
               <span className="hidden lg:inline">{tNav(OVERVIEW.i18nKey)}</span>
             </Link>
 
-            {dropdownGroups.slice(0, 2).map((group) => (
+            {dropdownGroups.slice(0, 3).map((group) => (
               <NavDropdown
                 key={group.id}
                 group={group}
@@ -439,7 +460,7 @@ export function DashboardNavbar() {
                 </Link>
 
                 <div className="mt-1 space-y-0.5">
-                  {dropdownGroups.slice(0, 2).map((group) => (
+                  {dropdownGroups.slice(0, 3).map((group) => (
                     <MobileNavSection
                       key={group.id}
                       group={group}

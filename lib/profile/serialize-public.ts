@@ -1,7 +1,15 @@
-import type { User, Plan } from "@/lib/generated/prisma/client";
+import type { User } from "@/lib/generated/prisma/client";
 import type { UserProfile } from "@/lib/serializers";
 import { resolveUserAvatarUrl } from "@/lib/profile/avatar";
 import { getCountryFlag, getCountry } from "@/lib/profile/countries";
+import {
+  computeAdr,
+  computeHsPct,
+  formatMapLabel,
+  formatWeaponLabel,
+  topKeyFromCounts,
+} from "@/lib/profile/player-advanced-stats";
+import { getLevelProgress } from "@/lib/progression/xp-curve";
 
 export type PublicPlayerProfile = {
   nickname: string;
@@ -23,15 +31,29 @@ export type PublicPlayerProfile = {
   rankedKills: number;
   rankedDeaths: number;
   rankedAssists: number;
+  rankedMvps: number;
+  rankedHeadshots: number;
+  rankedDamage: number;
+  rankedRoundsPlayed: number;
+  rankedClutches: number;
+  rankedUtilityDamage: number;
+  rankedEnemiesFlashed: number;
+  rankedAwpKills: number;
+  hsPct: number;
+  adr: number;
+  level: number;
+  xp: number;
+  profileTag: string | null;
+  profileMedalCode: string | null;
+  favoriteWeapon: string | null;
+  favoriteMap: string | null;
   steamPersonaName: string | null;
   steamProfileUrl: string | null;
   anticheatInstalled: boolean;
 };
 
-function planToClient(plan: Plan): PublicPlayerProfile["plan"] {
+function planToClient(plan: User["plan"]): PublicPlayerProfile["plan"] {
   switch (plan) {
-    case "FREE":
-      return "free";
     case "PREMIUM":
       return "premium";
     case "ELITE":
@@ -39,6 +61,49 @@ function planToClient(plan: Plan): PublicPlayerProfile["plan"] {
     default:
       return "free";
   }
+}
+
+function buildAdvancedFields(user: User): Pick<
+  PublicPlayerProfile,
+  | "rankedMvps"
+  | "rankedHeadshots"
+  | "rankedDamage"
+  | "rankedRoundsPlayed"
+  | "rankedClutches"
+  | "rankedUtilityDamage"
+  | "rankedEnemiesFlashed"
+  | "rankedAwpKills"
+  | "hsPct"
+  | "adr"
+  | "level"
+  | "xp"
+  | "profileTag"
+  | "profileMedalCode"
+  | "favoriteWeapon"
+  | "favoriteMap"
+> {
+  const favWeaponKey = topKeyFromCounts(user.weaponKillCounts);
+  const favMapKey = topKeyFromCounts(user.mapPlayCounts);
+  const levelSnapshot = getLevelProgress(user.xp);
+
+  return {
+    rankedMvps: user.rankedMvps,
+    rankedHeadshots: user.rankedHeadshots,
+    rankedDamage: user.rankedDamage,
+    rankedRoundsPlayed: user.rankedRoundsPlayed,
+    rankedClutches: user.rankedClutches,
+    rankedUtilityDamage: user.rankedUtilityDamage,
+    rankedEnemiesFlashed: user.rankedEnemiesFlashed,
+    rankedAwpKills: user.rankedAwpKills,
+    hsPct: computeHsPct(user.rankedHeadshots, user.rankedKills),
+    adr: computeAdr(user.rankedDamage, user.rankedRoundsPlayed),
+    level: levelSnapshot.level,
+    xp: user.xp,
+    profileTag: user.profileTag,
+    profileMedalCode: user.profileMedalCode,
+    favoriteWeapon: favWeaponKey ? formatWeaponLabel(favWeaponKey) : null,
+    favoriteMap: favMapKey ? formatMapLabel(favMapKey) : null,
+  };
 }
 
 /** Converte perfil da sessão (cliente) para exibição pública ao vivo */
@@ -65,6 +130,22 @@ export function userProfileToPublic(user: UserProfile): PublicPlayerProfile {
     rankedKills: user.rankedKills,
     rankedDeaths: user.rankedDeaths,
     rankedAssists: user.rankedAssists,
+    rankedMvps: 0,
+    rankedHeadshots: 0,
+    rankedDamage: 0,
+    rankedRoundsPlayed: 0,
+    rankedClutches: 0,
+    rankedUtilityDamage: 0,
+    rankedEnemiesFlashed: 0,
+    rankedAwpKills: 0,
+    hsPct: computeHsPct(0, user.rankedKills),
+    adr: 0,
+    level: user.level,
+    xp: user.xp,
+    profileTag: null,
+    profileMedalCode: null,
+    favoriteWeapon: null,
+    favoriteMap: null,
     steamPersonaName: user.steamPersonaName,
     steamProfileUrl: user.steamProfileUrl,
     anticheatInstalled: user.anticheatInstalled,
@@ -98,5 +179,6 @@ export function serializePublicPlayer(user: User): PublicPlayerProfile {
     steamPersonaName: user.steamPersonaName,
     steamProfileUrl: user.steamProfileUrl,
     anticheatInstalled: user.anticheatInstalled,
+    ...buildAdvancedFields(user),
   };
 }

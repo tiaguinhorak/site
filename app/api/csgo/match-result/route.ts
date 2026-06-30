@@ -14,6 +14,40 @@ const playerSchema = z.object({
   assists: z.number().int().min(0),
   score: z.number().int().min(0),
   mvp: z.number().int().min(0),
+  headshots: z.number().int().min(0).optional(),
+  damage: z.number().int().min(0).optional(),
+  utilityDamage: z.number().int().min(0).optional(),
+  enemiesFlashed: z.number().int().min(0).optional(),
+  clutchesWon: z.number().int().min(0).optional(),
+  entryKills: z.number().int().min(0).optional(),
+  awpKills: z.number().int().min(0).optional(),
+  weaponKills: z.record(z.string(), z.number().int().min(0)).optional(),
+});
+
+const roundSchema = z.object({
+  roundNumber: z.number().int().min(1),
+  winnerTeam: z.string().nullable().optional(),
+  reason: z.string().max(40).nullable().optional(),
+  bombPlanted: z.boolean().optional(),
+});
+
+const highlightSchema = z.object({
+  steamId: z.string().min(5),
+  type: z.enum(["ACE", "CLUTCH", "MULTI_KILL", "HEADSHOTS", "ENTRY", "KNIFE"]),
+  roundNumber: z.number().int().min(0).optional(),
+  detail: z.string().max(120).optional(),
+});
+
+const deathSchema = z.object({
+  roundNumber: z.number().int().min(0).optional(),
+  victimSteamId: z.string().min(5),
+  killerSteamId: z.string().min(5).nullable().optional(),
+  weapon: z.string().max(40).nullable().optional(),
+  headshot: z.boolean().optional(),
+  victimTeam: z.string().max(2).nullable().optional(),
+  x: z.number().optional(),
+  y: z.number().optional(),
+  z: z.number().optional(),
 });
 
 const bodySchema = z.object({
@@ -23,7 +57,11 @@ const bodySchema = z.object({
   scoreTeamB: z.number().int().min(0),
   winnerTeam: z.string().nullable().optional(),
   durationSec: z.number().int().min(0),
+  demoUrl: z.string().url().max(500).nullable().optional(),
   players: z.array(playerSchema),
+  rounds: z.array(roundSchema).optional(),
+  highlights: z.array(highlightSchema).optional(),
+  deaths: z.array(deathSchema).optional(),
 });
 
 export async function POST(request: NextRequest) {

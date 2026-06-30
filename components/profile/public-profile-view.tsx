@@ -10,9 +10,14 @@ import {
   ExternalLink,
   Medal,
   TrendingUp,
+  Crosshair,
+  Flame,
+  Zap,
+  MapPin,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SteamIcon } from "@/components/ui/icons";
+import { PublicProfileShareButton } from "@/components/profile/public-profile-share-button";
 import type { PublicPlayerProfile } from "@/lib/profile/serialize-public";
 import { cn } from "@/lib/utils";
 
@@ -72,6 +77,11 @@ export function PublicProfileView({ player }: { player: PublicPlayerProfile }) {
                 >
                   {planLabels[player.plan]}
                 </span>
+                {player.profileTag ? (
+                  <span className="rounded-full bg-violet-500/20 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-violet-300">
+                    [{player.profileTag}]
+                  </span>
+                ) : null}
               </div>
 
               <p className="mt-2 flex items-center gap-2 text-sm text-muted">
@@ -96,6 +106,10 @@ export function PublicProfileView({ player }: { player: PublicPlayerProfile }) {
                   <Medal className="h-4 w-4 text-primary" />
                   {player.elo} ELO
                 </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] px-3 py-1 text-sm font-medium text-foreground">
+                  {t("levelBadge", { level: player.level })}
+                </span>
+                <PublicProfileShareButton nickname={player.nickname} />
                 {player.anticheatInstalled && (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-sm font-medium text-emerald-400">
                     <ShieldCheck className="h-4 w-4" />
@@ -169,6 +183,55 @@ export function PublicProfileView({ player }: { player: PublicPlayerProfile }) {
             </p>
             <p className="mt-1 text-sm text-muted">
               {player.rankedKills}K / {player.rankedDeaths}D / {player.rankedAssists}A
+            </p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Advanced competitive stats */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.04 }}
+        className="rounded-card glass-strong p-6 sm:p-8"
+      >
+        <h2 className="font-display text-sm font-bold uppercase tracking-wider text-muted">
+          {t("advancedStatsTitle")}
+        </h2>
+        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-5">
+          {[
+            { label: t("hsPct"), value: `${player.hsPct}%`, icon: Crosshair },
+            { label: t("adr"), value: player.adr.toFixed(1), icon: Flame },
+            { label: t("mvps"), value: player.rankedMvps, icon: Trophy },
+            { label: t("clutches"), value: player.rankedClutches, icon: Zap },
+            { label: t("awpKills"), value: player.rankedAwpKills, icon: Target },
+          ].map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <div key={stat.label} className="rounded-xl glass p-4">
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted">
+                  <Icon className="h-3.5 w-3.5 text-primary" />
+                  {stat.label}
+                </div>
+                <p className="mt-2 font-display text-2xl font-bold text-foreground">{stat.value}</p>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-xl glass p-4">
+            <p className="text-xs uppercase tracking-wider text-muted">{t("favoriteWeapon")}</p>
+            <p className="mt-2 font-display text-lg font-bold text-foreground">
+              {player.favoriteWeapon ?? t("notAvailable")}
+            </p>
+          </div>
+          <div className="rounded-xl glass p-4">
+            <p className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-muted">
+              <MapPin className="h-3.5 w-3.5" />
+              {t("favoriteMap")}
+            </p>
+            <p className="mt-2 font-display text-lg font-bold text-foreground">
+              {player.favoriteMap ?? t("notAvailable")}
             </p>
           </div>
         </div>

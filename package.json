@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "sync:assets": "node scripts/sync-brand-assets.mjs",
-    "predev": "npm run sync:assets",
+    "predev": "npm run sync:assets && prisma generate",
     "prebuild": "npm run sync:assets && prisma generate",
     "postinstall": "prisma generate",
     "dev": "next dev",

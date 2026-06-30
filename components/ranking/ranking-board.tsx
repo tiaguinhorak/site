@@ -140,6 +140,14 @@ export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoar
     { id: "kd", label: t("sortKd") },
     { id: "wins", label: t("sortWins") },
     { id: "winRate", label: t("sortWinRate") },
+    { id: "kills", label: t("sortKills") },
+    { id: "assists", label: t("sortAssists") },
+    { id: "mvps", label: t("sortMvps") },
+    { id: "hs", label: t("sortHs") },
+    { id: "clutch", label: t("sortClutch") },
+    { id: "utility", label: t("sortUtility") },
+    { id: "awp", label: t("sortAwp") },
+    { id: "level", label: t("sortLevel") },
   ];
 
   return (

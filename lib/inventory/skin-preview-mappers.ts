@@ -70,6 +70,27 @@ export function adminCatalogItemToPreview(item: {
   };
 }
 
+export function storeRewardToPreview(reward: {
+  kind: string;
+  catalogSkinId?: string | null;
+  label: string | null;
+  imageUrl: string | null;
+  subLabel: string | null;
+}): SkinPreviewData | null {
+  if (reward.kind !== "CATALOG_SKIN" || !reward.catalogSkinId) return null;
+
+  const parts = reward.label?.split(" | ") ?? [];
+  return {
+    id: reward.catalogSkinId,
+    name: reward.label ?? "Skin",
+    imageUrl: reward.imageUrl ?? catalogSkinImageUrl(reward.catalogSkinId),
+    accent: rarityAccent(reward.subLabel ?? "common"),
+    rarity: reward.subLabel ?? "common",
+    weaponName: parts[0] ?? undefined,
+    paintkitName: parts[1] ?? undefined,
+  };
+}
+
 export function grantedSkinToPreview(item: {
   catalogSkinId: string;
   name: string;

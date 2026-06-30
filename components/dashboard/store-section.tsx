@@ -2,15 +2,17 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Flame, Loader2, Package, ShoppingBag, X } from "lucide-react";
+import { Coins, Flame, Loader2, Package, ShoppingBag, ShoppingCart, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { RemoteImage } from "@/components/ui/remote-image";
+import { useUser } from "@/lib/hooks/use-user";
 import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { secureApi } from "@/lib/api/client";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { StoreRewardsPreview } from "@/components/dashboard/store-rewards-preview";
+import { dispatchStoreCartOpen, dispatchStoreCartUpdated } from "@/lib/hooks/use-store-cart";
 
 type StoreProductKind = "SKIN" | "PACKAGE" | "CASE" | "AGENT";
 
@@ -33,6 +35,7 @@ type StoreItem = {
   price: string;
   priceCents: number;
   originalPrice?: string;
+  coinPrice: number | null;
   badge: string;
   description: string;
   accent: string;
@@ -40,7 +43,9 @@ type StoreItem = {
   trending: boolean;
   featured: boolean;
   canPurchase: boolean;
+  canBuyWithCoins: boolean;
   ownedSkin: boolean;
+  inCart: boolean;
   purchaseCount: number;
   maxPerUser: number | null;
   rewardsPreview: StoreRewardPreview[];
@@ -150,32 +155,44 @@ function StoreItemCard({
   item,
   featured,
   purchasingId,
+  addingToCartId,
   onPurchase,
+  onAddToCart,
 }: {
   item: StoreItem;
   featured?: boolean;
   purchasingId: string | null;
-  onPurchase: (item: StoreItem) => void;
+  addingToCartId: string | null;
+  onPurchase: (item: StoreItem, currency: "brl" | "coins") => void;
+  onAddToCart: (item: StoreItem) => void;
 }) {
   const t = useTranslations("store");
   const confirmPresets = useConfirmPresets();
+  const { user } = useUser();
   const isPurchasing = purchasingId === item.id;
+  const isAddingToCart = addingToCartId === item.id;
+  const coverImage = item.imageUrl ?? item.rewardsPreview[0]?.imageUrl ?? null;
+  const userCoins = user?.coins ?? 0;
+  const hasEnoughCoins = item.coinPrice != null && userCoins >= item.coinPrice;
+  const coinPriceLabel = item.coinPrice != null ? item.coinPrice.toLocaleString("pt-BR") : null;
 
-  const statusLabel = item.ownedSkin
-    ? t("owned")
-    : item.maxPerUser != null && item.purchaseCount >= item.maxPerUser
-      ? t("limitReached")
-      : !item.canPurchase && item.rewardsPreview.length === 0
-        ? t("unavailable")
-        : null;
+  const statusLabel = item.inCart
+    ? t("inCart")
+    : item.ownedSkin
+      ? t("owned")
+      : item.maxPerUser != null && item.purchaseCount >= item.maxPerUser
+        ? t("limitReached")
+        : !item.canPurchase && item.rewardsPreview.length === 0
+          ? t("unavailable")
+          : null;
 
   return (
     <motion.article
       initial={{ opacity: 0, y: featured ? 20 : 16 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "relative overflow-hidden rounded-card glass p-5",
-        featured && "glass-strong p-6 sm:p-8",
+        "relative w-full min-w-0 overflow-hidden rounded-card glass",
+        featured ? "glass-strong p-5 sm:p-8" : "p-4 sm:p-5",
       )}
     >
       <div
@@ -186,18 +203,24 @@ function StoreItemCard({
         )}
         aria-hidden
       />
-      <div className="relative flex flex-col gap-4">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex gap-4 min-w-0 flex-1">
-            {(item.imageUrl || item.rewardsPreview[0]?.imageUrl) && (
+
+      <div className="relative flex min-w-0 flex-col gap-4">
+        <div
+          className={cn(
+            "flex min-w-0 flex-col gap-4",
+            featured && "lg:flex-row lg:items-start lg:justify-between lg:gap-6",
+          )}
+        >
+          <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start">
+            {coverImage && (
               <div
                 className={cn(
-                  "hidden shrink-0 overflow-hidden rounded-xl border border-border/50 bg-black/20 sm:block",
-                  featured ? "h-28 w-28" : "h-20 w-20",
+                  "mx-auto shrink-0 overflow-hidden rounded-xl border border-border/50 bg-black/20 sm:mx-0",
+                  featured ? "h-24 w-24 sm:h-28 sm:w-28" : "h-20 w-20",
                 )}
               >
                 <RemoteImage
-                  src={item.imageUrl ?? item.rewardsPreview[0]?.imageUrl ?? ""}
+                  src={coverImage}
                   alt={item.name}
                   width={featured ? 112 : 80}
                   height={featured ? 112 : 80}
@@ -205,8 +228,9 @@ function StoreItemCard({
                 />
               </div>
             )}
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
+
+            <div className="min-w-0 flex-1 text-center sm:text-left">
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/20 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-primary">
                   {featured && <Flame className="h-3.5 w-3.5" />}
                   {item.badge}
@@ -220,59 +244,120 @@ function StoreItemCard({
               </p>
               <h2
                 className={cn(
-                  "mt-1 font-display font-bold text-foreground",
-                  featured ? "text-3xl sm:text-4xl" : "text-xl",
+                  "mt-1 break-words font-display font-bold leading-tight text-foreground",
+                  featured ? "text-2xl sm:text-3xl lg:text-4xl" : "text-lg sm:text-xl",
                 )}
               >
                 {item.name}
               </h2>
-              <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">{item.description}</p>
-              <div className="mt-3 flex flex-wrap items-baseline gap-3">
+              <p
+                className={cn(
+                  "mt-2 text-sm leading-relaxed text-muted",
+                  featured ? "max-w-2xl" : "line-clamp-3 sm:line-clamp-none",
+                )}
+              >
+                {item.description}
+              </p>
+              <div className="mt-3 flex flex-wrap items-baseline justify-center gap-3 sm:justify-start">
                 {item.originalPrice && (
-                  <span className="text-lg text-muted line-through">{item.originalPrice}</span>
+                  <span className="text-base text-muted line-through sm:text-lg">{item.originalPrice}</span>
                 )}
                 <span
                   className={cn(
                     "font-display font-bold text-foreground",
-                    featured ? "text-3xl" : "text-xl",
+                    featured ? "text-2xl sm:text-3xl" : "text-lg sm:text-xl",
                   )}
                 >
                   {item.priceCents === 0 ? t("free") : item.price}
                 </span>
+                {coinPriceLabel && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/15 px-2.5 py-1 text-sm font-semibold text-amber-300">
+                    <Coins className="h-4 w-4" />
+                    {coinPriceLabel}
+                  </span>
+                )}
               </div>
               {statusLabel && (
                 <p className="mt-2 text-sm font-medium text-amber-400">{statusLabel}</p>
               )}
             </div>
           </div>
-          <Button
-            type="button"
-            variant="primary"
-            size={featured ? "lg" : "md"}
-            className="shrink-0 self-start lg:self-center"
-            disabled={!item.canPurchase || isPurchasing}
-            confirm={
-              item.canPurchase
-                ? confirmPresets.purchaseItem(item.name, item.priceCents === 0 ? t("free") : item.price)
-                : undefined
-            }
-            onClick={() => onPurchase(item)}
-          >
-            {isPurchasing ? (
-              <Loader2 className="h-5 w-5 motion-safe-spin" />
-            ) : item.productKind === "CASE" ? (
-              t("openCase")
-            ) : (
-              t("buyNow")
+
+          <div
+            className={cn(
+              "flex w-full min-w-0 flex-col gap-2",
+              featured && "lg:w-auto lg:min-w-[220px] lg:shrink-0",
             )}
-          </Button>
+          >
+            <Button
+              type="button"
+              variant="outline"
+              size={featured ? "lg" : "md"}
+              className="w-full"
+              disabled={!item.canPurchase || item.inCart || isAddingToCart || isPurchasing}
+              onClick={() => onAddToCart(item)}
+            >
+              {isAddingToCart ? (
+                <Loader2 className="h-5 w-5 motion-safe-spin" />
+              ) : (
+                <>
+                  <ShoppingCart className="h-4 w-4" />
+                  {t("addToCart")}
+                </>
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size={featured ? "lg" : "md"}
+              className="w-full"
+              disabled={!item.canPurchase || isPurchasing || isAddingToCart}
+              confirm={
+                item.canPurchase
+                  ? confirmPresets.purchaseItem(item.name, item.priceCents === 0 ? t("free") : item.price)
+                  : undefined
+              }
+              onClick={() => onPurchase(item, "brl")}
+            >
+              {isPurchasing ? (
+                <Loader2 className="h-5 w-5 motion-safe-spin" />
+              ) : item.productKind === "CASE" ? (
+                t("openCase")
+              ) : (
+                t("buyNow")
+              )}
+            </Button>
+            {item.canBuyWithCoins && coinPriceLabel && (
+              <Button
+                type="button"
+                variant="glass"
+                size={featured ? "lg" : "md"}
+                className="w-full"
+                disabled={!hasEnoughCoins || isPurchasing || isAddingToCart}
+                confirm={
+                  hasEnoughCoins
+                    ? confirmPresets.purchaseItem(item.name, `${coinPriceLabel} ${t("coinsLabel")}`)
+                    : undefined
+                }
+                onClick={() => onPurchase(item, "coins")}
+              >
+                <Coins className="h-4 w-4" />
+                {hasEnoughCoins ? t("buyWithCoins") : t("notEnoughCoins")}
+              </Button>
+            )}
+          </div>
         </div>
 
-        <StoreRewardsPreview
-          productKind={item.productKind}
-          rewards={item.rewardsPreview}
-          featured={featured}
-        />
+        {item.rewardsPreview.length > 0 && (
+          <div className="min-w-0 border-t border-border/40 pt-4">
+            <StoreRewardsPreview
+              productKind={item.productKind}
+              rewards={item.rewardsPreview}
+              featured={featured}
+              compact={!featured}
+            />
+          </div>
+        )}
       </div>
     </motion.article>
   );
@@ -280,9 +365,11 @@ function StoreItemCard({
 
 export function StoreSection() {
   const t = useTranslations("store");
+  const { refresh } = useUser();
   const [items, setItems] = useState<StoreItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
+  const [addingToCartId, setAddingToCartId] = useState<string | null>(null);
   const [purchaseResult, setPurchaseResult] = useState<PurchaseResult | null>(null);
 
   const loadItems = useCallback(() => {
@@ -298,13 +385,36 @@ export function StoreSection() {
     loadItems();
   }, [loadItems]);
 
-  async function handlePurchase(item: StoreItem) {
-    if (!item.canPurchase || purchasingId) return;
+  async function handleAddToCart(item: StoreItem) {
+    if (!item.canPurchase || addingToCartId || purchasingId) return;
+
+    setAddingToCartId(item.id);
+    const result = await secureApi("/api/store/cart", {
+      method: "POST",
+      json: { storeItemId: item.id, quantity: 1 },
+    });
+    setAddingToCartId(null);
+
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+
+    toast.success(t("addedToCart"));
+    dispatchStoreCartUpdated();
+    dispatchStoreCartOpen();
+    loadItems();
+  }
+
+  async function handlePurchase(item: StoreItem, currency: "brl" | "coins") {
+    if (purchasingId) return;
+    if (currency === "brl" && !item.canPurchase) return;
+    if (currency === "coins" && !item.canBuyWithCoins) return;
 
     setPurchasingId(item.id);
     const result = await secureApi<PurchaseResult>("/api/store/purchase", {
       method: "POST",
-      json: { storeItemId: item.id },
+      json: { storeItemId: item.id, currency },
     });
     setPurchasingId(null);
 
@@ -318,6 +428,9 @@ export function StoreSection() {
       item.productKind === "CASE" ? t("caseOpenedToast") : t("purchaseSuccessToast"),
     );
     loadItems();
+    if (currency === "coins") {
+      void refresh();
+    }
   }
 
   if (loading) {
@@ -342,24 +455,28 @@ export function StoreSection() {
 
   return (
     <>
-      <section className="space-y-8">
+      <section className="space-y-6 sm:space-y-8">
         {featured && (
           <StoreItemCard
             item={featured}
             featured
             purchasingId={purchasingId}
+            addingToCartId={addingToCartId}
             onPurchase={handlePurchase}
+            onAddToCart={handleAddToCart}
           />
         )}
 
         {others.length > 0 && (
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             {others.map((item) => (
               <StoreItemCard
                 key={item.id}
                 item={item}
                 purchasingId={purchasingId}
+                addingToCartId={addingToCartId}
                 onPurchase={handlePurchase}
+                onAddToCart={handleAddToCart}
               />
             ))}
           </div>

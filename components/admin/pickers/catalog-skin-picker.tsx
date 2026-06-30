@@ -48,7 +48,7 @@ export function CatalogSkinPicker({
   const [category, setCategory] = useState<CatalogPickerCategory>("all");
   const [weaponFilter, setWeaponFilter] = useState("");
   const [weaponOptions, setWeaponOptions] = useState<WeaponOption[]>([]);
-  const [enabledOnly, setEnabledOnly] = useState(true);
+  const [enabledOnly, setEnabledOnly] = useState(false);
   const [items, setItems] = useState<CatalogSkinPickerItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -59,12 +59,6 @@ export function CatalogSkinPicker({
 
   const load = useCallback(async () => {
     const q = search.trim();
-    const hasFilter = q.length >= 2 || weaponFilter || category !== "all";
-    if (!hasFilter) {
-      setItems([]);
-      setTotalPages(1);
-      return;
-    }
 
     setLoading(true);
     try {
@@ -109,7 +103,9 @@ export function CatalogSkinPicker({
 
   return (
     <div className={cn("space-y-3 rounded-xl border border-border p-3", className)}>
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted">Buscar skin no catálogo</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+        Buscar skin no catálogo · clique na imagem para preview
+      </p>
 
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="relative sm:col-span-2">
@@ -163,10 +159,11 @@ export function CatalogSkinPicker({
         </div>
       ) : items.length === 0 ? (
         <p className="py-4 text-center text-xs text-muted">
-          Digite ao menos 2 caracteres ou escolha um filtro para buscar.
+          Nenhuma skin encontrada. Desmarque &quot;Só habilitadas&quot; ou busque por nome (ex: Asiimov).
         </p>
       ) : (
         <>
+          <p className="text-[11px] text-muted">{items.length} nesta página · clique na imagem para preview</p>
           <ul className="max-h-72 space-y-2 overflow-y-auto">
             {items.map((item) => {
               const name = skinDisplayName(item);
@@ -202,7 +199,7 @@ export function CatalogSkinPicker({
                     }}
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    {singleSelect ? "Usar" : "Add"}
+                    {singleSelect ? "Usar" : "Adicionar"}
                   </Button>
                 </li>
               );

@@ -55,11 +55,15 @@ enum StoreProductKind {
   PACKAGE
   CASE
   AGENT
+  TAG
+  MEDAL
+  SUBSCRIPTION
 }
 
 enum StoreRewardKind {
   CATALOG_SKIN
   AGENT
+  STICKER
 }
 
 enum StorePurchaseStatus {
@@ -68,35 +72,118 @@ enum StorePurchaseStatus {
   REFUNDED
 }
 
+enum StoreCheckoutStatus {
+  PENDING
+  PAID
+  DELINQUENT
+  CANCELLED
+}
+
+enum CoinTransactionKind {
+  EARN_MATCH
+  EARN_MISSION
+  EARN_ACHIEVEMENT
+  EARN_BATTLEPASS
+  PURCHASE
+  GIFT_SENT
+  GIFT_RECEIVED
+  ADMIN_ADJUST
+  REFUND
+}
+
+enum MissionPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum MissionMetric {
+  MATCHES_PLAYED
+  MATCHES_WON
+  KILLS
+  ASSISTS
+  MVPS
+}
+
+enum AchievementMetric {
+  TOTAL_MATCHES
+  TOTAL_WINS
+  TOTAL_KILLS
+  TOTAL_ASSISTS
+  TOTAL_MVPS
+  LEVEL
+  LIFETIME_COINS
+}
+
+enum AchievementTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+  DIAMOND
+}
+
+enum BattlePassTrack {
+  FREE
+  PREMIUM
+}
+
+enum BattlePassRewardType {
+  COINS
+  SKIN
+  AGENT
+  STICKER
+}
+
+enum ClanRole {
+  OWNER
+  OFFICER
+  MEMBER
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+}
+
+enum MatchHighlightType {
+  ACE
+  CLUTCH
+  MULTI_KILL
+  HEADSHOTS
+  ENTRY
+  KNIFE
+}
+
 model User {
-  id                 String   @id @default(cuid())
-  email              String?  @unique
-  passwordHash       String?
-  nickname           String
-  firstName          String   @default("")
-  lastName           String   @default("")
-  phone              String   @default("")
-  country            String   @default("BR")
-  bio                String   @default("")
-  avatarUrl          String?
-  avatarPreset       String?
-  plan               Plan     @default(FREE)
-  rank               Int      @default(0)
-  elo                Int      @default(1000)
-  kd                 Float    @default(0)
-  matches            Int      @default(0)
-  winRate            Int      @default(0)
-  hoursPlayed        Int      @default(0)
-  anticheatInstalled Boolean  @default(false)
-  mfaEnabled         Boolean  @default(false)
-  mfaSecret          String?
-  steamId            String?  @unique
-  steamLinkedAt      DateTime?
-  steamPersonaName   String?
-  steamAvatarUrl     String?
-  steamProfileUrl    String?
-  steamCountryCode   String?
-  isAdmin            Boolean  @default(false)
+  id                    String    @id @default(cuid())
+  email                 String?   @unique
+  passwordHash          String?
+  nickname              String
+  firstName             String    @default("")
+  lastName              String    @default("")
+  phone                 String    @default("")
+  country               String    @default("BR")
+  bio                   String    @default("")
+  avatarUrl             String?
+  avatarPreset          String?
+  plan                  Plan      @default(FREE)
+  rank                  Int       @default(0)
+  elo                   Int       @default(1000)
+  kd                    Float     @default(0)
+  matches               Int       @default(0)
+  winRate               Int       @default(0)
+  hoursPlayed           Int       @default(0)
+  anticheatInstalled    Boolean   @default(false)
+  mfaEnabled            Boolean   @default(false)
+  mfaSecret             String?
+  steamId               String?   @unique
+  steamLinkedAt         DateTime?
+  steamPersonaName      String?
+  steamAvatarUrl        String?
+  steamProfileUrl       String?
+  steamCountryCode      String?
+  isAdmin               Boolean   @default(false)
   rankedQueueDodges     Int       @default(0)
   rankedRestrictedUntil DateTime?
   rankedLastDodgeAt     DateTime?
@@ -105,33 +192,232 @@ model User {
   rankedKills           Int       @default(0)
   rankedDeaths          Int       @default(0)
   rankedAssists         Int       @default(0)
+  rankedMvps            Int       @default(0)
+  rankedHeadshots       Int       @default(0)
+  rankedDamage          Int       @default(0)
+  rankedRoundsPlayed    Int       @default(0)
+  rankedClutches        Int       @default(0)
+  rankedUtilityDamage   Int       @default(0)
+  rankedEnemiesFlashed  Int       @default(0)
+  rankedAwpKills        Int       @default(0)
+  profileTag            String?
+  profileMedalCode      String?
+  mapPlayCounts         Json      @default("{}")
+  weaponKillCounts      Json      @default("{}")
   competitivePoints     Int       @default(0)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  xp                    Int       @default(0)
+  level                 Int       @default(1)
+  coins                 Int       @default(0)
+  lifetimeCoins         Int       @default(0)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
-  notifications Notification[]
-  inventory     UserInventoryItem[]
-  punishments       Punishment[] @relation("UserPunishments")
-  punishmentsIssued Punishment[] @relation("PunishmentAdmin")
-  punishmentsRevoked Punishment[] @relation("PunishmentRevoker")
-  adminAuditLogs    AdminAuditLog[]
-  hostedLobbyRooms LobbyRoom[]  @relation("LobbyHost")
-  lobbyMemberships LobbyMember[]
-  rankedPartiesLed     RankedParty[]        @relation("RankedPartyLeader")
-  rankedPartyMembers   RankedPartyMember[]
-  rankedPartyMessages  RankedPartyMessage[]
-  rankedMatchAcceptances RankedMatchAcceptance[]
-  rankedMapVotes       RankedMapVote[]
-  rankedMatchPlayerStats RankedMatchPlayerStat[]
-  lobbyJoinQueues      LobbyJoinQueue[]
-  rankedQueueEntries   RankedQueueEntry[] @relation("RankedQueueLeader")
+  notifications           Notification[]
+  inventory               UserInventoryItem[]
+  punishments             Punishment[]                 @relation("UserPunishments")
+  punishmentsIssued       Punishment[]                 @relation("PunishmentAdmin")
+  punishmentsRevoked      Punishment[]                 @relation("PunishmentRevoker")
+  adminAuditLogs          AdminAuditLog[]
+  hostedLobbyRooms        LobbyRoom[]                  @relation("LobbyHost")
+  lobbyMemberships        LobbyMember[]
+  rankedPartiesLed        RankedParty[]                @relation("RankedPartyLeader")
+  rankedPartyMembers      RankedPartyMember[]
+  rankedPartyMessages     RankedPartyMessage[]
+  rankedMatchAcceptances  RankedMatchAcceptance[]
+  rankedMapVotes          RankedMapVote[]
+  rankedMatchPlayerStats  RankedMatchPlayerStat[]
+  lobbyJoinQueues         LobbyJoinQueue[]
+  rankedQueueEntries      RankedQueueEntry[]           @relation("RankedQueueLeader")
   notificationPreferences UserNotificationPreferences?
-  newsArticlesAuthored NewsArticle[] @relation("NewsAuthor")
-  storePurchases       StorePurchase[]
+  newsArticlesAuthored    NewsArticle[]                @relation("NewsAuthor")
+  storePurchases          StorePurchase[]
+  storeCart               StoreCart?
+  storeCheckouts          StoreCheckout[]
+  coinTransactions        CoinTransaction[]
+  userMissions            UserMission[]
+  userAchievements        UserAchievement[]
+  battlePasses            UserBattlePass[]
+  battlePassClaims        UserBattlePassClaim[]
+  clanMembership          ClanMember?
+  clansOwned              Clan[]                       @relation("ClanOwner")
+  friendRequestsSent      Friendship[]                 @relation("FriendRequester")
+  friendRequestsReceived  Friendship[]                 @relation("FriendAddressee")
 
   @@index([rank])
   @@index([elo])
   @@index([competitivePoints])
+  @@index([level])
+  @@index([rankedKills])
+  @@index([rankedAssists])
+  @@index([rankedMvps])
+  @@index([rankedHeadshots])
+  @@index([rankedClutches])
+  @@index([rankedUtilityDamage])
+  @@index([rankedAwpKills])
+}
+
+model CoinTransaction {
+  id           String              @id @default(cuid())
+  userId       String
+  amount       Int
+  balanceAfter Int
+  kind         CoinTransactionKind
+  reason       String              @default("")
+  metadata     Json?
+  createdAt    DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([kind])
+}
+
+model MissionDefinition {
+  id          String        @id @default(cuid())
+  code        String        @unique
+  period      MissionPeriod
+  metric      MissionMetric
+  target      Int
+  title       String
+  description String        @default("")
+  rewardXp    Int           @default(0)
+  rewardCoins Int           @default(0)
+  icon        String?
+  sortOrder   Int           @default(0)
+  enabled     Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  userMissions UserMission[]
+
+  @@index([period, enabled])
+}
+
+model UserMission {
+  id          String    @id @default(cuid())
+  userId      String
+  missionId   String
+  periodKey   String
+  progress    Int       @default(0)
+  target      Int
+  completed   Boolean   @default(false)
+  claimed     Boolean   @default(false)
+  completedAt DateTime?
+  claimedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mission MissionDefinition @relation(fields: [missionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, missionId, periodKey])
+  @@index([userId, periodKey])
+}
+
+model AchievementDefinition {
+  id          String            @id @default(cuid())
+  code        String            @unique
+  metric      AchievementMetric
+  threshold   Int
+  tier        AchievementTier   @default(BRONZE)
+  title       String
+  description String            @default("")
+  rewardXp    Int               @default(0)
+  rewardCoins Int               @default(0)
+  icon        String?
+  sortOrder   Int               @default(0)
+  enabled     Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  userAchievements UserAchievement[]
+
+  @@index([metric, enabled])
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement AchievementDefinition @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+}
+
+model BattlePassSeason {
+  id               String    @id @default(cuid())
+  code             String    @unique
+  name             String
+  seasonNumber     Int       @default(1)
+  maxLevel         Int       @default(50)
+  xpPerLevel       Int       @default(1000)
+  premiumCostCoins Int       @default(5000)
+  startsAt         DateTime  @default(now())
+  endsAt           DateTime?
+  active           Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  rewards    BattlePassReward[]
+  userPasses UserBattlePass[]
+
+  @@index([active])
+}
+
+model BattlePassReward {
+  id              String               @id @default(cuid())
+  seasonId        String
+  level           Int
+  track           BattlePassTrack
+  rewardType      BattlePassRewardType
+  amountCoins     Int                  @default(0)
+  catalogSkinId   String?
+  agentDefIndex   Int?
+  stickerDefIndex Int?
+  label           String
+  icon            String?
+  createdAt       DateTime             @default(now())
+
+  season BattlePassSeason      @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  claims UserBattlePassClaim[]
+
+  @@unique([seasonId, level, track])
+  @@index([seasonId])
+}
+
+model UserBattlePass {
+  id        String   @id @default(cuid())
+  userId    String
+  seasonId  String
+  xp        Int      @default(0)
+  level     Int      @default(1)
+  premium   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  season BattlePassSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, seasonId])
+  @@index([seasonId])
+}
+
+model UserBattlePassClaim {
+  id        String   @id @default(cuid())
+  userId    String
+  rewardId  String
+  claimedAt DateTime @default(now())
+
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reward BattlePassReward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, rewardId])
+  @@index([userId])
 }
 
 model Punishment {
@@ -219,14 +505,14 @@ model GameMode {
 }
 
 model GameModeRoom {
-  id         String   @id @default(cuid())
+  id         String @id @default(cuid())
   gameModeId String
   name       String
   map        String
-  players    Int      @default(0)
+  players    Int    @default(0)
   slots      Int
-  ping       Int      @default(0)
-  sortOrder  Int      @default(0)
+  ping       Int    @default(0)
+  sortOrder  Int    @default(0)
 
   gameMode  GameMode   @relation(fields: [gameModeId], references: [id], onDelete: Cascade)
   lobbyRoom LobbyRoom?
@@ -235,28 +521,28 @@ model GameModeRoom {
 }
 
 model LobbyRoom {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   hostUserId    String
   gameModeId    String
-  catalogRoomId String?  @unique
-  isSystem      Boolean  @default(false)
+  catalogRoomId String?   @unique
+  isSystem      Boolean   @default(false)
   name          String
   map           String
   slots         Int
-  region        String   @default("BR")
-  visibility    String   @default("public")
+  region        String    @default("BR")
+  visibility    String    @default("public")
   passwordHash  String?
-  settings      Json     @default("{}")
-  status        String   @default("open")
-  ping          Int      @default(25)
+  settings      Json      @default("{}")
+  status        String    @default("open")
+  ping          Int       @default(25)
   matchId       String?
   expiresAt     DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  host        User          @relation("LobbyHost", fields: [hostUserId], references: [id], onDelete: Cascade)
-  gameMode    GameMode      @relation(fields: [gameModeId], references: [id], onDelete: Cascade)
-  catalogRoom GameModeRoom? @relation(fields: [catalogRoomId], references: [id], onDelete: Cascade)
+  host        User                @relation("LobbyHost", fields: [hostUserId], references: [id], onDelete: Cascade)
+  gameMode    GameMode            @relation(fields: [gameModeId], references: [id], onDelete: Cascade)
+  catalogRoom GameModeRoom?       @relation(fields: [catalogRoomId], references: [id], onDelete: Cascade)
   members     LobbyMember[]
   joinQueue   LobbyJoinQueue[]
   rankedMatch RankedMatchSession?
@@ -283,15 +569,15 @@ model RankedParty {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  leader            User                @relation("RankedPartyLeader", fields: [leaderUserId], references: [id], onDelete: Cascade)
-  members           RankedPartyMember[]
-  challengesSent    RankedChallenge[]   @relation("ChallengeFrom")
-  challengesReceived RankedChallenge[]  @relation("ChallengeTo")
-  matchSessionsAsA  RankedMatchSession[] @relation("MatchPartyA")
-  matchSessionsAsB  RankedMatchSession[] @relation("MatchPartyB")
-  queueEntry        RankedQueueEntry?
-  activities        RankedPartyActivity[]
-  messages          RankedPartyMessage[]
+  leader             User                  @relation("RankedPartyLeader", fields: [leaderUserId], references: [id], onDelete: Cascade)
+  members            RankedPartyMember[]
+  challengesSent     RankedChallenge[]     @relation("ChallengeFrom")
+  challengesReceived RankedChallenge[]     @relation("ChallengeTo")
+  matchSessionsAsA   RankedMatchSession[]  @relation("MatchPartyA")
+  matchSessionsAsB   RankedMatchSession[]  @relation("MatchPartyB")
+  queueEntry         RankedQueueEntry?
+  activities         RankedPartyActivity[]
+  messages           RankedPartyMessage[]
 
   @@index([leaderUserId])
   @@index([status])
@@ -359,30 +645,31 @@ model RankedChallenge {
 }
 
 model RankedMatchSession {
-  id          String   @id @default(cuid())
-  challengeId String?  @unique
-  lobbyRoomId String?  @unique
-  matchSource String   @default("challenge")
-  teamSize    Int      @default(5)
-  partyAId    String
-  partyBId    String
-  status      String   @default("accepting")
-  csgoMatchId String?
-  csgoServerId String?
-  selectedMap String?
-  serverHost  String?
-  serverPort  Int?
-  vetoData    Json?
-  voteEndsAt       DateTime?
-  scoreTeamA       Int?
-  scoreTeamB       Int?
-  winnerTeam       String?
-  liveStartedAt    DateTime?
-  matchFinishedAt  DateTime?
-  durationSec      Int?
-  resultSyncedAt   DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id              String    @id @default(cuid())
+  challengeId     String?   @unique
+  lobbyRoomId     String?   @unique
+  matchSource     String    @default("challenge")
+  teamSize        Int       @default(5)
+  partyAId        String
+  partyBId        String
+  status          String    @default("accepting")
+  csgoMatchId     String?
+  csgoServerId    String?
+  selectedMap     String?
+  serverHost      String?
+  serverPort      Int?
+  vetoData        Json?
+  voteEndsAt      DateTime?
+  scoreTeamA      Int?
+  scoreTeamB      Int?
+  winnerTeam      String?
+  liveStartedAt   DateTime?
+  matchFinishedAt DateTime?
+  durationSec     Int?
+  resultSyncedAt  DateTime?
+  demoUrl         String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   challenge   RankedChallenge?        @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   lobbyRoom   LobbyRoom?              @relation(fields: [lobbyRoomId], references: [id], onDelete: SetNull)
@@ -391,6 +678,9 @@ model RankedMatchSession {
   acceptances RankedMatchAcceptance[]
   mapVotes    RankedMapVote[]
   playerStats RankedMatchPlayerStat[]
+  rounds      RankedMatchRound[]
+  highlights  RankedMatchHighlight[]
+  deaths      RankedMatchDeath[]
 
   @@index([partyAId])
   @@index([partyBId])
@@ -434,13 +724,20 @@ model RankedMatchPlayerStat {
   userId    String?
   steamId   String
   team      String
-  kills     Int      @default(0)
-  deaths    Int      @default(0)
-  assists   Int      @default(0)
-  score     Int      @default(0)
-  mvp       Int      @default(0)
-  won       Boolean  @default(false)
-  createdAt DateTime @default(now())
+  kills          Int      @default(0)
+  deaths         Int      @default(0)
+  assists        Int      @default(0)
+  score          Int      @default(0)
+  mvp            Int      @default(0)
+  won            Boolean  @default(false)
+  headshots      Int      @default(0)
+  damage         Int      @default(0)
+  utilityDamage  Int      @default(0)
+  enemiesFlashed Int      @default(0)
+  clutchesWon    Int      @default(0)
+  entryKills     Int      @default(0)
+  awpKills       Int      @default(0)
+  createdAt      DateTime @default(now())
 
   session RankedMatchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   user    User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -449,6 +746,57 @@ model RankedMatchPlayerStat {
   @@index([sessionId])
   @@index([userId])
   @@index([steamId])
+}
+
+model RankedMatchRound {
+  id          String   @id @default(cuid())
+  sessionId   String
+  roundNumber Int
+  winnerTeam  String?
+  reason      String?
+  bombPlanted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  session RankedMatchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, roundNumber])
+  @@index([sessionId])
+}
+
+model RankedMatchHighlight {
+  id          String             @id @default(cuid())
+  sessionId   String
+  steamId     String
+  userId      String?
+  type        MatchHighlightType
+  roundNumber Int?
+  detail      String             @default("")
+  createdAt   DateTime           @default(now())
+
+  session RankedMatchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([userId])
+}
+
+model RankedMatchDeath {
+  id            String   @id @default(cuid())
+  sessionId     String
+  roundNumber   Int      @default(0)
+  victimSteamId String
+  killerSteamId String?
+  weapon        String?
+  headshot      Boolean  @default(false)
+  victimTeam    String?
+  x             Float    @default(0)
+  y             Float    @default(0)
+  z             Float    @default(0)
+  createdAt     DateTime @default(now())
+
+  session RankedMatchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([sessionId, roundNumber])
 }
 
 model LobbyMember {
@@ -502,21 +850,21 @@ model RankedQueueEntry {
 }
 
 model NewsArticle {
-  id           String   @id @default(cuid())
-  slug         String   @unique
+  id           String    @id @default(cuid())
+  slug         String    @unique
   title        String
   excerpt      String
-  body         String   @default("") @db.Text
+  body         String    @default("") @db.Text
   category     String
   imageAccent  String
   imageUrl     String?
-  featured     Boolean  @default(false)
+  featured     Boolean   @default(false)
   translations Json?
   archivedAt   DateTime?
   authorId     String?
-  publishedAt  DateTime @default(now())
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  publishedAt  DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   author User? @relation("NewsAuthor", fields: [authorId], references: [id], onDelete: SetNull)
 
@@ -532,6 +880,7 @@ model StoreItem {
   productKind   StoreProductKind @default(SKIN)
   priceCents    Int
   originalCents Int?
+  coinPrice     Int?
   badge         String
   description   String
   accent        String
@@ -541,26 +890,32 @@ model StoreItem {
   featured      Boolean          @default(false)
   sortOrder     Int              @default(0)
   maxPerUser    Int?
+  tagText       String?
+  medalCode     String?
+  grantPlan     Plan?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
-  rewards   StoreItemReward[]
-  purchases StorePurchase[]
+  rewards       StoreItemReward[]
+  purchases     StorePurchase[]
+  cartItems     StoreCartItem[]
+  checkoutItems StoreCheckoutItem[]
 
   @@index([enabled, sortOrder])
 }
 
 model StoreItemReward {
-  id            String          @id @default(cuid())
-  storeItemId   String
-  kind          StoreRewardKind
-  catalogSkinId String?
-  agentDefIndex Int?
-  weight        Int             @default(100)
-  quantity      Int             @default(1)
-  sortOrder     Int             @default(0)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id              String          @id @default(cuid())
+  storeItemId     String
+  kind            StoreRewardKind
+  catalogSkinId   String?
+  agentDefIndex   Int?
+  stickerDefIndex Int?
+  weight          Int             @default(100)
+  quantity        Int             @default(1)
+  sortOrder       Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   storeItem   StoreItem        @relation(fields: [storeItemId], references: [id], onDelete: Cascade)
   catalogSkin CsgoSkinCatalog? @relation(fields: [catalogSkinId], references: [id], onDelete: SetNull)
@@ -586,6 +941,64 @@ model StorePurchase {
   @@index([userId, storeItemId])
 }
 
+model StoreCart {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items StoreCartItem[]
+}
+
+model StoreCartItem {
+  id          String   @id @default(cuid())
+  cartId      String
+  storeItemId String
+  quantity    Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  cart      StoreCart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  storeItem StoreItem @relation(fields: [storeItemId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, storeItemId])
+  @@index([cartId])
+}
+
+model StoreCheckout {
+  id           String              @id @default(cuid())
+  userId       String
+  status       StoreCheckoutStatus @default(PENDING)
+  totalCents   Int
+  dueAt        DateTime
+  paidAt       DateTime?
+  delinquentAt DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  user  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items StoreCheckoutItem[]
+
+  @@index([userId, status])
+  @@index([status, dueAt])
+}
+
+model StoreCheckoutItem {
+  id             String @id @default(cuid())
+  checkoutId     String
+  storeItemId    String
+  quantity       Int
+  unitPriceCents Int
+  lineTotalCents Int
+  grantedRewards Json?
+
+  checkout  StoreCheckout @relation(fields: [checkoutId], references: [id], onDelete: Cascade)
+  storeItem StoreItem     @relation(fields: [storeItemId], references: [id], onDelete: Restrict)
+
+  @@index([checkoutId])
+}
+
 model InventoryItem {
   id            String            @id @default(cuid())
   name          String
@@ -596,7 +1009,7 @@ model InventoryItem {
   catalogSkinId String?
   imageUrl      String?
 
-  catalogSkin CsgoSkinCatalog? @relation(fields: [catalogSkinId], references: [id], onDelete: SetNull)
+  catalogSkin CsgoSkinCatalog?    @relation(fields: [catalogSkinId], references: [id], onDelete: SetNull)
   users       UserInventoryItem[]
 
   @@index([catalogSkinId])
@@ -653,16 +1066,16 @@ model MarketingFeature {
 }
 
 model SubscriptionPlan {
-  id        String  @id @default(cuid())
-  slug      String  @unique
-  name      String
+  id         String  @id @default(cuid())
+  slug       String  @unique
+  name       String
   priceCents Int
-  period    String
-  highlight Boolean @default(false)
-  badge     String?
-  features  String
-  cta       String
-  sortOrder Int     @default(0)
+  period     String
+  highlight  Boolean @default(false)
+  badge      String?
+  features   String
+  cta        String
+  sortOrder  Int     @default(0)
 }
 
 model SiteStat {
@@ -727,7 +1140,7 @@ model CsgoMatch {
 }
 
 model CsgoSkinCatalog {
-  id             String @id
+  id             String   @id
   weaponId       String
   weaponName     String
   paintkit       Int
@@ -735,20 +1148,28 @@ model CsgoSkinCatalog {
   rarity         String
   category       String
   imageUrl       String?
-  /** CS:GO item definition index (e.g. glove type 5030). From CSGO-API weapon.weapon_id. */
+  /**
+   * CS:GO item definition index (e.g. glove type 5030). From CSGO-API weapon.weapon_id.
+   */
   weaponDefIndex Int?
-  /** Visible in inventory and synced to game allowlist when true. */
-  enabled        Boolean @default(true)
-  /** sync | admin | import */
-  source         String  @default("sync")
-  /** csgo = servidor CS:GO (!ws); cs2 = só CS2 (bloqueado); unknown = legado */
-  gameClient     String  @default("unknown")
+  /**
+   * Visible in inventory and synced to game allowlist when true.
+   */
+  enabled        Boolean  @default(true)
+  /**
+   * sync | admin | import
+   */
+  source         String   @default("sync")
+  /**
+   * csgo = servidor CS:GO (!ws); cs2 = só CS2 (bloqueado); unknown = legado
+   */
+  gameClient     String   @default("unknown")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  playerSkins     CsgoPlayerSkin[]
-  inventoryItems  InventoryItem[]
-  storeRewards    StoreItemReward[]
+  playerSkins    CsgoPlayerSkin[]
+  inventoryItems InventoryItem[]
+  storeRewards   StoreItemReward[]
 
   @@unique([weaponId, paintkit])
   @@index([weaponId])
@@ -780,16 +1201,16 @@ model CsgoPlayerSkin {
 }
 
 model CsgoStickerCatalog {
-  id          String  @id
-  defIndex    Int     @unique
+  id          String   @id
+  defIndex    Int      @unique
   name        String
   imageUrl    String?
   rarity      String
   stickerType String?
   effect      String?
   tournament  String?
-  enabled     Boolean @default(true)
-  source      String  @default("import")
+  enabled     Boolean  @default(true)
+  source      String   @default("import")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -819,16 +1240,16 @@ model CsgoPlayerWeaponSticker {
 }
 
 model CsgoAgentCatalog {
-  id          String  @id
-  defIndex    Int     @unique
+  id          String   @id
+  defIndex    Int      @unique
   name        String
   imageUrl    String?
   rarity      String
   team        String
   modelPlayer String?
   collection  String?
-  enabled     Boolean @default(true)
-  source      String  @default("import")
+  enabled     Boolean  @default(true)
+  source      String   @default("import")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -845,4 +1266,50 @@ model CsgoPlayerAgent {
   updatedAt DateTime @updatedAt
 
   @@index([steamId])
+}
+
+model Clan {
+  id          String   @id @default(cuid())
+  tag         String   @unique
+  name        String   @unique
+  description String   @default("")
+  avatarUrl   String?
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner   User         @relation("ClanOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members ClanMember[]
+
+  @@index([ownerId])
+}
+
+model ClanMember {
+  id       String   @id @default(cuid())
+  clanId   String
+  userId   String   @unique
+  role     ClanRole @default(MEMBER)
+  joinedAt DateTime @default(now())
+
+  clan Clan @relation(fields: [clanId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([clanId])
+  @@index([userId])
+}
+
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  requester User @relation("FriendRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("FriendAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([requesterId, status])
+  @@index([addresseeId, status])
 }

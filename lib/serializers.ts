@@ -1,6 +1,7 @@
 import type { User, Plan } from "@/lib/generated/prisma/client";
 import { getAvatarInitials } from "@/lib/profile";
 import { resolveUserAvatarUrl } from "@/lib/profile/avatar";
+import { getLevelProgress } from "@/lib/progression/xp-curve";
 
 export type UserProfile = {
   id: string;
@@ -29,6 +30,15 @@ export type UserProfile = {
   rankedKills: number;
   rankedDeaths: number;
   rankedAssists: number;
+  xp: number;
+  level: number;
+  xpIntoLevel: number;
+  xpForLevel: number;
+  xpToNext: number;
+  levelProgress: number;
+  isMaxLevel: boolean;
+  coins: number;
+  lifetimeCoins: number;
   anticheatInstalled: boolean;
   steamLinked: boolean;
   steamId: string | null;
@@ -57,6 +67,7 @@ function planToClient(plan: Plan): UserProfile["plan"] {
 export function serializeUser(user: User): UserProfile {
   const customAvatarUrl = user.avatarUrl;
   const resolved = resolveUserAvatarUrl(user);
+  const levelSnapshot = getLevelProgress(user.xp);
   const avatarSource: UserProfile["avatarSource"] = user.avatarPreset
     ? "preset"
     : user.avatarUrl
@@ -96,6 +107,15 @@ export function serializeUser(user: User): UserProfile {
     rankedKills: user.rankedKills,
     rankedDeaths: user.rankedDeaths,
     rankedAssists: user.rankedAssists,
+    xp: user.xp,
+    level: levelSnapshot.level,
+    xpIntoLevel: levelSnapshot.xpIntoLevel,
+    xpForLevel: levelSnapshot.xpForLevel,
+    xpToNext: levelSnapshot.xpToNext,
+    levelProgress: levelSnapshot.progress,
+    isMaxLevel: levelSnapshot.isMaxLevel,
+    coins: user.coins,
+    lifetimeCoins: user.lifetimeCoins,
     anticheatInstalled: user.anticheatInstalled,
     steamLinked: Boolean(user.steamId),
     steamId: user.steamId,

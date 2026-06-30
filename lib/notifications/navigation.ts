@@ -4,6 +4,8 @@ export type NotificationActionKind =
   | "profile"
   | "payment"
   | "store"
+  | "cart"
+  | "checkout"
   | "news"
   | "newsletter"
   | "settings"
@@ -57,6 +59,9 @@ export function resolveNotificationHref(
       return "/dashboard/premium";
     case "store":
       return "/dashboard/loja";
+    case "cart":
+    case "checkout":
+      return "/dashboard/loja?cart=1";
     case "news":
     case "newsletter":
       if (p.newsSlug) return `/dashboard/noticias/${encodeURIComponent(p.newsSlug)}`;

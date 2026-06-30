@@ -1,4 +1,17 @@
-export type LeaderboardSort = "points" | "elo" | "kd" | "wins" | "winRate";
+export type LeaderboardSort =
+  | "points"
+  | "elo"
+  | "kd"
+  | "wins"
+  | "winRate"
+  | "kills"
+  | "assists"
+  | "mvps"
+  | "hs"
+  | "clutch"
+  | "utility"
+  | "awp"
+  | "level";
 
 export type LeaderboardPlayer = {
   rank: number;
@@ -16,6 +29,12 @@ export type LeaderboardPlayer = {
   kills: number;
   deaths: number;
   assists: number;
+  mvps: number;
+  headshots: number;
+  clutches: number;
+  utilityDamage: number;
+  awpKills: number;
+  level: number;
 };
 
 export type LeaderboardPageResult = {
@@ -33,12 +52,21 @@ export const LEADERBOARD_SORT_VALUES: LeaderboardSort[] = [
   "kd",
   "wins",
   "winRate",
+  "kills",
+  "assists",
+  "mvps",
+  "hs",
+  "clutch",
+  "utility",
+  "awp",
+  "level",
 ];
 
 export const LEADERBOARD_PAGE_SIZE = 25;
 
 export type RankedMatchHistoryEntry = {
   id: string;
+  sessionId: string;
   map: string | null;
   finishedAt: string | null;
   won: boolean;
@@ -47,7 +75,10 @@ export type RankedMatchHistoryEntry = {
   assists: number;
   score: number;
   mvp: number;
+  headshots: number;
+  damage: number;
   scoreTeamA: number | null;
   scoreTeamB: number | null;
+  hasDemo: boolean;
   pointsDelta: number | null;
 };

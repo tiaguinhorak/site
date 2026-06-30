@@ -1,5 +1,7 @@
 import "server-only";
 
+import { statSync } from "node:fs";
+import { join } from "node:path";
 import { PrismaClient } from "@/lib/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
@@ -39,12 +41,39 @@ function createPrismaClient(): PrismaClient {
   return new PrismaClient({ adapter });
 }
 
+function generatedClientMtimeMs(): number {
+  try {
+    return statSync(join(process.cwd(), "lib/generated/prisma/internal/class.ts")).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
+  prismaClientMtimeMs: number | undefined;
 };
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+function resolvePrismaClient(): PrismaClient {
+  const clientMtime = generatedClientMtimeMs();
+  const existing = globalForPrisma.prisma;
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+  if (
+    existing &&
+    globalForPrisma.prismaClientMtimeMs === clientMtime &&
+    "userAchievement" in existing
+  ) {
+    return existing;
+  }
+
+  if (existing) {
+    void existing.$disconnect().catch(() => {});
+  }
+
+  const client = createPrismaClient();
+  globalForPrisma.prisma = client;
+  globalForPrisma.prismaClientMtimeMs = clientMtime;
+  return client;
 }
+
+export const prisma = resolvePrismaClient();

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import type { RankedMatchHistoryEntry } from "@/lib/leaderboard/types";
 import { cn } from "@/lib/utils";
@@ -60,8 +61,12 @@ export function RankedMatchHistory({ nickname }: RankedMatchHistoryProps) {
         {history.map((match) => (
           <li
             key={match.id}
-            className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+            className="first:pt-0 last:pb-0"
           >
+            <Link
+              href={`/dashboard/partidas/${match.sessionId}`}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg py-3 transition-colors hover:bg-white/5"
+            >
             <div className="min-w-0">
               <p className="font-display text-sm font-semibold text-foreground">
                 {match.map ?? t("unknownMap")}
@@ -92,6 +97,7 @@ export function RankedMatchHistory({ nickname }: RankedMatchHistoryProps) {
                 {match.kills}/{match.deaths}/{match.assists}
               </span>
             </div>
+            </Link>
           </li>
         ))}
       </ul>

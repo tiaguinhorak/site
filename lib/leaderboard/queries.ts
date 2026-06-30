@@ -28,8 +28,14 @@ const USER_SELECT = {
   rankedKills: true,
   rankedDeaths: true,
   rankedAssists: true,
+  rankedMvps: true,
+  rankedHeadshots: true,
+  rankedClutches: true,
+  rankedUtilityDamage: true,
+  rankedAwpKills: true,
   winRate: true,
   matches: true,
+  level: true,
 } satisfies Prisma.UserSelect;
 
 type LeaderboardUserRow = Prisma.UserGetPayload<{ select: typeof USER_SELECT }>;
@@ -73,6 +79,12 @@ function serializeLeaderboardUser(
     kills: user.rankedKills,
     deaths: user.rankedDeaths,
     assists: user.rankedAssists,
+    mvps: user.rankedMvps,
+    headshots: user.rankedHeadshots,
+    clutches: user.rankedClutches,
+    utilityDamage: user.rankedUtilityDamage,
+    awpKills: user.rankedAwpKills,
+    level: user.level,
   };
 }
 
@@ -86,6 +98,22 @@ function orderByForSort(sort: LeaderboardSort): Prisma.UserOrderByWithRelationIn
       return [{ rankedWins: "desc" }, { competitivePoints: "desc" }];
     case "winRate":
       return [{ winRate: "desc" }, { competitivePoints: "desc" }];
+    case "kills":
+      return [{ rankedKills: "desc" }, { competitivePoints: "desc" }];
+    case "assists":
+      return [{ rankedAssists: "desc" }, { competitivePoints: "desc" }];
+    case "mvps":
+      return [{ rankedMvps: "desc" }, { competitivePoints: "desc" }];
+    case "hs":
+      return [{ rankedHeadshots: "desc" }, { competitivePoints: "desc" }];
+    case "clutch":
+      return [{ rankedClutches: "desc" }, { competitivePoints: "desc" }];
+    case "utility":
+      return [{ rankedUtilityDamage: "desc" }, { competitivePoints: "desc" }];
+    case "awp":
+      return [{ rankedAwpKills: "desc" }, { competitivePoints: "desc" }];
+    case "level":
+      return [{ level: "desc" }, { xp: "desc" }];
     default:
       return [{ competitivePoints: "desc" }, { rankedWins: "desc" }];
   }
@@ -176,9 +204,18 @@ async function computeSortRank(userId: string, sort: LeaderboardSort): Promise<n
       competitivePoints: true,
       rankedWins: true,
       rankedLosses: true,
+      rankedKills: true,
+      rankedAssists: true,
+      rankedMvps: true,
+      rankedHeadshots: true,
+      rankedClutches: true,
+      rankedUtilityDamage: true,
+      rankedAwpKills: true,
       elo: true,
       kd: true,
       winRate: true,
+      level: true,
+      xp: true,
     },
   });
   if (!self) return null;
@@ -201,9 +238,18 @@ function buildAheadWhere(
   self: {
     competitivePoints: number;
     rankedWins: number;
+    rankedKills: number;
+    rankedAssists: number;
+    rankedMvps: number;
+    rankedHeadshots: number;
+    rankedClutches: number;
+    rankedUtilityDamage: number;
+    rankedAwpKills: number;
     elo: number;
     kd: number;
     winRate: number;
+    level: number;
+    xp: number;
   },
 ): Prisma.UserWhereInput {
   switch (sort) {
@@ -241,6 +287,83 @@ function buildAheadWhere(
           },
         ],
       };
+    case "kills":
+      return {
+        OR: [
+          { rankedKills: { gt: self.rankedKills } },
+          {
+            rankedKills: self.rankedKills,
+            competitivePoints: { gt: self.competitivePoints },
+          },
+        ],
+      };
+    case "assists":
+      return {
+        OR: [
+          { rankedAssists: { gt: self.rankedAssists } },
+          {
+            rankedAssists: self.rankedAssists,
+            competitivePoints: { gt: self.competitivePoints },
+          },
+        ],
+      };
+    case "mvps":
+      return {
+        OR: [
+          { rankedMvps: { gt: self.rankedMvps } },
+          {
+            rankedMvps: self.rankedMvps,
+            competitivePoints: { gt: self.competitivePoints },
+          },
+        ],
+      };
+    case "hs":
+      return {
+        OR: [
+          { rankedHeadshots: { gt: self.rankedHeadshots } },
+          {
+            rankedHeadshots: self.rankedHeadshots,
+            competitivePoints: { gt: self.competitivePoints },
+          },
+        ],
+      };
+    case "clutch":
+      return {
+        OR: [
+          { rankedClutches: { gt: self.rankedClutches } },
+          {
+            rankedClutches: self.rankedClutches,
+            competitivePoints: { gt: self.competitivePoints },
+          },
+        ],
+      };
+    case "utility":
+      return {
+        OR: [
+          { rankedUtilityDamage: { gt: self.rankedUtilityDamage } },
+          {
+            rankedUtilityDamage: self.rankedUtilityDamage,
+            competitivePoints: { gt: self.competitivePoints },
+          },
+        ],
+      };
+    case "awp":
+      return {
+        OR: [
+          { rankedAwpKills: { gt: self.rankedAwpKills } },
+          {
+            rankedAwpKills: self.rankedAwpKills,
+            competitivePoints: { gt: self.competitivePoints },
+          },
+        ],
+      };
+    case "level":
+      return {
+        OR: [
+          { level: { gt: self.level } },
+          { level: self.level, xp: { gt: self.xp } },
+        ],
+      };
     default:
       return {
         OR: [
@@ -275,12 +398,16 @@ export async function fetchPlayerRankedHistory(
       score: true,
       mvp: true,
       won: true,
+      headshots: true,
+      damage: true,
+      sessionId: true,
       session: {
         select: {
           selectedMap: true,
           matchFinishedAt: true,
           scoreTeamA: true,
           scoreTeamB: true,
+          demoUrl: true,
         },
       },
     },
@@ -288,6 +415,7 @@ export async function fetchPlayerRankedHistory(
 
   return rows.map((row) => ({
     id: row.id,
+    sessionId: row.sessionId,
     map: row.session.selectedMap,
     finishedAt: row.session.matchFinishedAt?.toISOString() ?? null,
     won: row.won,
@@ -296,8 +424,11 @@ export async function fetchPlayerRankedHistory(
     assists: row.assists,
     score: row.score,
     mvp: row.mvp,
+    headshots: row.headshots,
+    damage: row.damage,
     scoreTeamA: row.session.scoreTeamA,
     scoreTeamB: row.session.scoreTeamB,
+    hasDemo: Boolean(row.session.demoUrl),
     pointsDelta: null,
   }));
 }

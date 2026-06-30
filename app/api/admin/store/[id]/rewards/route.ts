@@ -18,10 +18,15 @@ import {
   storeItemWithRewardsInclude,
 } from "@/lib/store/serialize";
 import { loadAgentPreviewMap, collectAgentDefIndexesFromStoreItems } from "@/lib/store/agent-preview-map";
+import {
+  collectStickerDefIndexesFromStoreItems,
+  loadStickerPreviewMap,
+} from "@/lib/store/sticker-preview-map";
+import { validateStoreRewardDuplicates } from "@/lib/store/reward-validation";
 
 function validateRewardRows(
   productKind: string,
-  rewards: { kind: string; catalogSkinId?: string | null; agentDefIndex?: number | null }[],
+  rewards: { kind: string; catalogSkinId?: string | null; agentDefIndex?: number | null; stickerDefIndex?: number | null }[],
 ): string | null {
   if (rewards.length === 0) {
     return "Adicione ao menos uma recompensa.";
@@ -34,24 +39,15 @@ function validateRewardRows(
     if (reward.kind === "AGENT" && !reward.agentDefIndex) {
       return "Recompensa de agente precisa de agentDefIndex.";
     }
+    if (reward.kind === "STICKER" && !reward.stickerDefIndex) {
+      return "Recompensa de sticker precisa de stickerDefIndex.";
+    }
   }
 
   switch (productKind) {
     case "SKIN":
-      if (rewards.length !== 1 || rewards[0]?.kind !== "CATALOG_SKIN") {
-        return "Produto SKIN exige exatamente uma recompensa de skin.";
-      }
-      break;
     case "AGENT":
-      if (rewards.length !== 1 || rewards[0]?.kind !== "AGENT") {
-        return "Produto AGENT exige exatamente uma recompensa de agente.";
-      }
-      break;
     case "CASE":
-      if (!rewards.every((row) => row.kind === "CATALOG_SKIN")) {
-        return "Caixa (CASE) exige recompensas somente de skin.";
-      }
-      break;
     case "PACKAGE":
       break;
     default:
@@ -78,9 +74,12 @@ export async function GET(
   }
 
   const agentByDef = await loadAgentPreviewMap(collectAgentDefIndexesFromStoreItems([item]));
+  const stickerByDef = await loadStickerPreviewMap(collectStickerDefIndexesFromStoreItems([item]));
 
   return NextResponse.json({
-    rewards: item.rewards.map((reward) => serializeStoreReward(reward, { agentByDef })),
+    rewards: item.rewards.map((reward) =>
+      serializeStoreReward(reward, { agentByDef, stickerByDef }),
+    ),
   });
 }
 
@@ -116,9 +115,23 @@ export async function PUT(
     );
   }
 
-  const validationError = validateRewardRows(existing.productKind, parsed.data.rewards);
+  const validationProductKind = parsed.data.productKind ?? existing.productKind;
+
+  if (parsed.data.productKind && parsed.data.productKind !== existing.productKind) {
+    await prisma.storeItem.update({
+      where: { id },
+      data: { productKind: parsed.data.productKind },
+    });
+  }
+
+  const validationError = validateRewardRows(validationProductKind, parsed.data.rewards);
   if (validationError) {
     return NextResponse.json({ error: validationError }, { status: 400 });
+  }
+
+  const duplicateError = await validateStoreRewardDuplicates(id, parsed.data.rewards);
+  if (duplicateError) {
+    return NextResponse.json({ error: duplicateError }, { status: 409 });
   }
 
   const rewards = await prisma.$transaction(async (tx) => {
@@ -129,6 +142,7 @@ export async function PUT(
         kind: reward.kind,
         catalogSkinId: reward.kind === "CATALOG_SKIN" ? reward.catalogSkinId : null,
         agentDefIndex: reward.kind === "AGENT" ? reward.agentDefIndex : null,
+        stickerDefIndex: reward.kind === "STICKER" ? reward.stickerDefIndex : null,
         weight: reward.weight,
         quantity: reward.quantity,
         sortOrder: reward.sortOrder ?? index,
@@ -152,9 +166,12 @@ export async function PUT(
   const agentByDef = await loadAgentPreviewMap(
     collectAgentDefIndexesFromStoreItems([{ rewards }]),
   );
+  const stickerByDef = await loadStickerPreviewMap(
+    collectStickerDefIndexesFromStoreItems([{ rewards }]),
+  );
 
   return NextResponse.json({
     ok: true,
-    rewards: rewards.map((reward) => serializeStoreReward(reward, { agentByDef })),
+    rewards: rewards.map((reward) => serializeStoreReward(reward, { agentByDef, stickerByDef })),
   });
 }

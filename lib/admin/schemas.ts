@@ -178,6 +178,7 @@ export const adminStoreCreateSchema = z.object({
   productKind: z.enum(["SKIN", "PACKAGE", "CASE", "AGENT"]).default("SKIN"),
   priceCents: z.number().int().min(0).max(99999999),
   originalCents: z.number().int().min(0).max(99999999).optional().nullable(),
+  coinPrice: z.number().int().min(0).max(9999999).optional().nullable(),
   badge: z.string().min(1).max(40).transform((v) => sanitizeText(v, 40)),
   description: z.string().min(4).max(300).transform((v) => sanitizeText(v, 300)),
   accent: z.string().min(3).max(120).transform((v) => sanitizeText(v, 120)),
@@ -197,15 +198,17 @@ export const adminStoreCreateSchema = z.object({
 export const adminStoreUpdateSchema = adminStoreCreateSchema.partial();
 
 export const adminStoreRewardSchema = z.object({
-  kind: z.enum(["CATALOG_SKIN", "AGENT"]),
+  kind: z.enum(["CATALOG_SKIN", "AGENT", "STICKER"]),
   catalogSkinId: z.string().min(1).optional().nullable(),
   agentDefIndex: z.number().int().min(1).optional().nullable(),
+  stickerDefIndex: z.number().int().min(1).optional().nullable(),
   weight: z.number().int().min(1).max(100000).default(100),
   quantity: z.number().int().min(1).max(99).default(1),
   sortOrder: z.number().int().min(0).max(9999).default(0),
 });
 
 export const adminStoreRewardsPutSchema = z.object({
+  productKind: z.enum(["SKIN", "PACKAGE", "CASE", "AGENT"]).optional(),
   rewards: z.array(adminStoreRewardSchema).max(50),
 });
 

@@ -1,0 +1,31 @@
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getSessionUserId } from "@/lib/auth/session-user";
+import { applyApiGuards } from "@/lib/security/api-guard";
+import { RATE_LIMITS } from "@/lib/security/constants";
+import { leaveClan, ClanError } from "@/lib/clans/service";
+
+export async function POST(request: NextRequest) {
+  const guardError = await applyApiGuards(
+    request,
+    "clan-leave",
+    RATE_LIMITS.profile.limit,
+    RATE_LIMITS.profile.windowMs,
+  );
+  if (guardError) return guardError;
+
+  const userId = await getSessionUserId(request);
+  if (!userId) {
+    return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  }
+
+  try {
+    await leaveClan(userId);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    if (err instanceof ClanError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    return NextResponse.json({ error: "Falha ao sair do clã." }, { status: 500 });
+  }
+}

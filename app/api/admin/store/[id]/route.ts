@@ -55,6 +55,9 @@ export async function PATCH(
         ...(parsed.data.originalCents !== undefined
           ? { originalCents: parsed.data.originalCents ?? null }
           : {}),
+        ...(parsed.data.coinPrice !== undefined
+          ? { coinPrice: parsed.data.coinPrice ?? null }
+          : {}),
         ...(parsed.data.imageUrl !== undefined
           ? { imageUrl: parsed.data.imageUrl ?? null }
           : {}),
