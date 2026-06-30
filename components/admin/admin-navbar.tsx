@@ -22,6 +22,8 @@ import {
   CloudCog,
   Sparkles,
   ChevronDown,
+  Zap,
+  Flame,
   ImageIcon,
   type LucideIcon,
 } from "lucide-react";
@@ -51,6 +53,8 @@ const iconMap: Record<string, LucideIcon> = {
   CloudCog,
   Sparkles,
   ImageIcon,
+  Zap,
+  Flame,
 };
 
 function isActive(pathname: string, href: string) {

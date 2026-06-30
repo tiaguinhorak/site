@@ -15,6 +15,13 @@ import {
   Flame,
   Star,
   Bolt,
+  Skull,
+  Boxes,
+  ScanFace,
+  Bomb,
+  Waves,
+  Mountain,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -35,6 +42,13 @@ const iconMap: Record<string, LucideIcon> = {
   Flame,
   Star,
   Bolt,
+  Skull,
+  Boxes,
+  ScanFace,
+  Bomb,
+  Waves,
+  Mountain,
+  Users,
 };
 
 export function resolveIcon(key: string): LucideIcon {

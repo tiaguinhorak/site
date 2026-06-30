@@ -1155,6 +1155,35 @@ model PublicServer {
   @@index([isLiveSynced, pool])
 }
 
+/// Modos exibidos no hub Warmup (/dashboard/warmup) — editáveis no admin.
+model WarmupMode {
+  id        String          @id @default(cuid())
+  slug      String          @unique
+  label     String
+  /// Valor em PublicServer.mode usado para filtrar servidores ao vivo.
+  modeLabel String
+  iconKey   String          @default("Crosshair")
+  accent    String          @default("from-violet-600 to-purple-800")
+  sortOrder Int             @default(0)
+  enabled   Boolean         @default(true)
+  maps      WarmupModeMap[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([enabled, sortOrder])
+}
+
+model WarmupModeMap {
+  id           String     @id @default(cuid())
+  warmupModeId String
+  mapId        String
+  sortOrder    Int        @default(0)
+  warmupMode   WarmupMode @relation(fields: [warmupModeId], references: [id], onDelete: Cascade)
+
+  @@unique([warmupModeId, mapId])
+  @@index([warmupModeId])
+}
+
 model LeaderboardEntry {
   id     String @id @default(cuid())
   rank   Int    @unique

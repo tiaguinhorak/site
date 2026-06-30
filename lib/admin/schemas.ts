@@ -251,6 +251,24 @@ export const adminGameModeRoomCreateSchema = z.object({
 
 export const adminGameModeRoomUpdateSchema = adminGameModeRoomCreateSchema.partial();
 
+export const adminWarmupModeCreateSchema = z.object({
+  slug: z
+    .string()
+    .min(2)
+    .max(40)
+    .transform((v) => sanitizeText(v, 40).toLowerCase().replace(/\s+/g, "-"))
+    .pipe(z.string().regex(/^[a-z0-9_-]+$/, "Slug inválido.")),
+  label: z.string().min(2).max(60).transform((v) => sanitizeText(v, 60)),
+  modeLabel: z.string().min(2).max(60).transform((v) => sanitizeText(v, 60)),
+  iconKey: z.string().min(2).max(40).transform((v) => sanitizeText(v, 40)).optional(),
+  accent: z.string().min(3).max(80).transform((v) => sanitizeText(v, 80)).optional(),
+  sortOrder: z.number().int().min(0).max(9999).default(0),
+  enabled: z.boolean().optional(),
+  maps: z.array(z.string().min(2).max(80)).max(32).optional(),
+});
+
+export const adminWarmupModeUpdateSchema = adminWarmupModeCreateSchema.partial();
+
 export const adminRankedQueueRestrictSchema = z.object({
   minutes: z.number().int().min(1).max(10080),
   reason: z

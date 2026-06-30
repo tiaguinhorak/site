@@ -110,6 +110,13 @@ export const ICON_PRESETS = [
   { key: "Flame", label: "Fogo" },
   { key: "Star", label: "Estrela" },
   { key: "Bolt", label: "Raio" },
+  { key: "Skull", label: "Caveira" },
+  { key: "Boxes", label: "Caixas" },
+  { key: "ScanFace", label: "Headshot" },
+  { key: "Bomb", label: "Bomba" },
+  { key: "Waves", label: "Ondas" },
+  { key: "Mountain", label: "Montanha" },
+  { key: "Users", label: "Grupo" },
 ] as const;
 
 export type IconPresetKey = typeof ICON_PRESETS[number]["key"];

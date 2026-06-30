@@ -1,45 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  Boxes,
-  Bomb,
-  Crosshair,
-  Gamepad2,
-  Mountain,
-  ScanFace,
-  Server,
-  Skull,
-  Target,
-  Users,
-  Waves,
-  type LucideIcon,
-} from "lucide-react";
+import { Server } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { LiveServerCard } from "@/components/admin/live-server-manage-panel";
 import { useLiveServerStats } from "@/lib/hooks/use-live-server-stats";
+import { useWarmupModes } from "@/lib/hooks/use-warmup-modes";
 import { useUser } from "@/lib/hooks/use-user";
+import { resolveWarmupIcon } from "@/lib/warmup/icons";
 import {
-  WARMUP_MODES,
   type WarmupModeDef,
-  type WarmupModeId,
   serverMatchesWarmupMode,
 } from "@/lib/warmup/modes";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-
-const WARMUP_ICONS: Record<string, LucideIcon> = {
-  Boxes,
-  Skull,
-  Gamepad2,
-  Crosshair,
-  Target,
-  ScanFace,
-  Bomb,
-  Waves,
-  Users,
-  Mountain,
-};
 
 function WarmupModeCard({
   mode,
@@ -52,15 +26,15 @@ function WarmupModeCard({
   serverCount: number;
   onSelect: () => void;
 }) {
-  const Icon = WARMUP_ICONS[mode.icon] ?? Crosshair;
+  const Icon = resolveWarmupIcon(mode.icon);
 
   return (
     <button
       type="button"
       onClick={onSelect}
       className={cn(
-        "group relative flex flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center transition-all",
-        "min-h-[5.5rem] border-amber-500/35 bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)]",
+        "group relative flex min-h-[5.5rem] flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center transition-all",
+        "border-amber-500/35 bg-[color-mix(in_srgb,var(--foreground)_4%,transparent)]",
         "hover:border-amber-400/60 hover:bg-[color-mix(in_srgb,var(--foreground)_7%,transparent)]",
         active && "border-amber-400 ring-2 ring-amber-400/30",
       )}
@@ -82,31 +56,34 @@ export function WarmupModesSection() {
   const t = useTranslations("warmup");
   const { user } = useUser();
   const isAdmin = user?.isAdmin === true;
-  const { statsByKey, loading, refresh } = useLiveServerStats(true, "warmup");
+  const { modes, loading: modesLoading } = useWarmupModes(false);
+  const { statsByKey, loading: serversLoading, refresh } = useLiveServerStats(true, "warmup");
   const servers = Object.values(statsByKey);
-  const [selectedModeId, setSelectedModeId] = useState<WarmupModeId | "all">("all");
+  const [selectedModeId, setSelectedModeId] = useState<string | "all">("all");
+
+  const loading = modesLoading || (serversLoading && servers.length === 0);
 
   const countsByMode = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const mode of WARMUP_MODES) {
+    for (const mode of modes) {
       counts[mode.id] = servers.filter((server) =>
         serverMatchesWarmupMode(server.mode, mode),
       ).length;
     }
     return counts;
-  }, [servers]);
+  }, [modes, servers]);
 
   const filteredServers =
     selectedModeId === "all"
       ? servers
       : servers.filter((server) => {
-          const mode = WARMUP_MODES.find((entry) => entry.id === selectedModeId);
+          const mode = modes.find((entry) => entry.id === selectedModeId);
           return mode ? serverMatchesWarmupMode(server.mode, mode) : false;
         });
 
   const onlineCount = servers.filter((s) => s.online).length;
 
-  if (loading && servers.length === 0) {
+  if (loading && modes.length === 0) {
     return (
       <div className="space-y-6" aria-busy="true">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
@@ -144,7 +121,7 @@ export function WarmupModesSection() {
           >
             {t("allModes")}
           </button>
-          {WARMUP_MODES.map((mode) => (
+          {modes.map((mode) => (
             <WarmupModeCard
               key={mode.id}
               mode={mode}
@@ -161,7 +138,7 @@ export function WarmupModesSection() {
           {selectedModeId === "all"
             ? t("serversTitleAll")
             : t("serversTitleMode", {
-                mode: WARMUP_MODES.find((m) => m.id === selectedModeId)?.label ?? "",
+                mode: modes.find((m) => m.id === selectedModeId)?.label ?? "",
               })}
         </h3>
 

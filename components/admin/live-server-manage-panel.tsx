@@ -16,7 +16,7 @@ import { ServerConnectActions } from "@/components/ui/server-connect-actions";
 import { secureApi } from "@/lib/api/client";
 import { confirmPresets } from "@/lib/confirm-presets";
 import type { LiveServerStatView } from "@/lib/hooks/use-live-server-stats";
-import { WARMUP_MODES } from "@/lib/warmup/modes";
+import { useWarmupModes } from "@/lib/hooks/use-warmup-modes";
 import { formatMapLabel } from "@/lib/servers/maps";
 import { cn } from "@/lib/utils";
 
@@ -96,6 +96,7 @@ export function LiveServerManagePanel({ server, onActionComplete }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const isWarmup = server.pool === "warmup";
+  const { modes: warmupModes } = useWarmupModes(false);
   const mapLabel = formatMapLabel(map);
 
   async function saveMetadata() {
@@ -221,7 +222,7 @@ export function LiveServerManagePanel({ server, onActionComplete }: Props) {
                 onChange={(e) => setMode(e.target.value)}
                 className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
               >
-                {WARMUP_MODES.map((entry) => (
+                {warmupModes.map((entry) => (
                   <option key={entry.id} value={entry.modeLabel}>
                     {entry.label}
                   </option>

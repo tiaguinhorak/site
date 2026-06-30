@@ -257,6 +257,13 @@ export const adminNav = [
     description: "Subir, derrubar servidores e cancelar partidas de teste na VPS.",
   },
   {
+    label: "Warmup / modos",
+    href: "/admin/warmup-modos",
+    icon: "Zap",
+    title: "Modos Warmup",
+    description: "Deathmatch, Surf, Retake, Warmup — filtros e mapas do hub público.",
+  },
+  {
     label: "Notícias",
     href: "/admin/noticias",
     icon: "Newspaper",
@@ -275,7 +282,7 @@ export const adminNav = [
     href: "/admin/modos",
     icon: "Gamepad2",
     title: "Modos de jogo",
-    description: "Modos e salas exibidos no dashboard.",
+    description: "Modos e salas do lobby/marketing (não confundir com Warmup).",
   },
   {
     label: "Auditoria",
@@ -314,19 +321,19 @@ export const adminNavGroups: AdminNavGroup[] = [
     id: "content",
     label: "Conteúdo",
     icon: "Newspaper",
-    items: [adminNav[8], adminNav[9], adminNav[10]],
+    items: [adminNav[9], adminNav[10], adminNav[11]],
   },
   {
     id: "infra",
     label: "Infra",
     icon: "Server",
-    items: [adminNav[5], adminNav[6], adminNav[7]],
+    items: [adminNav[5], adminNav[6], adminNav[7], adminNav[8]],
   },
   {
     id: "system",
     label: "Sistema",
     icon: "ScrollText",
-    items: [adminNav[11]],
+    items: [adminNav[12]],
   },
 ];
 
