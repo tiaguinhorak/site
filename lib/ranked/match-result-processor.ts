@@ -7,7 +7,7 @@ import { syncLeaderboardRanks } from "@/lib/leaderboard/sync-ranks";
 import { abandonRankedSessionInternal } from "@/lib/ranked/reconcile-stale-sessions";
 import { notifySessionParticipants, notifyRankedRooms } from "@/lib/realtime/notify";
 import { triggerQueueMatchmaking } from "@/lib/ranked/queue-service";
-import { steamIdVariants } from "@/lib/steam/steam-id";
+import { normalizeSteamId64, steamIdVariants } from "@/lib/steam/steam-id";
 import { grantMatchProgression, computeMatchProgression } from "@/lib/progression/award";
 import { applyMissionProgress } from "@/lib/missions/service";
 import { evaluateAchievements } from "@/lib/achievements/service";
@@ -162,7 +162,8 @@ export async function processMatchResultFromGame(input: MatchResultInput): Promi
     >();
 
     for (const player of input.players) {
-      const user = await findUserBySteamId(player.steamId);
+      const steamId = normalizeSteamId64(player.steamId) ?? player.steamId.trim();
+      const user = await findUserBySteamId(steamId);
       const won = winnerTeam != null && player.team === winnerTeam;
       const headshots = Math.max(0, player.headshots ?? 0);
       const damage = Math.max(0, player.damage ?? 0);
@@ -171,20 +172,20 @@ export async function processMatchResultFromGame(input: MatchResultInput): Promi
       const clutchesWon = Math.max(0, player.clutchesWon ?? 0);
       const entryKills = Math.max(0, player.entryKills ?? 0);
       const awpKills = Math.max(0, player.awpKills ?? 0);
-      if (user) userIdBySteamId.set(player.steamId, user.id);
-      advancedBySteamId.set(player.steamId, { headshots, clutchesWon, entryKills });
+      if (user) userIdBySteamId.set(steamId, user.id);
+      advancedBySteamId.set(steamId, { headshots, clutchesWon, entryKills });
 
       await tx.rankedMatchPlayerStat.upsert({
         where: {
           sessionId_steamId: {
             sessionId: session.id,
-            steamId: player.steamId,
+            steamId,
           },
         },
         create: {
           sessionId: session.id,
           userId: user?.id ?? null,
-          steamId: player.steamId,
+          steamId,
           team: player.team,
           kills: player.kills,
           deaths: player.deaths,
