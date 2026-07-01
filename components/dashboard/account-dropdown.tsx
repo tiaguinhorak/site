@@ -73,7 +73,7 @@ export function AccountDropdown({ className }: Props) {
           size="sm"
         />
         <span className="hidden max-w-[88px] truncate font-display text-sm font-semibold text-foreground md:block">
-          {user.nickname}
+          {user.displayName}
         </span>
         <ChevronDown
           className={cn("h-3.5 w-3.5 shrink-0 text-muted transition-transform", open && "rotate-180")}
@@ -98,7 +98,7 @@ export function AccountDropdown({ className }: Props) {
             />
             <div className="min-w-0">
               <p className="truncate font-display text-sm font-bold text-foreground">
-                {user.nickname}
+                {user.displayName}
               </p>
               <p className="truncate text-xs capitalize text-muted">
                 {t("plan", { plan: user.plan ?? "free" })}

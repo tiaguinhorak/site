@@ -1,11 +1,13 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import { resolveSteamDisplayName, STEAM_DISPLAY_NAME_SELECT } from "@/lib/steam/display-name";
 
 export type MatchDetailPlayer = {
   steamId: string;
   userId: string | null;
   nickname: string;
+  displayName: string;
   team: string;
   kills: number;
   deaths: number;
@@ -35,6 +37,7 @@ export type MatchDetailHighlight = {
   id: string;
   steamId: string;
   nickname: string;
+  displayName: string;
   type: string;
   roundNumber: number | null;
   detail: string;
@@ -102,7 +105,7 @@ export async function fetchMatchDetail(sessionId: string): Promise<MatchDetail |
           enemiesFlashed: true,
           clutchesWon: true,
           entryKills: true,
-          user: { select: { nickname: true } },
+          user: { select: { ...STEAM_DISPLAY_NAME_SELECT } },
         },
         orderBy: { score: "desc" },
       },
@@ -149,12 +152,21 @@ export async function fetchMatchDetail(sessionId: string): Promise<MatchDetail |
     (session.scoreTeamA ?? 0) + (session.scoreTeamB ?? 0),
   );
 
-  const nicknameBySteamId = new Map<string, string>();
+  const displayNameBySteamId = new Map<string, string>();
   for (const p of session.playerStats) {
-    nicknameBySteamId.set(p.steamId, p.user?.nickname ?? `Steam ${p.steamId.slice(-6)}`);
+    const fallback = `Steam ${p.steamId.slice(-6)}`;
+    if (p.user) {
+      displayNameBySteamId.set(p.steamId, resolveSteamDisplayName(p.user));
+    } else {
+      displayNameBySteamId.set(p.steamId, fallback);
+    }
   }
 
   const players: MatchDetailPlayer[] = session.playerStats.map((p) => {
+    const fallback = `Steam ${p.steamId.slice(-6)}`;
+    const displayName = p.user
+      ? resolveSteamDisplayName(p.user)
+      : fallback;
     const totalShots = p.kills > 0 ? p.kills : 0;
     const hsPct = totalShots > 0 ? roundTo((p.headshots / totalShots) * 100, 0) : 0;
     const adr = totalRounds > 0 ? roundTo(p.damage / totalRounds, 1) : 0;
@@ -162,7 +174,8 @@ export async function fetchMatchDetail(sessionId: string): Promise<MatchDetail |
     return {
       steamId: p.steamId,
       userId: p.userId,
-      nickname: p.user?.nickname ?? `Steam ${p.steamId.slice(-6)}`,
+      nickname: p.user?.nickname ?? fallback,
+      displayName,
       team: p.team,
       kills: p.kills,
       deaths: p.deaths,
@@ -202,7 +215,8 @@ export async function fetchMatchDetail(sessionId: string): Promise<MatchDetail |
     highlights: session.highlights.map((h) => ({
       id: h.id,
       steamId: h.steamId,
-      nickname: nicknameBySteamId.get(h.steamId) ?? `Steam ${h.steamId.slice(-6)}`,
+      nickname: displayNameBySteamId.get(h.steamId) ?? `Steam ${h.steamId.slice(-6)}`,
+      displayName: displayNameBySteamId.get(h.steamId) ?? `Steam ${h.steamId.slice(-6)}`,
       type: h.type,
       roundNumber: h.roundNumber,
       detail: h.detail,

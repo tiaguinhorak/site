@@ -10,9 +10,9 @@ import { RATE_LIMITS } from "@/lib/security/constants";
 import { sessionOptionsFromUser } from "@/lib/auth/session-options";
 import { applySessionCookie, createSessionToken } from "@/lib/security/session";
 import {
-  jsonErrorKey,
   validationSchemasForRequest,
   zodErrorResponse,
+  apiErrFromRequest,
 } from "@/lib/i18n/api-route";
 
 export async function POST(request: NextRequest) {
@@ -33,18 +33,27 @@ export async function POST(request: NextRequest) {
     return zodErrorResponse(request, parsed.error);
   }
 
+  const emailMsg = apiErrFromRequest(request, "emailAlreadyRegistered");
+  const nicknameMsg = apiErrFromRequest(request, "nicknameAlreadyInUse");
+
   const existing = await prisma.user.findUnique({
     where: { email: parsed.data.email },
   });
   if (existing) {
-    return jsonErrorKey(request, 409, "emailAlreadyRegistered");
+    return NextResponse.json(
+      { error: emailMsg, fieldErrors: { email: emailMsg } },
+      { status: 409 },
+    );
   }
 
   const nicknameTaken = await prisma.user.findFirst({
     where: { nickname: parsed.data.nickname },
   });
   if (nicknameTaken) {
-    return jsonErrorKey(request, 409, "nicknameAlreadyInUse");
+    return NextResponse.json(
+      { error: nicknameMsg, fieldErrors: { nickname: nicknameMsg } },
+      { status: 409 },
+    );
   }
 
   const passwordHash = await hashPassword(parsed.data.password);

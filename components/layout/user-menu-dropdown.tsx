@@ -94,7 +94,7 @@ export function UserMenuDropdown({ align = "right", className }: UserMenuDropdow
           size="sm"
         />
         <span className="hidden max-w-[100px] truncate font-display text-sm font-semibold text-foreground sm:block">
-          {user.nickname}
+          {user.displayName}
         </span>
         <ChevronDown
           className={cn(
@@ -122,7 +122,7 @@ export function UserMenuDropdown({ align = "right", className }: UserMenuDropdow
             />
             <div className="min-w-0">
               <p className="truncate font-display text-sm font-bold text-foreground">
-                {user.nickname}
+                {user.displayName}
               </p>
               <span className="mt-1 inline-flex rounded-md border border-border/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted">
                 {planLabel}

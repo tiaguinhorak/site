@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
     teamParam === "T" || teamParam === "CT" ? (teamParam as LoadoutTeam) : undefined;
 
   const dualTeamOnly = params.get("dualTeamOnly") === "1" || params.get("dualTeamOnly") === "true";
+  const ownedOnly = params.get("ownedOnly") === "1" || params.get("ownedOnly") === "true";
 
   const rarityParam = params.get("rarityTier");
   const RARITY_TIERS = new Set<RarityKey>([
@@ -61,6 +62,7 @@ export async function GET(request: NextRequest) {
     team,
     dualTeamOnly,
     rarityTier,
+    ownedOnly,
   });
 
   return NextResponse.json(result);

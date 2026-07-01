@@ -11,11 +11,12 @@ import type {
 } from "@/lib/leaderboard/types";
 import { LEADERBOARD_PAGE_SIZE } from "@/lib/leaderboard/types";
 import { syncStaleSteamProfilesBackground } from "@/lib/steam/sync-profiles-background";
+import { resolveSteamDisplayName, STEAM_DISPLAY_NAME_SELECT } from "@/lib/steam/display-name";
 
 export type { LeaderboardPageResult, LeaderboardPlayer, LeaderboardSort };
 
 const USER_SELECT = {
-  nickname: true,
+  ...STEAM_DISPLAY_NAME_SELECT,
   country: true,
   avatarUrl: true,
   avatarPreset: true,
@@ -85,6 +86,7 @@ function serializeLeaderboardUser(
   return {
     rank,
     nickname: user.nickname,
+    displayName: resolveSteamDisplayName(user),
     country: user.country,
     avatarUrl: resolveUserAvatarUrl(user),
     plan: planToClient(user.plan),

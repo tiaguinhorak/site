@@ -300,6 +300,7 @@ model User {
   notificationPreferences UserNotificationPreferences?
   newsArticlesAuthored    NewsArticle[]                @relation("NewsAuthor")
   storePurchases          StorePurchase[]
+  economyGrants           UserEconomyGrant[]
   storeCart               StoreCart?
   storeCheckouts          StoreCheckout[]
   coinTransactions        CoinTransaction[]
@@ -1049,6 +1050,21 @@ model StorePurchase {
   @@index([userId])
   @@index([storeItemId])
   @@index([userId, storeItemId])
+}
+
+model UserEconomyGrant {
+  id        String          @id @default(cuid())
+  userId    String
+  kind      StoreRewardKind
+  defIndex  Int
+  source    String          @default("admin")
+  createdAt DateTime        @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, defIndex])
+  @@index([userId])
+  @@index([userId, kind])
 }
 
 model StoreCart {

@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { formatMapLabel } from "@/lib/servers/maps";
 import { getRequestLocale } from "@/lib/i18n/server";
+import { resolveSteamDisplayName, STEAM_DISPLAY_NAME_SELECT } from "@/lib/steam/display-name";
 
 const LIVE_STATUSES = ["accepting", "voting", "starting", "live"] as const;
 type LiveStatus = (typeof LIVE_STATUSES)[number];
@@ -31,12 +32,20 @@ export async function GET(request: NextRequest) {
       teamSize: true,
       partyA: {
         select: {
-          members: { select: { user: { select: { nickname: true } } } },
+          members: {
+            select: {
+              user: { select: { ...STEAM_DISPLAY_NAME_SELECT } },
+            },
+          },
         },
       },
       partyB: {
         select: {
-          members: { select: { user: { select: { nickname: true } } } },
+          members: {
+            select: {
+              user: { select: { ...STEAM_DISPLAY_NAME_SELECT } },
+            },
+          },
         },
       },
     },
@@ -44,8 +53,12 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     matches: sessions.map((session) => {
-      const teamA = session.partyA.members.map((member) => member.user.nickname);
-      const teamB = session.partyB.members.map((member) => member.user.nickname);
+      const teamA = session.partyA.members.map((member) =>
+        resolveSteamDisplayName(member.user),
+      );
+      const teamB = session.partyB.members.map((member) =>
+        resolveSteamDisplayName(member.user),
+      );
       const statusLabel = isLiveStatus(session.status)
         ? t(session.status)
         : session.status;

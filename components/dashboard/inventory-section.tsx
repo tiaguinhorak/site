@@ -15,6 +15,7 @@ import {
   RefreshCw,
   AlertTriangle,
   PackageOpen,
+  Tags,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { type InventoryCategoryKey } from "@/lib/profile";
@@ -77,6 +78,17 @@ import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
 import { SkinPreviewModal } from "@/components/skins/skin-preview-modal";
 import { preloadSkinGridImages, preloadSkinPreviewImage } from "@/lib/inventory/preload-skin-images";
 import type { InventoryBootstrapData } from "@/lib/inventory/inventory-bootstrap";
+import {
+  INVENTORY_REFRESH_EVENT,
+  type InventoryRefreshDetail,
+} from "@/lib/inventory/inventory-refresh-events";
+import { patchCatalogGridCacheOwnedState } from "@/lib/inventory/catalog-grid-cache";
+import {
+  STICKER_FINISH_VARIANTS,
+  type StickerFinishVariant,
+} from "@/lib/inventory/sticker-finish-variant";
+
+type InventoryFilterKey = "all" | InventoryCategoryKey | "sticker";
 
 type AgentLoadoutState = {
   agentT: number;
@@ -94,6 +106,17 @@ type AgentCatalogItem = {
   imageUrl: string | null;
   rarity: string;
   team: string;
+  owned: boolean;
+};
+
+type StickerCatalogItem = {
+  id: string;
+  defIndex: number;
+  name: string;
+  imageUrl: string | null;
+  rarity: string;
+  owned: boolean;
+  finishVariant: StickerFinishVariant;
 };
 
 type CatalogSkin = {
@@ -127,6 +150,7 @@ function catalogGridCacheParams(
   weaponId: string,
   dualTeamOnly: boolean,
   rarityTier: string,
+  ownedOnly: boolean,
 ): CatalogGridCacheParams {
   return {
     category,
@@ -135,11 +159,12 @@ function catalogGridCacheParams(
     weaponId,
     dualTeamOnly,
     rarityTier,
+    ownedOnly,
   };
 }
 
 function resolveInitialInventoryState(bootstrap: InventoryBootstrapData | null) {
-  const gridParams = catalogGridCacheParams("all", 1, "", "", false, "all");
+  const gridParams = catalogGridCacheParams("all", 1, "", "", false, "all", false);
   // Never read sessionStorage here — it is empty on the server but may hold data on
   // the client, which produces different initial HTML and triggers hydration recovery
   // (in dev: cascades of GET /dashboard/inventario and a frozen UI).
@@ -263,7 +288,7 @@ function applyLoadoutToCatalogItems(
   });
 }
 
-const CATEGORY_ICON: Record<"all" | InventoryCategoryKey, typeof LayoutGrid> = {
+const CATEGORY_ICON: Record<InventoryFilterKey, typeof LayoutGrid> = {
   all: LayoutGrid,
   knife: Swords,
   gloves: Hand,
@@ -271,6 +296,7 @@ const CATEGORY_ICON: Record<"all" | InventoryCategoryKey, typeof LayoutGrid> = {
   pistol: Target,
   smg: Zap,
   agent: LayoutGrid,
+  sticker: Tags,
 };
 
 async function postJson(
@@ -339,7 +365,7 @@ export function InventorySection({
     [t],
   );
 
-  const filters: { id: "all" | InventoryCategoryKey; label: string }[] = useMemo(
+  const filters: { id: InventoryFilterKey; label: string }[] = useMemo(
     () => [
       { id: "all", label: t("catAll") },
       { id: "knife", label: t("catKnife") },
@@ -348,6 +374,7 @@ export function InventorySection({
       { id: "pistol", label: t("catPistol") },
       { id: "smg", label: t("catSmg") },
       { id: "agent", label: t("catAgent") },
+      { id: "sticker", label: t("catSticker") },
     ],
     [t],
   );
@@ -360,6 +387,8 @@ export function InventorySection({
     return base;
   });
   const [agentItems, setAgentItems] = useState<AgentCatalogItem[]>([]);
+  const [stickerItems, setStickerItems] = useState<StickerCatalogItem[]>([]);
+  const [stickerFinishFilter, setStickerFinishFilter] = useState<StickerFinishVariant | "">("");
   const [agentLoadout, setAgentLoadout] = useState<AgentLoadoutState | null>(
     initialLoadoutCache
       ? agentLoadoutFromEquippedItems(initialLoadoutCache.items)
@@ -369,8 +398,9 @@ export function InventorySection({
   const [agentWorkspaceOpen, setAgentWorkspaceOpen] = useState(false);
   const [loadout, setLoadout] = useState<LoadoutResponse | null>(initialLoadoutCache);
   const [dualTeamOnly, setDualTeamOnly] = useState(false);
+  const [ownedOnly, setOwnedOnly] = useState(false);
   const [rarityFilter, setRarityFilter] = useState<RarityKey | "all">("all");
-  const [filter, setFilter] = useState<"all" | InventoryCategoryKey>("all");
+  const [filter, setFilter] = useState<InventoryFilterKey>("all");
   const [weaponFilter, setWeaponFilter] = useState("");
   const [weaponOptions, setWeaponOptions] = useState<
     Array<{ weaponId: string; weaponName: string }>
@@ -503,10 +533,11 @@ export function InventorySection({
         team: agentTeamBrowse,
         search,
       });
+      if (ownedOnly) params.set("ownedOnly", "1");
 
-      const [pickerResponse] = await Promise.all([
-        fetch(`/api/inventory/agents?${params}`, { credentials: "same-origin" }),
-      ]);
+      const pickerResponse = await fetch(`/api/inventory/agents?${params}`, {
+        credentials: "same-origin",
+      });
 
       if (reqId !== reqIdRef.current) return;
       if (!pickerResponse.ok) {
@@ -529,7 +560,48 @@ export function InventorySection({
         setBootstrapped(true);
       }
     }
-  }, [page, search, agentTeamBrowse]);
+  }, [page, search, agentTeamBrowse, ownedOnly]);
+
+  const fetchStickers = useCallback(async () => {
+    const reqId = ++reqIdRef.current;
+    setLoading(true);
+    setLoadError(false);
+
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: "36",
+        search,
+      });
+      if (ownedOnly) params.set("ownedOnly", "1");
+      if (stickerFinishFilter) params.set("finishVariant", stickerFinishFilter);
+
+      const response = await fetch(`/api/inventory/stickers?${params}`, {
+        credentials: "same-origin",
+      });
+
+      if (reqId !== reqIdRef.current) return;
+      if (!response.ok) {
+        setLoadError(true);
+        return;
+      }
+
+      const data = await response.json();
+      if (reqId !== reqIdRef.current) return;
+
+      setStickerItems(data.items ?? []);
+      setTotalPages(data.totalPages ?? 1);
+      setResultTotal(data.total ?? 0);
+      setCatalogTotal(data.total ?? 0);
+    } catch {
+      if (reqId === reqIdRef.current) setLoadError(true);
+    } finally {
+      if (reqId === reqIdRef.current) {
+        setLoading(false);
+        setBootstrapped(true);
+      }
+    }
+  }, [page, search, ownedOnly, stickerFinishFilter]);
 
   const fetchSkins = useCallback(async (options?: { silent?: boolean }) => {
     const cacheParams = catalogGridCacheParams(
@@ -539,6 +611,7 @@ export function InventorySection({
       weaponFilter,
       dualTeamOnly,
       rarityFilter,
+      ownedOnly,
     );
     const fetchKey = JSON.stringify(cacheParams) + (options?.silent ? ":silent" : "");
     if (skinsFetchInFlightRef.current === fetchKey) return;
@@ -576,6 +649,7 @@ export function InventorySection({
         search,
       });
       if (dualTeamOnly) params.set("dualTeamOnly", "1");
+      if (ownedOnly) params.set("ownedOnly", "1");
       if (rarityFilter !== "all") params.set("rarityTier", rarityFilter);
       if (weaponFilter) params.set("weaponId", weaponFilter);
 
@@ -632,7 +706,7 @@ export function InventorySection({
         prefetchCatalogGrid({ ...cacheParams, page: page + 1 });
       }
       if (filter !== "all" && page === 1 && !options?.silent) {
-        prefetchCatalogGrid(catalogGridCacheParams("all", 1, "", "", false, "all"));
+        prefetchCatalogGrid(catalogGridCacheParams("all", 1, "", "", false, "all", false));
       }
     } catch {
       if (!options?.silent && !cached?.items.length) setLoadError(true);
@@ -645,7 +719,7 @@ export function InventorySection({
         setBootstrapped(true);
       }
     }
-  }, [filter, page, search, weaponFilter, dualTeamOnly, rarityFilter]);
+  }, [filter, page, search, weaponFilter, dualTeamOnly, rarityFilter, ownedOnly]);
 
   const applyBootstrapData = useCallback(
     (data: InventoryBootstrapData, options?: { silent?: boolean }) => {
@@ -653,7 +727,7 @@ export function InventorySection({
       setLoadout(data.loadout);
       setAgentLoadout(agentLoadoutFromEquippedItems(data.loadout.items));
 
-      const gridParams = catalogGridCacheParams("all", 1, "", "", false, "all");
+      const gridParams = catalogGridCacheParams("all", 1, "", "", false, "all", false);
       writeCatalogGridCache(gridParams, {
         items: data.catalog.items,
         page: data.catalog.page,
@@ -711,6 +785,37 @@ export function InventorySection({
     [applyBootstrapData],
   );
 
+  const handleInventoryRefresh = useCallback(
+    (event?: Event) => {
+      const detail = (event as CustomEvent<InventoryRefreshDetail> | undefined)?.detail;
+      if (detail?.catalogSkinIds?.length) {
+        patchCatalogGridCacheOwnedState(detail.catalogSkinIds);
+        setItems((prev) =>
+          prev.map((item) =>
+            detail.catalogSkinIds!.includes(item.id) ? { ...item, owned: true } : item,
+          ),
+        );
+      }
+      clientBootstrapRefreshDoneRef.current = false;
+      reqIdRef.current += 1;
+      void refreshBootstrap({ silent: false });
+      if (filter === "agent") {
+        void fetchAgents();
+      } else if (filter === "sticker") {
+        void fetchStickers();
+      } else {
+        void fetchSkins({ silent: false });
+      }
+    },
+    [refreshBootstrap, fetchSkins, fetchAgents, fetchStickers, filter],
+  );
+
+  useEffect(() => {
+    const handler = (e: Event) => handleInventoryRefresh(e);
+    window.addEventListener(INVENTORY_REFRESH_EVENT, handler);
+    return () => window.removeEventListener(INVENTORY_REFRESH_EVENT, handler);
+  }, [handleInventoryRefresh]);
+
   useEffect(() => {
     const timer = setTimeout(() => setSearch(searchInput.trim()), 350);
     return () => clearTimeout(timer);
@@ -724,7 +829,7 @@ export function InventorySection({
     setPage(1);
     setWeaponFilter("");
     reqIdRef.current += 1;
-  }, [filter, search, dualTeamOnly, rarityFilter]);
+  }, [filter, search, dualTeamOnly, rarityFilter, ownedOnly, stickerFinishFilter]);
 
   useEffect(() => {
     if (rarityFilter !== "all" && availableRarityTiers.length > 0 && !availableRarityTiers.includes(rarityFilter)) {
@@ -756,7 +861,7 @@ export function InventorySection({
     if (clientBootstrapRefreshDoneRef.current) return;
     clientBootstrapRefreshDoneRef.current = true;
 
-    const gridParams = catalogGridCacheParams("all", 1, "", "", false, "all");
+    const gridParams = catalogGridCacheParams("all", 1, "", "", false, "all", false);
     const catalogCache = readCatalogGridCache(gridParams);
     const loadoutCache = readLoadoutClientCache();
 
@@ -794,6 +899,10 @@ export function InventorySection({
       fetchAgents();
       return;
     }
+    if (filter === "sticker") {
+      fetchStickers();
+      return;
+    }
 
     const isDefaultGrid =
       filter === "all" &&
@@ -801,6 +910,7 @@ export function InventorySection({
       !search &&
       !weaponFilter &&
       !dualTeamOnly &&
+      !ownedOnly &&
       rarityFilter === "all";
 
     if (clientBootstrapRefreshDoneRef.current && isDefaultGrid) {
@@ -811,13 +921,20 @@ export function InventorySection({
   }, [
     filter,
     fetchAgents,
+    fetchStickers,
     fetchSkins,
     page,
     search,
     weaponFilter,
     dualTeamOnly,
     rarityFilter,
+    ownedOnly,
   ]);
+
+  useEffect(() => {
+    if (filter !== "sticker") return;
+    fetchStickers();
+  }, [stickerFinishFilter, filter, fetchStickers]);
 
   const handleEquip = async (item: CatalogSkin, side: EquipSide) => {
     if (!item.owned) return;
@@ -1000,14 +1117,38 @@ export function InventorySection({
   const equippedCount = loadout?.items.length ?? 0;
   const showDualTeamFilter = weaponOptions.some((w) => weaponSupportsBothTeams(w.weaponId));
   const isAgentView = filter === "agent";
+  const isStickerView = filter === "sticker";
+  const isSkinView = !isAgentView && !isStickerView;
+  const gridItemCount = isAgentView
+    ? agentItems.length
+    : isStickerView
+      ? stickerItems.length
+      : items.length;
+  const ownedOnlyLabel =
+    filter === "agent"
+      ? t("ownedOnlyFilterAgents")
+      : filter === "sticker"
+        ? t("ownedOnlyFilterStickers")
+        : t("ownedOnlyFilter");
+  const ownedOnlyHint =
+    filter === "agent"
+      ? t("ownedOnlyFilterHintAgents")
+      : filter === "sticker"
+        ? t("ownedOnlyFilterHintStickers")
+        : t("ownedOnlyFilterHint");
   const showEmptyCatalog = bootstrapped && !loading && !loadError && catalogTotal === 0;
   const showNoResults =
     bootstrapped &&
     !loading &&
     !loadError &&
     catalogTotal > 0 &&
-    (isAgentView ? agentItems.length === 0 : items.length === 0);
-  const catalogGridLoading = loading && (isAgentView ? agentItems.length === 0 : items.length === 0);
+    gridItemCount === 0;
+  const catalogGridLoading = loading && gridItemCount === 0;
+  const retryFetch = isAgentView
+    ? fetchAgents
+    : isStickerView
+      ? fetchStickers
+      : () => fetchSkins();
 
   return (
     <section className="space-y-6">
@@ -1046,16 +1187,19 @@ export function InventorySection({
                   key={f.id}
                   type="button"
                   onClick={() => {
-                    prefetchCatalogGrid(
-                      catalogGridCacheParams(
-                        f.id,
-                        1,
-                        search,
-                        "",
-                        dualTeamOnly,
-                        rarityFilter,
-                      ),
-                    );
+                    if (f.id !== "agent" && f.id !== "sticker") {
+                      prefetchCatalogGrid(
+                        catalogGridCacheParams(
+                          f.id,
+                          1,
+                          search,
+                          "",
+                          dualTeamOnly,
+                          rarityFilter,
+                          ownedOnly,
+                        ),
+                      );
+                    }
                     setFilter(f.id);
                   }}
                   className={cn(
@@ -1110,7 +1254,7 @@ export function InventorySection({
             </div>
           )}
 
-          {!isAgentView && availableRarityTiers.length > 0 && (
+          {isSkinView && availableRarityTiers.length > 0 && (
           <div className="mt-3 border-t border-border/50 pt-3">
             <label className="mb-2 block text-[10px] font-semibold uppercase tracking-wider text-muted">
               {t("rarityLegendTitle")}
@@ -1126,7 +1270,69 @@ export function InventorySection({
           </div>
           )}
 
-          {!isAgentView && showDualTeamFilter && (
+          <div className="mt-3 border-t border-border/50 pt-3">
+            <button
+              type="button"
+              onClick={() => {
+                setOwnedOnly((v) => !v);
+                setPage(1);
+              }}
+              className={cn(
+                "inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold transition-all",
+                ownedOnly
+                  ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground"
+                  : chipInactiveHoverClass,
+              )}
+            >
+              {ownedOnlyLabel}
+            </button>
+            <p className="mt-1.5 text-[10px] text-muted">{ownedOnlyHint}</p>
+          </div>
+
+          {isStickerView && (
+            <div className="mt-3 border-t border-border/50 pt-3">
+              <label className="mb-2 block text-[10px] font-semibold uppercase tracking-wider text-muted">
+                {t("stickersFilterFinishAll")}
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStickerFinishFilter("");
+                    setPage(1);
+                  }}
+                  className={cn(
+                    "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                    stickerFinishFilter === ""
+                      ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground"
+                      : chipInactiveHoverClass,
+                  )}
+                >
+                  {t("stickersFilterFinishAll")}
+                </button>
+                {STICKER_FINISH_VARIANTS.map((variant) => (
+                  <button
+                    key={variant}
+                    type="button"
+                    onClick={() => {
+                      setStickerFinishFilter(variant);
+                      setPage(1);
+                    }}
+                    className={cn(
+                      "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                      stickerFinishFilter === variant
+                        ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground"
+                        : chipInactiveHoverClass,
+                    )}
+                  >
+                    {t(`stickersFilterFinish_${variant}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {isSkinView && showDualTeamFilter && (
           <div className="mt-3 border-t border-border/50 pt-3">
             <button
               type="button"
@@ -1147,7 +1353,7 @@ export function InventorySection({
           </div>
           )}
 
-          {!isAgentView && weaponOptions.length > 0 && (
+          {isSkinView && weaponOptions.length > 0 && (
             <div className="mt-3 border-t border-border/50 pt-3">
               <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted">
                 {t("weaponFilterLabel")}
@@ -1260,7 +1466,7 @@ export function InventorySection({
             <div className="flex flex-col items-center gap-3 rounded-card glass py-16 text-center">
               <AlertTriangle className="h-8 w-8 text-amber-400" />
               <p className="text-sm text-muted">{t("loadError")}</p>
-              <Button type="button" variant="outline" size="sm" onClick={isAgentView ? fetchAgents : () => fetchSkins()}>
+              <Button type="button" variant="outline" size="sm" onClick={retryFetch}>
                 <RefreshCw className="h-3.5 w-3.5" />
                 {t("retry")}
               </Button>
@@ -1297,6 +1503,7 @@ export function InventorySection({
                   rarity={item.rarity}
                   equippedT={equippedT}
                   equippedCT={equippedCT}
+                  locked={!item.owned && !canUseAgents}
                   onClick={() => setAgentWorkspaceOpen(true)}
                   className={cn(anyEquipped && "ring-1 ring-emerald-400/35")}
                 >
@@ -1309,6 +1516,36 @@ export function InventorySection({
                 </InventorySkinTile>
                 );
               })}
+            </div>
+          ) : isStickerView ? (
+            <div
+              className={cn(
+                "grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 transition-opacity",
+                loading && "opacity-60",
+              )}
+            >
+              {stickerItems.map((item, index) => (
+                <InventorySkinTile
+                  key={item.id}
+                  name={item.name}
+                  imageUrl={item.imageUrl}
+                  accent="from-amber-500 to-orange-600"
+                  rarity={item.rarity}
+                  locked={!item.owned && !canUseStickers}
+                  priority={index < 8}
+                  onClick={() => {
+                    if (!canUseStickers) return;
+                    toast.info(t("stickersEquipFirst"));
+                  }}
+                >
+                  <div className="mt-2 flex flex-wrap items-center justify-center gap-1">
+                    <SkinRarityBadge
+                      rarity={item.rarity}
+                      accent="from-amber-500 to-orange-600"
+                    />
+                  </div>
+                </InventorySkinTile>
+              ))}
             </div>
           ) : (
             <div

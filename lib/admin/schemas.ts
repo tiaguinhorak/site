@@ -315,3 +315,27 @@ export const adminStickerCatalogUpdateSchema = z.object({
 export const adminInventoryGrantSchema = z.object({
   catalogSkinId: z.string().min(1).max(64),
 });
+
+export const adminInventoryGrantBulkSchema = z
+  .object({
+    catalogSkinIds: z.array(z.string().min(1).max(64)).max(50).optional(),
+    agentDefIndexes: z.array(z.number().int().positive()).max(50).optional(),
+    stickerDefIndexes: z.array(z.number().int().positive()).max(50).optional(),
+  })
+  .refine(
+    (data) =>
+      (data.catalogSkinIds?.length ?? 0) > 0 ||
+      (data.agentDefIndexes?.length ?? 0) > 0 ||
+      (data.stickerDefIndexes?.length ?? 0) > 0,
+    { message: "Selecione ao menos um item para conceder." },
+  );
+
+export const adminInventoryGrantEconomySchema = z.object({
+  kind: z.enum(["AGENT", "STICKER"]),
+  defIndex: z.number().int().positive(),
+});
+
+export const adminInventoryRevokeEconomySchema = z.object({
+  kind: z.enum(["AGENT", "STICKER"]),
+  defIndex: z.number().int().positive(),
+});

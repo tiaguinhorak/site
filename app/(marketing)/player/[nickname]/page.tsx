@@ -10,10 +10,7 @@ import { serializePublicPlayer } from "@/lib/profile/serialize-public";
 import { getPublicPlayerSkins } from "@/lib/inventory/get-public-player-skins";
 import { resolveEloRankLabels } from "@/lib/ranked/resolve-elo-rank-labels";
 import { getPublicUserMedals } from "@/lib/achievements/service";
-import {
-  refreshSteamProfileForUserId,
-  userNeedsSteamProfileRefresh,
-} from "@/lib/steam/sync-profiles";
+import { refreshSteamProfileIfDue } from "@/lib/steam/sync-profiles";
 import { syncStaleSteamProfilesBackground } from "@/lib/steam/sync-profiles-background";
 
 type PageProps = {
@@ -25,8 +22,9 @@ export async function generateMetadata({ params }: PageProps) {
   const normalized = nickname.trim().toUpperCase();
   const user = await prisma.user.findFirst({ where: { nickname: normalized } });
   if (!user) return { title: "Perfil não encontrado — clutchclube" };
+  const player = serializePublicPlayer(user);
   return {
-    title: `${user.nickname} — Perfil clutchclube`,
+    title: `${player.displayName} — Perfil clutchclube`,
     description: `Rank #${user.rank} · ${user.elo} ELO · K/D ${user.kd.toFixed(2)} no clutchclube.`,
   };
 }
@@ -45,13 +43,12 @@ export default async function PlayerProfilePage({ params }: PageProps) {
 
   if (!user) notFound();
 
-  if (userNeedsSteamProfileRefresh(user)) {
+  if (user.steamId) {
     try {
-      await refreshSteamProfileForUserId(user.id);
-      const refreshed = await prisma.user.findFirst({ where: { id: user.id } });
-      if (refreshed) user = refreshed;
+      await refreshSteamProfileIfDue(user.id);
+      user = (await prisma.user.findFirst({ where: { nickname: normalized } })) ?? user;
     } catch {
-      // Exibe dados em cache se a API Steam falhar.
+      // Mantém dados em cache se a API Steam falhar.
     }
   }
 

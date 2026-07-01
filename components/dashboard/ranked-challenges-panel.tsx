@@ -28,7 +28,7 @@ function OpponentRow({
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-foreground">{room.name}</p>
         <p className="text-[11px] text-muted">
-          {room.leaderNickname}
+          {room.leaderDisplayName}
           <span className="mx-1">·</span>
           {room.region}
           <span className="mx-1">·</span>

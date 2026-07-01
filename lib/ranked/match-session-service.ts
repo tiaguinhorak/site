@@ -23,6 +23,7 @@ import {
   notifyRankedVoteStarted,
 } from "@/lib/ranked/notifications";
 import { notifySessionParticipants, notifyRankedRooms } from "@/lib/realtime/notify";
+import { resolveSteamDisplayName, STEAM_DISPLAY_NAME_SELECT } from "@/lib/steam/display-name";
 import { reconcileRankedSessionConnect } from "@/lib/ranked/reconcile-server-state";
 import {
   abandonRankedSessionInternal,
@@ -51,7 +52,7 @@ const sessionInclude = {
   partyB: { include: partyInclude },
   acceptances: {
     include: {
-      user: { select: { id: true, nickname: true } },
+      user: { select: { id: true, ...STEAM_DISPLAY_NAME_SELECT } },
     },
   },
   mapVotes: true,
@@ -105,6 +106,7 @@ export function serializeSession(
     return {
       userId: m.userId,
       nickname: m.user.nickname,
+      displayName: resolveSteamDisplayName(m.user),
       accepted: row?.accepted ?? false,
       isYou: viewerUserId === m.userId,
     };

@@ -22,11 +22,13 @@ import { getCountryFlag } from "@/lib/profile";
 import { useUser } from "@/lib/hooks/use-user";
 import { secureApi } from "@/lib/api/client";
 import { toast } from "@/lib/toast";
+import { dispatchInventoryRefresh } from "@/lib/inventory/inventory-refresh-events";
 import { cn } from "@/lib/utils";
 
 type FriendUser = {
   id: string;
   nickname: string;
+  displayName: string;
   country: string;
   avatarUrl: string | null;
   plan: string;
@@ -213,7 +215,7 @@ function FriendsList({
               prefetch={false}
               className="truncate font-display text-sm font-semibold text-foreground hover:text-primary"
             >
-              {friend.nickname}
+              {friend.displayName}
             </Link>
             <p className="text-xs text-muted">
               {getCountryFlag(friend.country)} {t("level", { level: friend.level })} · ELO{" "}
@@ -280,7 +282,7 @@ function RequestsView({
                 <Avatar user={req.user} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-display text-sm font-semibold text-foreground">
-                    {req.user.nickname}
+                    {req.user.displayName}
                   </p>
                   <p className="text-xs text-muted">{t("level", { level: req.user.level })}</p>
                 </div>
@@ -331,7 +333,7 @@ function RequestsView({
                 <Avatar user={req.user} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-display text-sm font-semibold text-foreground">
-                    {req.user.nickname}
+                    {req.user.displayName}
                   </p>
                   <p className="text-xs text-muted">{t("pending")}</p>
                 </div>
@@ -435,7 +437,7 @@ function AddFriends({
             prefetch={false}
             className="truncate font-display text-sm font-semibold text-foreground hover:text-primary"
           >
-            {user.nickname}
+            {user.displayName}
           </Link>
           <p className="text-xs text-muted">
             {getCountryFlag(user.country)} {t("level", { level: user.level })}
@@ -560,6 +562,9 @@ function GiftModal({
       return;
     }
     toast.success(t("giftSent", { nickname: target.nickname }));
+    if (mode === "item") {
+      dispatchInventoryRefresh();
+    }
     onDone();
   }
 

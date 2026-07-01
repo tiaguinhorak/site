@@ -372,12 +372,16 @@ export function invalidateStickerPickerBaseCache(): void {
   pickerBaseCache = null;
 }
 
+export type StickerPickerCatalogItem = StickerPickerItem & { owned: boolean };
+
 export async function listEnabledStickersForPicker(options?: {
   search?: string;
   page?: number;
   limit?: number;
   weaponId?: string;
   finishVariant?: StickerFinishVariant | "";
+  ownedOnly?: boolean;
+  ownedDefIndexes?: Set<number>;
 }) {
   await ensureLegacyStickerCatalogAndLoadouts();
 
@@ -386,6 +390,8 @@ export async function listEnabledStickersForPicker(options?: {
   const trimmed = options?.search?.trim().toLowerCase() ?? "";
   const weaponId = options?.weaponId?.trim() ?? "";
   const finishFilter = options?.finishVariant ?? "";
+  const ownedOnly = options?.ownedOnly ?? false;
+  const ownedDefIndexes = options?.ownedDefIndexes ?? new Set<number>();
 
   // Use the in-memory base list — no DB hit after first load.
   const base = await getPickerBaseItems();
@@ -395,9 +401,17 @@ export async function listEnabledStickersForPicker(options?: {
     filtered = filtered.filter((row) => row.name.toLowerCase().includes(trimmed));
   }
 
-  let items = filtered
+  if (ownedOnly) {
+    filtered = filtered.filter((row) => ownedDefIndexes.has(row.defIndex));
+  }
+
+  let items: StickerPickerCatalogItem[] = filtered
     .map((row) => enrichPickerItem(row, weaponId))
-    .filter((row) => stickerMatchesFinishFilter(row.name, row.effect, finishFilter));
+    .filter((row) => stickerMatchesFinishFilter(row.name, row.effect, finishFilter))
+    .map((row) => ({
+      ...row,
+      owned: ownedDefIndexes.has(row.defIndex),
+    }));
 
   if (weaponId) {
     items = items.filter((row) => row.compatible);

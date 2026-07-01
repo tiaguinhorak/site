@@ -296,6 +296,7 @@ export function ProfileSection() {
               <div className="flex flex-wrap items-center gap-2">
                 <ProfileDisplayName
                   nickname={profile.nickname}
+                  displayName={profile.displayName}
                   plan={profile.plan}
                   customization={profile.customization}
                   nameClassName="font-display text-2xl font-bold text-foreground sm:text-3xl"

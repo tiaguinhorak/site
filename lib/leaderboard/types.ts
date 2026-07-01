@@ -18,6 +18,7 @@ export type LeaderboardSort =
 export type LeaderboardPlayer = {
   rank: number;
   nickname: string;
+  displayName: string;
   country: string;
   avatarUrl: string | null;
   plan: "free" | "premium" | "elite";

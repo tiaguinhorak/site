@@ -3,6 +3,7 @@ import "server-only";
 import type { ClanRole, Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { resolveUserAvatarUrl } from "@/lib/profile/avatar";
+import { resolveSteamDisplayName, STEAM_DISPLAY_NAME_SELECT } from "@/lib/steam/display-name";
 
 export const CLAN_MAX_MEMBERS = 20;
 export const CLAN_TAG_REGEX = /^[A-Z0-9]{2,6}$/;
@@ -19,7 +20,7 @@ export class ClanError extends Error {
 
 const MEMBER_USER_SELECT = {
   id: true,
-  nickname: true,
+  ...STEAM_DISPLAY_NAME_SELECT,
   country: true,
   avatarUrl: true,
   avatarPreset: true,
@@ -37,6 +38,7 @@ const MEMBER_USER_SELECT = {
 export type ClanMemberView = {
   userId: string;
   nickname: string;
+  displayName: string;
   country: string;
   avatarUrl: string | null;
   role: ClanRole;
@@ -78,6 +80,7 @@ export type ClanJoinRequestView = {
   id: string;
   userId: string;
   nickname: string;
+  displayName: string;
   avatarUrl: string | null;
   country: string;
   level: number;
@@ -136,6 +139,7 @@ function serializeMember(member: ClanWithMembers["members"][number]): ClanMember
   return {
     userId: u.id,
     nickname: u.nickname,
+    displayName: resolveSteamDisplayName(u),
     country: u.country,
     avatarUrl: resolveUserAvatarUrl(u),
     role: member.role,
@@ -497,7 +501,7 @@ export async function getClanDetail(
           user: {
             select: {
               id: true,
-              nickname: true,
+              ...STEAM_DISPLAY_NAME_SELECT,
               country: true,
               avatarUrl: true,
               avatarPreset: true,
@@ -531,6 +535,7 @@ export async function getClanDetail(
         id: req.id,
         userId: req.userId,
         nickname: req.user.nickname,
+        displayName: resolveSteamDisplayName(req.user),
         country: req.user.country,
         avatarUrl: resolveUserAvatarUrl(req.user),
         level: req.user.level,

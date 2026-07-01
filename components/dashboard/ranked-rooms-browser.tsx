@@ -78,7 +78,12 @@ export function RankedRoomsBrowser({
         (room) =>
           room.name.toLowerCase().includes(q) ||
           room.leaderNickname.toLowerCase().includes(q) ||
-          room.members.some((m) => m.nickname.toLowerCase().includes(q)),
+          room.leaderDisplayName.toLowerCase().includes(q) ||
+          room.members.some(
+            (m) =>
+              m.nickname.toLowerCase().includes(q) ||
+              m.displayName.toLowerCase().includes(q),
+          ),
       );
     }
 

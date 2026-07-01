@@ -97,7 +97,7 @@ export function createValidationSchemas(v: ValidationMessages) {
       nickname: nicknameSchema,
       email: emailSchema,
       password: passwordSchema,
-      confirmPassword: z.string().max(LIMITS.password),
+      confirmPassword: z.string().min(1, v.password.required).max(LIMITS.password),
       website: honeypotSchema,
     })
     .refine((data) => data.password === data.confirmPassword, {
@@ -113,7 +113,7 @@ export function createValidationSchemas(v: ValidationMessages) {
       phone: requiredPhoneSchema,
       country: countrySchema,
       password: passwordSchema,
-      confirmPassword: z.string().max(LIMITS.password),
+      confirmPassword: z.string().min(1, v.password.required).max(LIMITS.password),
       website: honeypotSchema,
     })
     .refine((data) => data.password === data.confirmPassword, {
@@ -157,7 +157,7 @@ export function createValidationSchemas(v: ValidationMessages) {
         .min(1, v.password.currentRequired)
         .max(LIMITS.password),
       newPassword: passwordSchema,
-      confirmPassword: z.string().max(LIMITS.password),
+      confirmPassword: z.string().min(1, v.password.required).max(LIMITS.password),
     })
     .refine((data) => data.newPassword === data.confirmPassword, {
       message: v.passwordMismatch,

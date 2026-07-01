@@ -30,6 +30,7 @@ import { assertNotSmurfBlocked } from "@/lib/anti-smurf/service";
 import { logRankedPartyActivity } from "@/lib/ranked/party-activity";
 import { assertRankedSmurfEligible } from "@/lib/anti-smurf/service";
 import { serializeProfileCustomization } from "@/lib/profile/serialize-customization";
+import { resolveSteamDisplayName, STEAM_DISPLAY_NAME_SELECT } from "@/lib/steam/display-name";
 
 import { RankedPartyError } from "@/lib/errors/domain";
 
@@ -39,7 +40,7 @@ export const partyInclude = {
   leader: {
     select: {
       id: true,
-      nickname: true,
+      ...STEAM_DISPLAY_NAME_SELECT,
       elo: true,
       avatarUrl: true,
       avatarPreset: true,
@@ -71,7 +72,7 @@ export const partyInclude = {
       user: {
         select: {
           id: true,
-          nickname: true,
+          ...STEAM_DISPLAY_NAME_SELECT,
           elo: true,
           avatarUrl: true,
           avatarPreset: true,
@@ -120,9 +121,10 @@ function serializeMember(
   return {
     id: member.user.id,
     nickname: member.user.nickname,
+    displayName: resolveSteamDisplayName(member.user),
     elo: member.user.elo,
     avatarUrl: resolveUserAvatarUrl(member.user),
-    avatarInitials: getAvatarInitials("", "", member.user.nickname),
+    avatarInitials: getAvatarInitials("", "", resolveSteamDisplayName(member.user)),
     customization: serializeProfileCustomization(member.user),
     slotIndex: member.slotIndex,
     isLeader: isLeaderMember,
@@ -167,6 +169,7 @@ export function serializeParty(
   if (status === "open" && memberCount >= slots) status = "full";
 
   const leaderNickname = party.leader.nickname;
+  const leaderDisplayName = resolveSteamDisplayName(party.leader);
   const avgElo =
     memberCount > 0
       ? Math.round(members.reduce((sum, m) => sum + m.elo, 0) / memberCount)
@@ -174,11 +177,12 @@ export function serializeParty(
 
   return {
     id: party.id,
-    name: party.name?.trim() || `Time ${leaderNickname}`,
+    name: party.name?.trim() || `Time ${leaderDisplayName}`,
     inviteCode: party.inviteCode,
     status,
     leaderUserId: party.leaderUserId,
     leaderNickname,
+    leaderDisplayName,
     memberCount,
     slots,
     avgLevel: eloToLobbyLevel(avgElo),

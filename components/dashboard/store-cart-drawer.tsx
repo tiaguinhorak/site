@@ -13,6 +13,7 @@ import {
   useStoreCart,
 } from "@/lib/hooks/use-store-cart";
 import { toast } from "@/lib/toast";
+import { dispatchInventoryRefresh } from "@/lib/inventory/inventory-refresh-events";
 import { cn } from "@/lib/utils";
 
 type CartLine = {
@@ -144,6 +145,7 @@ export function StoreCartDrawer() {
 
     if (result.data.status === "PAID") {
       toast.success(t("checkoutPaid"));
+      dispatchInventoryRefresh();
       dispatchStoreCartUpdated();
       closeCart();
       void load();
@@ -163,6 +165,7 @@ export function StoreCartDrawer() {
       return;
     }
     toast.success(t("checkoutPaid"));
+    dispatchInventoryRefresh();
     dispatchStoreCartUpdated();
     void load();
   }

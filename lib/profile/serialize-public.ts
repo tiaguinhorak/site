@@ -14,9 +14,11 @@ import {
   topKeyFromCounts,
 } from "@/lib/profile/player-advanced-stats";
 import { getLevelProgress } from "@/lib/progression/xp-curve";
+import { resolveSteamDisplayName } from "@/lib/steam/display-name";
 
 export type PublicPlayerProfile = {
   nickname: string;
+  displayName: string;
   bio: string;
   country: string;
   countryName: string;
@@ -120,6 +122,7 @@ export function userProfileToPublic(user: UserProfile): PublicPlayerProfile {
 
   return {
     nickname: user.nickname,
+    displayName: user.displayName,
     bio: user.bio,
     country: user.country,
     countryName: countryMeta?.name ?? user.country,
@@ -170,6 +173,7 @@ export function serializePublicPlayer(user: User): PublicPlayerProfile {
 
   return {
     nickname: user.nickname,
+    displayName: resolveSteamDisplayName(user),
     bio: user.bio,
     country: user.country,
     countryName: countryMeta?.name ?? user.country,

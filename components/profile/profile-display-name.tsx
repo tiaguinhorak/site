@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 
 type ProfileDisplayNameProps = {
   nickname: string;
+  displayName?: string;
   plan: "free" | "premium" | "elite";
   customization?: PublicProfileCustomization | null;
   className?: string;
@@ -19,6 +20,7 @@ type ProfileDisplayNameProps = {
 
 export function ProfileDisplayName({
   nickname,
+  displayName,
   plan,
   customization,
   className,
@@ -33,6 +35,8 @@ export function ProfileDisplayName({
 
   const adminRainbow = customization?.frameIsRainbow;
   const accentColor = customization?.accentColor;
+
+  const visibleName = displayName ?? nickname;
 
   return (
     <span className={cn("inline-flex flex-wrap items-center gap-2", className)}>
@@ -50,7 +54,7 @@ export function ProfileDisplayName({
               : undefined
         }
       >
-        {nickname}
+        {visibleName}
       </span>
       {shouldShowBadge ? (
         planLabel ? (

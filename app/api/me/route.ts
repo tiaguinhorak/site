@@ -5,8 +5,7 @@ import { serializeUser } from "@/lib/serializers";
 import { jsonErrorKey } from "@/lib/i18n/api-route";
 import { prisma } from "@/lib/prisma";
 import {
-  refreshSteamProfileForUserId,
-  userNeedsSteamProfileRefresh,
+  refreshSteamProfileIfDue,
 } from "@/lib/steam/sync-profiles";
 import { syncStaleSteamProfilesBackground } from "@/lib/steam/sync-profiles-background";
 
@@ -18,9 +17,9 @@ export async function GET(request: NextRequest) {
     return jsonErrorKey(request, 401, "unauthorized");
   }
 
-  if (userNeedsSteamProfileRefresh(user)) {
+  if (user.steamId) {
     try {
-      await refreshSteamProfileForUserId(user.id);
+      await refreshSteamProfileIfDue(user.id);
       user = (await prisma.user.findUnique({ where: { id: user.id } })) ?? user;
     } catch {
       // Mantém dados em cache se a API Steam falhar.

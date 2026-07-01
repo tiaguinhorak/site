@@ -19,6 +19,7 @@ import { cleanupLobbyMembersForClosedRooms } from "@/lib/lobby/reconcile-members
 import { notifyLobbyRooms } from "@/lib/realtime/notify";
 import { LobbyRoomError } from "@/lib/errors/domain";
 import type { Plan } from "@/lib/generated/prisma/client";
+import { resolveSteamDisplayName, STEAM_DISPLAY_NAME_SELECT } from "@/lib/steam/display-name";
 
 export { LobbyRoomError } from "@/lib/errors/domain";
 
@@ -69,7 +70,7 @@ const lobbyInclude = {
   host: {
     select: {
       id: true,
-      nickname: true,
+      ...STEAM_DISPLAY_NAME_SELECT,
       avatarUrl: true,
       avatarPreset: true,
       steamAvatarUrl: true,
@@ -84,11 +85,10 @@ const lobbyInclude = {
       user: {
         select: {
           id: true,
-          nickname: true,
+          ...STEAM_DISPLAY_NAME_SELECT,
           avatarUrl: true,
           avatarPreset: true,
           steamAvatarUrl: true,
-          steamPersonaName: true,
           steamLinkedAt: true,
           elo: true,
           country: true,
@@ -130,6 +130,7 @@ type LobbyWithRelations = NonNullable<
 export type SerializedMember = {
   id: string;
   nickname: string;
+  displayName: string;
   level: number;
   avatarUrl: string | null;
   avatarInitials: string;
@@ -157,6 +158,7 @@ export type SerializedLobbyRoom = {
   status: string;
   hostUserId: string;
   hostNickname: string;
+  hostDisplayName: string;
   settings: LobbyRoomSettings;
   isHost: boolean;
   isMember: boolean;
@@ -172,9 +174,10 @@ function serializeLobbyRoom(
   const members: SerializedMember[] = room.members.map((m) => ({
     id: m.user.id,
     nickname: m.user.nickname,
+    displayName: resolveSteamDisplayName(m.user),
     level: eloToLobbyLevel(m.user.elo),
     avatarUrl: resolveUserAvatarUrl(m.user),
-    avatarInitials: getAvatarInitials("", "", m.user.nickname),
+    avatarInitials: getAvatarInitials("", "", resolveSteamDisplayName(m.user)),
     customization: serializeProfileCustomization(m.user),
     steamVerified: Boolean(m.user.steamLinkedAt),
     slotIndex: m.slotIndex,
@@ -199,6 +202,7 @@ function serializeLobbyRoom(
     status: room.status,
     hostUserId: room.hostUserId,
     hostNickname: room.host.nickname,
+    hostDisplayName: resolveSteamDisplayName(room.host),
     settings: parseSettings(room.settings),
     isHost: viewerUserId === room.hostUserId,
     isMember: viewerUserId

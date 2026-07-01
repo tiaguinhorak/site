@@ -11,6 +11,7 @@ import {
   ensureLegacyAgentCatalogAndLoadouts,
   listEnabledAgentsForPicker,
 } from "@/lib/inventory/agent-catalog-admin";
+import { getUserObtainedAgentDefIndexes } from "@/lib/inventory/user-obtained-economy";
 import { pushPlayerAgentsToGameServer } from "@/lib/inventory/push-agents-to-game-server";
 import { getInventoryPlanLimitsCached } from "@/lib/inventory/plan-limits-cache";
 import { getUserSteamIdCached } from "@/lib/inventory/user-steam-id-cache";
@@ -42,11 +43,15 @@ export async function GET(request: NextRequest) {
     const limit = Number(params.get("limit") ?? "24");
     const teamParam = params.get("team");
     const team = teamParam === "T" || teamParam === "CT" ? teamParam : undefined;
+    const ownedOnly = params.get("ownedOnly") === "1";
+    const ownedDefIndexes = await getUserObtainedAgentDefIndexes(userId);
     const result = await listEnabledAgentsForPicker({
       search,
       page: Number.isFinite(page) ? page : 1,
       limit: Number.isFinite(limit) ? limit : 24,
       team,
+      ownedOnly,
+      ownedDefIndexes,
     });
     return NextResponse.json(result);
   }

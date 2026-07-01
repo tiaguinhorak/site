@@ -26,6 +26,7 @@ export type LobbyRoomView = {
 export type LobbyPlayer = {
   id: string;
   nickname: string;
+  displayName: string;
   level: number;
   avatarUrl: string | null;
   avatarInitials: string;
@@ -46,6 +47,7 @@ export type LobbyRoomEnriched = LobbyRoomView & {
   members: LobbyPlayerSlot[];
   hostUserId?: string;
   hostNickname?: string;
+  hostDisplayName?: string;
   visibility?: "public" | "private";
   hasPassword?: boolean;
   status?: "open" | "full" | "starting" | "in_match" | "closed";

@@ -25,6 +25,7 @@ export type CatalogGridCacheParams = {
   weaponId: string;
   dualTeamOnly: boolean;
   rarityTier: string;
+  ownedOnly: boolean;
 };
 
 export type CatalogGridCacheEntry = {
@@ -52,6 +53,7 @@ function cacheKey(params: CatalogGridCacheParams): string {
     params.weaponId,
     params.dualTeamOnly ? "1" : "0",
     params.rarityTier,
+    params.ownedOnly ? "1" : "0",
   ].join("|");
 }
 
@@ -174,6 +176,32 @@ export function patchCatalogGridCacheEquipState(
   }
 }
 
+/** Marca skins como obtidas em todas as páginas em cache. */
+export function patchCatalogGridCacheOwnedState(catalogSkinIds: string[]): void {
+  if (catalogSkinIds.length === 0) return;
+  const idSet = new Set(catalogSkinIds);
+
+  const patchItems = (items: CachedCatalogSkin[]) =>
+    items.map((item) => (idSet.has(item.id) ? { ...item, owned: true } : item));
+
+  for (const [key, entry] of memory.entries()) {
+    memory.set(key, { ...entry, items: patchItems(entry.items) });
+  }
+
+  if (typeof window === "undefined") return;
+  try {
+    const storage = readStorage();
+    let dirty = false;
+    for (const [key, entry] of Object.entries(storage)) {
+      storage[key] = { ...entry, items: patchItems(entry.items) };
+      dirty = true;
+    }
+    if (dirty) writeStorage(storage);
+  } catch {
+    // ignore
+  }
+}
+
 /** Clear all catalog grid caches (memory + sessionStorage). */
 export function clearAllCatalogGridCache(): void {
   memory.clear();
@@ -197,6 +225,7 @@ export function prefetchCatalogGrid(params: CatalogGridCacheParams): void {
   if (params.weaponId) searchParams.set("weaponId", params.weaponId);
   if (params.dualTeamOnly) searchParams.set("dualTeamOnly", "1");
   if (params.rarityTier !== "all") searchParams.set("rarityTier", params.rarityTier);
+  if (params.ownedOnly) searchParams.set("ownedOnly", "1");
 
   void fetch(`/api/inventory/skins?${searchParams}`, { credentials: "same-origin" })
     .then((res) => (res.ok ? res.json() : null))

@@ -13,6 +13,7 @@ import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { StoreRewardsPreview } from "@/components/dashboard/store-rewards-preview";
 import { dispatchStoreCartOpen, dispatchStoreCartUpdated, useStoreCart } from "@/lib/hooks/use-store-cart";
+import { dispatchInventoryRefresh } from "@/lib/inventory/inventory-refresh-events";
 
 type StoreProductKind = "SKIN" | "PACKAGE" | "CASE" | "AGENT";
 
@@ -485,6 +486,14 @@ export function StoreSection({ shopMode = "brl" }: { shopMode?: "brl" | "coins" 
     toast.success(
       item.productKind === "CASE" ? t("caseOpenedToast") : t("purchaseSuccessToast"),
     );
+    const skinIds = result.data.granted
+      .filter((r) => r.catalogSkinId && !r.alreadyOwned)
+      .map((r) => r.catalogSkinId!);
+    if (skinIds.length > 0) {
+      dispatchInventoryRefresh({ catalogSkinIds: skinIds });
+    } else if (result.data.granted.some((r) => r.kind === "CATALOG_SKIN")) {
+      dispatchInventoryRefresh();
+    }
     loadItems();
     if (currency === "coins") {
       void refresh();

@@ -12,6 +12,18 @@ import {
 
 export { userNeedsSteamProfileRefresh, type SteamProfileSyncResult };
 
+const userRefreshAt = new Map<string, number>();
+const USER_REFRESH_MS = 10 * 60 * 1000;
+
+/** Atualiza perfil Steam do usuário no máximo 1x a cada 10 min (login, dashboard, etc.). */
+export async function refreshSteamProfileIfDue(userId: string): Promise<boolean> {
+  const now = Date.now();
+  const last = userRefreshAt.get(userId) ?? 0;
+  if (now - last < USER_REFRESH_MS) return false;
+  userRefreshAt.set(userId, now);
+  return refreshSteamProfileForUserId(userId);
+}
+
 export async function refreshSteamProfileForUserId(userId: string): Promise<boolean> {
   return refreshSteamProfileForUserIdCore(prisma, userId);
 }

@@ -38,6 +38,7 @@ type ClanRole = "OWNER" | "OFFICER" | "MEMBER";
 type ClanMemberView = {
   userId: string;
   nickname: string;
+  displayName: string;
   country: string;
   avatarUrl: string | null;
   role: ClanRole;
@@ -64,6 +65,7 @@ type ClanJoinRequestView = {
   id: string;
   userId: string;
   nickname: string;
+  displayName: string;
   avatarUrl: string | null;
   country: string;
   level: number;
@@ -606,7 +608,7 @@ function ClanDashboard({
                   <AvatarImage src={req.avatarUrl ?? getDefaultAvatarPresetUrl()} alt="" size={40} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-display text-sm font-semibold text-foreground">{req.nickname}</p>
+                  <p className="font-display text-sm font-semibold text-foreground">{req.displayName}</p>
                   <p className="text-xs text-muted">
                     {getCountryFlag(req.country)} · <EloRankBadgeI18n elo={req.elo} size="sm" />
                   </p>
@@ -686,7 +688,7 @@ function ClanDashboard({
                             : "text-muted",
                       )}
                     />
-                    {member.nickname}
+                    {member.displayName}
                   </Link>
                   <p className="text-xs text-muted">
                     {getCountryFlag(member.country)} {t("memberLevel", { level: member.level })} ·{" "}

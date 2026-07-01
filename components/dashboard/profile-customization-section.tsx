@@ -239,6 +239,7 @@ export function ProfileCustomizationSection() {
             <div>
               <ProfileDisplayName
                 nickname={user.nickname}
+                displayName={user.displayName}
                 plan={user.plan}
                 customization={display}
                 nameClassName="font-display text-2xl font-bold text-foreground"

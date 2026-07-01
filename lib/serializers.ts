@@ -1,6 +1,7 @@
 import type { User, Plan } from "@/lib/generated/prisma/client";
 import { getAvatarInitials } from "@/lib/profile";
 import { resolveUserAvatarUrl } from "@/lib/profile/avatar";
+import { resolveSteamDisplayName } from "@/lib/steam/display-name";
 import { getLevelProgress } from "@/lib/progression/xp-curve";
 import {
   serializeProfileCustomization,
@@ -10,6 +11,7 @@ import {
 export type UserProfile = {
   id: string;
   nickname: string;
+  displayName: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -88,6 +90,7 @@ export function serializeUser(user: User): UserProfile {
   return {
     id: user.id,
     nickname: user.nickname,
+    displayName: resolveSteamDisplayName(user),
     firstName: user.firstName,
     lastName: user.lastName,
     email: user.email ?? "",

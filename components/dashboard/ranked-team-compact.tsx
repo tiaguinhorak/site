@@ -63,7 +63,7 @@ function CompactSlot({
           large ? "max-w-[5.5rem] text-xs" : "max-w-[4.5rem] text-[10px]",
         )}
       >
-        {player ? player.nickname : t("slotEmpty")}
+        {player ? player.displayName : t("slotEmpty")}
       </p>
       {player?.canKick && onKick && (
         <button
@@ -71,7 +71,7 @@ function CompactSlot({
           disabled={kicking}
           onClick={() => onKick(player.id)}
           className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border border-rose-400/40 bg-rose-500/25 text-rose-300"
-          aria-label={t("removeAria", { nickname: player.nickname })}
+          aria-label={t("removeAria", { nickname: player.displayName })}
         >
           {kicking ? (
             <Loader2 className="h-2.5 w-2.5 motion-safe-spin" />

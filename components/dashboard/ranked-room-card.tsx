@@ -27,7 +27,7 @@ function MemberAvatar({
   emptyLabel: string;
 }) {
   return (
-    <div className="relative h-10 w-10" title={player?.nickname ?? emptyLabel}>
+    <div className="relative h-10 w-10" title={player?.displayName ?? emptyLabel}>
       {player ? (
         <UserProfileAvatar
           avatarUrl={player.avatarUrl}

@@ -3,6 +3,7 @@ import type { PublicProfileCustomization } from "@/lib/profile/serialize-customi
 export type RankedPartyMemberView = {
   id: string;
   nickname: string;
+  displayName: string;
   elo: number;
   avatarUrl: string | null;
   avatarInitials: string;
@@ -20,6 +21,7 @@ export type RankedPartyView = {
   status: "open" | "full" | "in_match" | "disbanded";
   leaderUserId: string;
   leaderNickname: string;
+  leaderDisplayName: string;
   memberCount: number;
   slots: number;
   avgLevel: number;
@@ -93,6 +95,7 @@ export type RankedMatchSessionView = {
   acceptances: {
     userId: string;
     nickname: string;
+    displayName: string;
     accepted: boolean;
     isYou: boolean;
   }[];

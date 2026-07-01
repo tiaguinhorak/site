@@ -98,7 +98,8 @@ function buildLobbyPlayer(
 
   return {
     id: dbUser?.id ?? steamId,
-    nickname: personaName,
+    nickname: dbUser?.nickname ?? personaName,
+    displayName: personaName,
     level: eloToLevel(elo),
     avatarUrl,
     avatarInitials: getAvatarInitials("", "", personaName),

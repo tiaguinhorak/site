@@ -25,7 +25,7 @@ function TeamBlock({
       <ul className="space-y-1">
         {members.map((m) => (
           <li key={m.id} className="text-sm">
-            {m.nickname} · {m.elo} ELO
+            {m.displayName} · {m.elo} ELO
           </li>
         ))}
       </ul>
@@ -84,7 +84,7 @@ export function RankedMatchFlow() {
                   ) : (
                     <Loader2 className="h-4 w-4 motion-safe-spin text-muted" />
                   )}
-                  {a.nickname}
+                  {a.displayName}
                   {a.isYou && ` ${t("you")}`}
                 </li>
               ))}

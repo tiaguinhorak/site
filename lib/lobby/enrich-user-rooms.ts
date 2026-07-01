@@ -29,6 +29,7 @@ export function enrichUserLobbyRoom(room: SerializedLobbyRoom): LobbyRoomEnriche
     return {
       id: member.id,
       nickname: member.nickname,
+      displayName: member.displayName,
       level: member.level,
       avatarUrl: member.avatarUrl,
       avatarInitials: member.avatarInitials,
@@ -66,6 +67,7 @@ export function enrichUserLobbyRoom(room: SerializedLobbyRoom): LobbyRoomEnriche
     members: slots,
     hostUserId: room.hostUserId,
     hostNickname: room.hostNickname,
+    hostDisplayName: room.hostDisplayName,
     visibility: room.visibility as "public" | "private",
     hasPassword: room.hasPassword,
     status: room.status as LobbyRoomEnriched["status"],

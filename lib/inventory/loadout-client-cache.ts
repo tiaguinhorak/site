@@ -66,3 +66,13 @@ export function patchLoadoutClientCache(items: EquippedLoadoutEntry[]): void {
   };
   writeStorage(memory.data, memory.at);
 }
+
+export function clearLoadoutClientCache(): void {
+  memory = null;
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}

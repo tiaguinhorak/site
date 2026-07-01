@@ -82,7 +82,7 @@ function Scoreboard({
         <tbody>
           {rows.map((p) => (
             <tr key={p.steamId} className="border-t border-white/5">
-              <td className="px-4 py-2 text-left font-medium text-foreground">{p.nickname}</td>
+              <td className="px-4 py-2 text-left font-medium text-foreground">{p.displayName}</td>
               <td className="px-2 py-2 text-center text-foreground">{p.kills}</td>
               <td className="px-2 py-2 text-center text-muted">{p.deaths}</td>
               <td className="px-2 py-2 text-center text-muted">{p.assists}</td>
@@ -369,7 +369,7 @@ export function MatchDetailView({ match }: MatchDetailViewProps) {
                   <Icon className="h-4 w-4 text-primary" />
                   <div>
                     <p className="text-xs font-semibold text-foreground">
-                      {t(`highlightType.${h.type}` as never)} · {h.nickname}
+                      {t(`highlightType.${h.type}` as never)} · {h.displayName}
                     </p>
                     {h.detail ? <p className="text-[10px] text-muted">{h.detail}</p> : null}
                   </div>

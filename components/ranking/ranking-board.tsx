@@ -180,7 +180,7 @@ export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoar
                 <p className="font-display text-2xl font-bold text-foreground">
                   #{data.you.rank}{" "}
                   <span className="text-base font-semibold text-muted">
-                    · {data.you.nickname}
+                    · {data.you.displayName}
                   </span>
                 </p>
               </div>
@@ -408,6 +408,7 @@ function PodiumCard({
           >
             <ProfileDisplayName
               nickname={player.nickname}
+              displayName={player.displayName}
               plan={player.plan}
               customization={player.customization}
               nameClassName={cn(
@@ -478,6 +479,7 @@ function LeaderboardRow({
             >
               <ProfileDisplayName
                 nickname={player.nickname}
+                displayName={player.displayName}
                 plan={player.plan}
                 customization={player.customization}
                 nameClassName="font-display text-sm font-semibold"

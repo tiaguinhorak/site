@@ -184,7 +184,7 @@ export async function getLeaderboard() {
       const players = await fetchLeaderboardTop(50);
       return players.map((p) => ({
         rank: p.rank,
-        name: p.nickname,
+        name: p.displayName,
         kd: p.kd,
         points: p.points,
       }));

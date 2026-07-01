@@ -8,6 +8,7 @@ import {
   type PublicProfileCustomization,
 } from "@/lib/profile/serialize-customization";
 import { fetchSteamFriendIds } from "@/lib/steam/friends";
+import { resolveSteamDisplayName, STEAM_DISPLAY_NAME_SELECT } from "@/lib/steam/display-name";
 
 export class FriendError extends Error {
   status: number;
@@ -19,7 +20,7 @@ export class FriendError extends Error {
 
 const FRIEND_USER_SELECT = {
   id: true,
-  nickname: true,
+  ...STEAM_DISPLAY_NAME_SELECT,
   country: true,
   avatarUrl: true,
   avatarPreset: true,
@@ -49,6 +50,7 @@ const FRIEND_USER_SELECT = {
 export type FriendUser = {
   id: string;
   nickname: string;
+  displayName: string;
   country: string;
   avatarUrl: string | null;
   plan: string;
@@ -77,6 +79,7 @@ function serializeFriendUser(user: FriendUserRow): FriendUser {
   return {
     id: user.id,
     nickname: user.nickname,
+    displayName: resolveSteamDisplayName(user),
     country: user.country,
     avatarUrl: resolveUserAvatarUrl(user),
     plan: user.plan.toLowerCase(),

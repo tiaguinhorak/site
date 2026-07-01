@@ -188,7 +188,7 @@ export function LobbyRoomDetail({ roomId }: { roomId: string }) {
               )}
             </div>
             <p className="mt-2 text-sm text-muted">
-              {room.modeName} · {room.map} · {room.ping}ms · {t("hostLabel")}: {room.hostNickname}
+              {room.modeName} · {room.map} · {room.ping}ms · {t("hostLabel")}: {room.hostDisplayName ?? room.hostNickname}
             </p>
             <p className="mt-1 font-mono text-sm">
               {t("playersCount", { players: room.players, slots: room.slots })}
@@ -293,7 +293,7 @@ export function LobbyRoomDetail({ roomId }: { roomId: string }) {
                       size="sm"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium">{member.nickname}</p>
+                      <p className="truncate font-medium">{member.displayName}</p>
                       <p className="text-xs text-muted">{t("levelLabel", { level: member.level })}</p>
                     </div>
                     {member.id === room.hostUserId && (

@@ -13,17 +13,22 @@ import { secureApi } from "@/lib/api/client";
 import { notifyAuthSessionChanged } from "@/lib/auth/auth-events";
 import { useUser } from "@/lib/hooks/use-user";
 import { toast } from "@/lib/toast";
-import {
-  registerSchema,
-  formatZodErrors,
-  firstZodError,
-} from "@/lib/security/schemas";
 import { sanitizeNickname } from "@/lib/security/sanitize";
+import {
+  useValidationSchemas,
+  useZodFieldHelpers,
+} from "@/lib/hooks/use-validation-schemas";
+
+function normalizeNicknameInput(value: string): string {
+  return value.toUpperCase().replace(/[^A-Z0-9_]/g, "").slice(0, 24);
+}
 
 export function RegisterForm() {
   const router = useRouter();
   const { refresh } = useUser();
   const t = useTranslations("authForm");
+  const { registerSchema } = useValidationSchemas();
+  const { formatZodErrors, firstZodError } = useZodFieldHelpers();
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [nickname, setNickname] = useState("");
@@ -32,12 +37,14 @@ export function RegisterForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [honeypot, setHoneypot] = useState("");
 
+  const nicknameSanitized = sanitizeNickname(nickname);
+
   async function submitRegister() {
     setFieldErrors({});
 
     const parsed = registerSchema.safeParse({
-      nickname,
-      email,
+      nickname: nicknameSanitized,
+      email: email.trim(),
       password,
       confirmPassword,
       website: honeypot,
@@ -90,22 +97,30 @@ export function RegisterForm() {
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
-          submitRegister();
+          void submitRegister();
         }}
         noValidate
       >
         <HoneypotField value={honeypot} onChange={setHoneypot} />
 
-        <Input
-          label={t("nickname")}
-          placeholder={t("nicknamePlaceholder")}
-          autoComplete="username"
-          maxLength={24}
-          value={nickname}
-          onChange={(e) => setNickname(sanitizeNickname(e.target.value))}
-          error={fieldErrors.nickname}
-          icon={<User className="h-4.5 w-4.5" />}
-        />
+        <div>
+          <Input
+            label={t("nickname")}
+            placeholder={t("nicknamePlaceholder")}
+            autoComplete="username"
+            maxLength={24}
+            value={nickname}
+            onChange={(e) => setNickname(normalizeNicknameInput(e.target.value))}
+            error={fieldErrors.nickname}
+            icon={<User className="h-4.5 w-4.5" />}
+          />
+          <p className="mt-1.5 text-xs text-muted">{t("nicknameHint")}</p>
+          {nickname.length > 0 && nicknameSanitized.length < 3 && (
+            <p className="mt-1 text-xs text-amber-400">
+              {t("nicknameMinHint", { count: nicknameSanitized.length })}
+            </p>
+          )}
+        </div>
         <Input
           label={t("email")}
           type="email"
@@ -117,17 +132,20 @@ export function RegisterForm() {
           error={fieldErrors.email}
           icon={<Mail className="h-4.5 w-4.5" />}
         />
-        <Input
-          label={t("password")}
-          type="password"
-          placeholder={t("newPasswordPlaceholder")}
-          autoComplete="new-password"
-          maxLength={128}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          error={fieldErrors.password}
-          icon={<Lock className="h-4.5 w-4.5" />}
-        />
+        <div>
+          <Input
+            label={t("password")}
+            type="password"
+            placeholder={t("newPasswordPlaceholder")}
+            autoComplete="new-password"
+            maxLength={128}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            error={fieldErrors.password}
+            icon={<Lock className="h-4.5 w-4.5" />}
+          />
+          <p className="mt-1.5 text-xs text-muted">{t("passwordHint")}</p>
+        </div>
         <Input
           label={t("confirmPassword")}
           type="password"

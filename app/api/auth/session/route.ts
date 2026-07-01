@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { serializeUser } from "@/lib/serializers";
 import {
   refreshSteamProfileForUserId,
-  userNeedsSteamProfileRefresh,
+  refreshSteamProfileIfDue,
 } from "@/lib/steam/sync-profiles";
 import { syncStaleSteamProfilesBackground } from "@/lib/steam/sync-profiles-background";
 
@@ -28,9 +28,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ authenticated: false });
   }
 
-  if (userNeedsSteamProfileRefresh(user)) {
+  if (user.steamId) {
     try {
-      await refreshSteamProfileForUserId(user.id);
+      await refreshSteamProfileIfDue(user.id);
       user = (await prisma.user.findUnique({ where: { id: user.id } })) ?? user;
     } catch {
       // Mantém cache local se a API Steam falhar momentaneamente.

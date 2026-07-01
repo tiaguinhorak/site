@@ -17,7 +17,7 @@ export function DashboardWelcome() {
       className="mb-8"
     >
       <h2 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
-        {t("greeting", { name: user.nickname })}
+        {t("greeting", { name: user.displayName })}
       </h2>
       <p className="mt-1 text-sm text-muted">
         {t("subtitle", { rank: user.rank, elo: user.elo })}

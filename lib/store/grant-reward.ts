@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { CsgoApiError } from "@/lib/csgo-api/http";
 import { ensureInventoryItemForCatalogSkin } from "@/lib/inventory/inventory-ownership";
 import { notifyInventorySkinGranted } from "@/lib/inventory/inventory-notifications";
+import { invalidateUserCatalogAccess } from "@/lib/inventory/user-catalog-access-cache";
 import { savePlayerAgentsForUser } from "@/lib/inventory/player-agents";
 import { pushPlayerAgentsToGameServer } from "@/lib/inventory/push-agents-to-game-server";
 import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
@@ -71,6 +72,7 @@ export async function grantCatalogSkinReward(
     if (options?.notify !== false) {
       await notifyInventorySkinGranted(userId, skinName, catalogSkinId);
     }
+    invalidateUserCatalogAccess(userId);
   }
 
   return {

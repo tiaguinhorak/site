@@ -159,15 +159,21 @@ export async function listAgentCatalogAdmin(options: {
   };
 }
 
+export type AgentPickerItem = AgentCatalogAdminRow & { owned: boolean };
+
 export async function listEnabledAgentsForPicker(options: {
   search?: string;
   page?: number;
   limit?: number;
   team?: "T" | "CT";
+  ownedOnly?: boolean;
+  ownedDefIndexes?: Set<number>;
 }) {
   const page = Math.max(1, options.page ?? 1);
   const limit = Math.min(48, Math.max(1, options.limit ?? 24));
   const search = options.search?.trim() ?? "";
+  const ownedOnly = options.ownedOnly ?? false;
+  const ownedDefIndexes = options.ownedDefIndexes ?? new Set<number>();
 
   const where = {
     enabled: true,
@@ -180,9 +186,14 @@ export async function listEnabledAgentsForPicker(options: {
           ],
         }
       : {}),
+    ...(ownedOnly && ownedDefIndexes.size > 0
+      ? { defIndex: { in: [...ownedDefIndexes] } }
+      : ownedOnly
+        ? { defIndex: { in: [-1] } }
+        : {}),
   };
 
-  const [items, total] = await Promise.all([
+  const [rows, total] = await Promise.all([
     prisma.csgoAgentCatalog.findMany({
       where,
       orderBy: { name: "asc" },
@@ -192,8 +203,13 @@ export async function listEnabledAgentsForPicker(options: {
     prisma.csgoAgentCatalog.count({ where }),
   ]);
 
+  const items: AgentPickerItem[] = rows.map((row) => ({
+    ...serializeRow(row),
+    owned: ownedDefIndexes.has(row.defIndex),
+  }));
+
   return {
-    items: items.map(serializeRow),
+    items,
     page,
     limit,
     total,

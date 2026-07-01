@@ -56,6 +56,7 @@ export async function getCatalogSkinsForUser(
     team?: LoadoutTeam;
     dualTeamOnly?: boolean;
     rarityTier?: RarityKey;
+    ownedOnly?: boolean;
   },
 ): Promise<{
   items: CatalogSkinRow[];
@@ -75,6 +76,7 @@ export async function getCatalogSkinsForUser(
   const team = options.team;
   const dualTeamOnly = options.dualTeamOnly ?? false;
   const rarityTier = options.rarityTier;
+  const ownedOnly = options.ownedOnly ?? false;
 
   await ensureCatalogReady();
 
@@ -106,6 +108,31 @@ export async function getCatalogSkinsForUser(
   }
   if (rarityTier) {
     andClauses.push(prismaRarityTierWhere(rarityTier));
+  }
+
+  const access = await getUserCatalogAccess(userId);
+  const allSkins = access.allSkins;
+  const ownedCatalogIds = access.ownedIds;
+
+  if (ownedOnly && !allSkins) {
+    const ownedList = ownedCatalogIds ? [...ownedCatalogIds] : [];
+    if (ownedList.length === 0) {
+      const weaponOptions =
+        page === 1
+          ? await getCatalogWeaponOptions(category).catch(() => [])
+          : [];
+      return {
+        items: [],
+        page,
+        limit,
+        total: 0,
+        totalPages: 1,
+        catalogTotal: await getCatalogTotalCached(),
+        weaponOptions,
+        availableRarityTiers: await getCatalogRarityTiers(),
+      };
+    }
+    andClauses.push({ id: { in: ownedList } });
   }
 
   const where = {
@@ -150,9 +177,6 @@ export async function getCatalogSkinsForUser(
   const equippedBySkin = new Map(
     equippedRows.map((row) => [row.skinId, { equippedT: row.equippedT, equippedCT: row.equippedCT }]),
   );
-  const access = await getUserCatalogAccess(userId);
-  const allSkins = access.allSkins;
-  const ownedCatalogIds = access.ownedIds;
 
   const items: CatalogSkinRow[] = rows.map((row) => {
     const flags = equippedBySkin.get(row.id);

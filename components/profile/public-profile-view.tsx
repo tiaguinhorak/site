@@ -69,6 +69,7 @@ export function PublicProfileView({
               <div className="flex flex-wrap items-center gap-2">
                 <ProfileDisplayName
                   nickname={player.nickname}
+                  displayName={player.displayName}
                   plan={player.plan}
                   customization={custom}
                   planLabel={planLabel}
