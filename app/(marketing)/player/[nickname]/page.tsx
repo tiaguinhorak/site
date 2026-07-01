@@ -14,6 +14,7 @@ import {
   refreshSteamProfileForUserId,
   userNeedsSteamProfileRefresh,
 } from "@/lib/steam/sync-profiles";
+import { syncStaleSteamProfilesBackground } from "@/lib/steam/sync-profiles-background";
 
 type PageProps = {
   params: Promise<{ nickname: string }>;
@@ -33,6 +34,8 @@ export async function generateMetadata({ params }: PageProps) {
 export const dynamic = "force-dynamic";
 
 export default async function PlayerProfilePage({ params }: PageProps) {
+  syncStaleSteamProfilesBackground();
+
   const { nickname } = await params;
   const normalized = nickname.trim().toUpperCase();
 

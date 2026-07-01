@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { probeOutboundUrl } from "@/lib/steam/fetch-with-timeout";
 import { checkStorageHealth, getStorageConfig } from "@/lib/storage";
 import { hasSteamApiKey } from "@/lib/steam/api-key";
+import { syncStaleSteamProfilesBackground } from "@/lib/steam/sync-profiles-background";
 
 function appUrlWarnings(appUrl: string): string[] {
   const warnings: string[] = [];
@@ -26,6 +27,8 @@ function appUrlWarnings(appUrl: string): string[] {
 }
 
 export async function GET() {
+  syncStaleSteamProfilesBackground();
+
   const sessionSecret = process.env.SESSION_SECRET?.trim() ?? "";
   const appUrl = process.env.APP_URL?.trim() ?? "";
   const databaseUrl = process.env.DATABASE_URL?.trim() ?? "";

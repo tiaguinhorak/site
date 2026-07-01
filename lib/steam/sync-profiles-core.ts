@@ -1,4 +1,5 @@
 import type { PrismaClient, User } from "@/lib/generated/prisma/client";
+import type { Prisma } from "@/lib/generated/prisma/client";
 import { fetchSteamPlayerSummariesWithMeta } from "@/lib/steam/profile";
 import { isSteamId64, normalizeSteamId64 } from "@/lib/steam/steam-id";
 import { buildUserSteamUpdate } from "@/lib/steam/sync-user";
@@ -28,7 +29,8 @@ type SteamUserRow = Pick<
   | "country"
 >;
 
-const FALLBACK_PERSONA = /^Player_\d{4}$/;
+/** Persona gerada quando a API Steam falhou no login antigo. */
+export const STEAM_FALLBACK_PERSONA = /^Player_\d{4}$/i;
 
 function resolveApiSteamId(steamId: string | null | undefined): string | null {
   if (!steamId?.trim()) return null;
@@ -36,13 +38,17 @@ function resolveApiSteamId(steamId: string | null | undefined): string | null {
   return normalizeSteamId64(trimmed) ?? (isSteamId64(trimmed) ? trimmed : null);
 }
 
+export function isStaleSteamPersonaName(name: string | null | undefined): boolean {
+  if (!name?.trim()) return true;
+  return STEAM_FALLBACK_PERSONA.test(name.trim());
+}
+
 export function userNeedsSteamProfileRefresh(
   user: Pick<User, "steamId" | "steamPersonaName" | "steamAvatarUrl">,
 ): boolean {
   if (!user.steamId) return false;
-  if (!user.steamPersonaName || !user.steamAvatarUrl) return true;
-  if (FALLBACK_PERSONA.test(user.steamPersonaName)) return true;
-  return false;
+  if (!user.steamAvatarUrl) return true;
+  return isStaleSteamPersonaName(user.steamPersonaName);
 }
 
 export async function refreshSteamProfileForUserId(
@@ -66,7 +72,7 @@ export async function refreshSteamProfileForUser(
 
   const { profiles } = await fetchSteamPlayerSummariesWithMeta([steamId]);
   const profile = profiles.get(steamId) ?? (user.steamId ? profiles.get(user.steamId) : undefined);
-  if (!profile) return false;
+  if (!profile?.personaName && !profile?.avatarUrl) return false;
 
   await prisma.user.update({
     where: { id: user.id },
@@ -84,6 +90,32 @@ export type SteamProfileSyncResult = {
   apiHttpStatus: number | null;
   apiError: string | null;
 };
+
+function staleSteamWhere(): Prisma.UserWhereInput {
+  return {
+    steamId: { not: null },
+    OR: [
+      { steamPersonaName: null },
+      { steamAvatarUrl: null },
+      { steamPersonaName: { startsWith: "Player_", mode: "insensitive" } },
+    ],
+  };
+}
+
+/** Atualiza só contas com nome/avatar Steam incompleto ou fallback Player_XXXX. */
+export async function refreshStaleSteamProfiles(
+  prisma: PrismaClient,
+  limit = 50,
+): Promise<SteamProfileSyncResult> {
+  const users = await prisma.user.findMany({
+    where: staleSteamWhere(),
+    select: STEAM_USER_SELECT,
+    orderBy: { updatedAt: "asc" },
+    take: limit,
+  });
+
+  return applySteamProfilesToUsers(prisma, users);
+}
 
 export async function refreshAllLinkedSteamProfiles(
   prisma: PrismaClient,
@@ -103,6 +135,13 @@ export async function refreshAllLinkedSteamProfiles(
     take: limit,
   });
 
+  return applySteamProfilesToUsers(prisma, users);
+}
+
+async function applySteamProfilesToUsers(
+  prisma: PrismaClient,
+  users: SteamUserRow[],
+): Promise<SteamProfileSyncResult> {
   const result: SteamProfileSyncResult = {
     total: users.length,
     updated: 0,
@@ -146,7 +185,7 @@ export async function refreshAllLinkedSteamProfiles(
     const profile =
       profiles.get(user.apiSteamId) ??
       (user.steamId ? profiles.get(user.steamId) : undefined);
-    if (!profile) {
+    if (!profile?.personaName && !profile?.avatarUrl) {
       result.failed += 1;
       continue;
     }

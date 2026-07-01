@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import {
   refreshAllLinkedSteamProfiles as refreshAllLinkedSteamProfilesCore,
+  refreshStaleSteamProfiles as refreshStaleSteamProfilesCore,
   refreshSteamProfileForUser as refreshSteamProfileForUserCore,
   refreshSteamProfileForUserId as refreshSteamProfileForUserIdCore,
   userNeedsSteamProfileRefresh,
@@ -19,6 +20,10 @@ export async function refreshSteamProfileForUser(
   user: Parameters<typeof refreshSteamProfileForUserCore>[1],
 ): Promise<boolean> {
   return refreshSteamProfileForUserCore(prisma, user);
+}
+
+export async function refreshStaleSteamProfiles(limit = 50): Promise<SteamProfileSyncResult> {
+  return refreshStaleSteamProfilesCore(prisma, limit);
 }
 
 export async function refreshAllLinkedSteamProfiles(options?: {

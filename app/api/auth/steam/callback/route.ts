@@ -19,11 +19,13 @@ import { createSessionToken, applySessionCookie } from "@/lib/security/session";
 import { isUserBanned } from "@/lib/admin/punishments";
 import { onSteamLinked } from "@/lib/anti-smurf/service";
 import { recordAccountFingerprint } from "@/lib/anti-smurf/fingerprint";
+import { refreshSteamProfileForUserId } from "@/lib/steam/sync-profiles";
+import { syncStaleSteamProfilesBackground } from "@/lib/steam/sync-profiles-background";
 
-function fallbackSteamProfile(steamId: string): SteamProfileData {
+function minimalSteamProfile(steamId: string): SteamProfileData {
   return {
     steamId,
-    personaName: `Player_${steamId.slice(-4)}`,
+    personaName: "",
     avatarUrl: null,
     profileUrl: `https://steamcommunity.com/profiles/${steamId}`,
     realName: null,
@@ -50,6 +52,8 @@ export async function GET(request: NextRequest) {
 }
 
 async function handleSteamCallback(request: NextRequest) {
+  syncStaleSteamProfilesBackground();
+
   const mode = request.nextUrl.searchParams.get("mode") ?? "login";
   const params = request.nextUrl.searchParams;
 
@@ -60,8 +64,8 @@ async function handleSteamCallback(request: NextRequest) {
     );
   }
 
-  const steamProfile =
-    (await fetchSteamPlayerSummary(steamId)) ?? fallbackSteamProfile(steamId);
+  const fetched = await fetchSteamPlayerSummary(steamId);
+  const steamProfile = fetched ?? minimalSteamProfile(steamId);
 
   if (mode === "switch") {
     const userId = await getSessionUserId(request);
@@ -87,7 +91,7 @@ async function handleSteamCallback(request: NextRequest) {
     }
 
     const nickname = await resolveSteamNickname(
-      steamProfile.personaName,
+      steamProfile.personaName || `steam_${steamId.slice(-4)}`,
       steamId,
       userId,
     );
@@ -99,6 +103,8 @@ async function handleSteamCallback(request: NextRequest) {
       where: { id: userId },
       data: steamUpdate,
     });
+
+    if (!fetched) void refreshSteamProfileForUserId(userId);
 
     const token = createSessionToken(currentUser.id, {
       profileComplete: false,
@@ -134,6 +140,7 @@ async function handleSteamCallback(request: NextRequest) {
       where: { id: userId },
       data: buildUserSteamUpdate(currentUser, steamProfile),
     });
+    if (!fetched) void refreshSteamProfileForUserId(userId);
     void onSteamLinked(userId, steamProfile.accountCreatedAt);
     void recordAccountFingerprint(userId, request);
 
@@ -146,19 +153,20 @@ async function handleSteamCallback(request: NextRequest) {
 
   if (!user) {
     const nickname = await resolveSteamNickname(
-      steamProfile.personaName,
+      steamProfile.personaName || `steam_${steamId.slice(-4)}`,
       steamId,
     );
 
     user = await prisma.user.create({
       data: buildUserSteamCreate(steamProfile, nickname),
     });
+    if (!fetched) void refreshSteamProfileForUserId(user.id);
     void onSteamLinked(user.id, steamProfile.accountCreatedAt);
     void recordAccountFingerprint(user.id, request);
   } else {
     const steamUpdate = buildUserSteamUpdate(user, steamProfile);
     const syncedNick = await syncNicknameFromSteam(
-      steamProfile.personaName,
+      steamProfile.personaName || user.nickname,
       steamId,
       user.id,
       user.nickname,
@@ -170,6 +178,7 @@ async function handleSteamCallback(request: NextRequest) {
       where: { id: user.id },
       data: steamUpdate,
     });
+    if (!fetched) void refreshSteamProfileForUserId(user.id);
     void onSteamLinked(user.id, steamProfile.accountCreatedAt);
     void recordAccountFingerprint(user.id, request);
 

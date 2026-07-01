@@ -10,6 +10,7 @@ import type {
   RankedMatchHistoryEntry,
 } from "@/lib/leaderboard/types";
 import { LEADERBOARD_PAGE_SIZE } from "@/lib/leaderboard/types";
+import { syncStaleSteamProfilesBackground } from "@/lib/steam/sync-profiles-background";
 
 export type { LeaderboardPageResult, LeaderboardPlayer, LeaderboardSort };
 
@@ -168,6 +169,8 @@ export async function fetchLeaderboardPage(options: {
   sort?: LeaderboardSort;
   userId?: string | null;
 }): Promise<LeaderboardPageResult> {
+  syncStaleSteamProfilesBackground();
+
   const page = Math.max(1, options.page ?? 1);
   const limit = Math.min(50, Math.max(10, options.limit ?? LEADERBOARD_PAGE_SIZE));
   const sort = options.sort ?? "points";

@@ -22,6 +22,14 @@ export function mapSteamCountry(code: string | null): string | null {
   return STEAM_COUNTRY_MAP[upper] ?? "BR";
 }
 
+const FALLBACK_PERSONA = /^Player_\d{4}$/i;
+
+function validSteamPersona(name: string): string | null {
+  const trimmed = name.trim();
+  if (!trimmed || FALLBACK_PERSONA.test(trimmed)) return null;
+  return trimmed;
+}
+
 export function isSteamAvatarUrl(url: string | null | undefined): boolean {
   if (!url) return false;
   return (
@@ -63,11 +71,13 @@ export function buildUserSteamUpdate(
 ): Prisma.UserUpdateInput {
   const update: Prisma.UserUpdateInput = {
     steamId: steam.steamId,
-    steamPersonaName: steam.personaName,
-    steamAvatarUrl: steam.avatarUrl,
     steamProfileUrl: steam.profileUrl,
     steamCountryCode: steam.countryCode,
   };
+
+  const persona = validSteamPersona(steam.personaName);
+  if (persona) update.steamPersonaName = persona;
+  if (steam.avatarUrl) update.steamAvatarUrl = steam.avatarUrl;
 
   if (!user?.steamId) {
     update.steamLinkedAt = new Date();
@@ -81,7 +91,7 @@ export function buildUserSteamUpdate(
     update.avatarUrl = steam.avatarUrl;
   }
 
-  const displayName = steam.realName?.trim() || steam.personaName.trim();
+  const displayName = steam.realName?.trim() || persona || "";
   if (user && !user.firstName.trim() && displayName) {
     const { firstName, lastName } = splitPersonName(displayName);
     if (firstName) update.firstName = firstName;
@@ -102,7 +112,7 @@ export function buildUserSteamCreate(
 ): Prisma.UserCreateInput {
   return {
     steamId: steam.steamId,
-    steamPersonaName: steam.personaName,
+    steamPersonaName: validSteamPersona(steam.personaName),
     steamAvatarUrl: steam.avatarUrl,
     steamProfileUrl: steam.profileUrl,
     steamCountryCode: steam.countryCode,

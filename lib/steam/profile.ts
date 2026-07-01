@@ -24,12 +24,16 @@ export type SteamSummaryFetchMeta = {
 
 const STEAM_SUMMARY_BATCH_SIZE = 100;
 const PROBE_STEAM_ID = "76561197960287930";
+const FETCH_RETRIES = 3;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function mapSteamPlayer(player: SteamPlayerSummary): SteamProfileData {
   return {
     steamId: player.steamid,
-    personaName:
-      player.personaname?.trim() || `Player_${player.steamid.slice(-4)}`,
+    personaName: player.personaname?.trim() ?? "",
     avatarUrl: player.avatarfull || player.avatarmedium || player.avatar || null,
     profileUrl: player.profileurl || null,
     realName: player.realname?.trim() || null,
@@ -137,15 +141,7 @@ export async function probeSteamPlayerSummariesApi(): Promise<{
   };
 }
 
-export async function fetchSteamPlayerSummary(
-  steamId: string,
-): Promise<SteamProfileData | null> {
-  const normalized = normalizeSteamId64(steamId) ?? steamId;
-  const map = await fetchSteamPlayerSummaries([normalized]);
-  return map.get(normalized) ?? map.get(steamId) ?? null;
-}
-
-export async function fetchSteamPlayerSummaries(
+async function fetchSteamPlayerSummariesOnce(
   steamIds: string[],
 ): Promise<Map<string, SteamProfileData>> {
   const apiKey = getSteamApiKey();
@@ -172,6 +168,32 @@ export async function fetchSteamPlayerSummaries(
   }
 
   return result;
+}
+
+export async function fetchSteamPlayerSummary(
+  steamId: string,
+): Promise<SteamProfileData | null> {
+  const normalized = normalizeSteamId64(steamId) ?? steamId;
+
+  for (let attempt = 0; attempt < FETCH_RETRIES; attempt += 1) {
+    const map = await fetchSteamPlayerSummariesOnce([normalized]);
+    const profile = map.get(normalized) ?? map.get(steamId);
+    if (profile?.personaName || profile?.avatarUrl) {
+      return profile;
+    }
+    if (attempt < FETCH_RETRIES - 1) {
+      await sleep(400 * (attempt + 1));
+    }
+  }
+
+  const map = await fetchSteamPlayerSummariesOnce([normalized]);
+  return map.get(normalized) ?? map.get(steamId) ?? null;
+}
+
+export async function fetchSteamPlayerSummaries(
+  steamIds: string[],
+): Promise<Map<string, SteamProfileData>> {
+  return fetchSteamPlayerSummariesOnce(steamIds);
 }
 
 export async function fetchSteamPlayerSummariesWithMeta(

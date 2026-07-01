@@ -8,8 +8,11 @@ import {
   refreshSteamProfileForUserId,
   userNeedsSteamProfileRefresh,
 } from "@/lib/steam/sync-profiles";
+import { syncStaleSteamProfilesBackground } from "@/lib/steam/sync-profiles-background";
 
 export async function GET(request: NextRequest) {
+  syncStaleSteamProfilesBackground();
+
   let user = await getSessionUser(request);
   if (!user) {
     return jsonErrorKey(request, 401, "unauthorized");
