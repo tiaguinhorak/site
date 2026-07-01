@@ -1,13 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { motion } from "motion/react";
 import {
   Crown,
+  LayoutDashboard,
   Loader2,
   LogOut,
+  MessageSquare,
   Plus,
+  Settings,
   Shield,
   ShieldCheck,
   Swords,
@@ -26,7 +28,6 @@ import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EloRankBadgeI18n } from "@/components/ranked/elo-rank-badge-i18n";
-import { SocialUserName } from "@/components/social/social-user-name";
 import { SocialUserRow } from "@/components/social/social-user-row";
 import { getCountryFlag } from "@/lib/profile";
 import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
@@ -34,6 +35,7 @@ import { secureApi, secureFormApi } from "@/lib/api/client";
 import { useUser } from "@/lib/hooks/use-user";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import { ClanChatPanel } from "@/components/dashboard/clan-chat-panel";
 
 type ClanRole = "OWNER" | "OFFICER" | "MEMBER";
 
@@ -424,6 +426,8 @@ function CreateClanCard({
   );
 }
 
+type ClanTab = "overview" | "members" | "chat" | "settings";
+
 function ClanDashboard({
   clan,
   busy,
@@ -439,10 +443,19 @@ function ClanDashboard({
   onRefresh: () => void;
   t: ReturnType<typeof useTranslations<"clans">>;
 }) {
+  const { user } = useUser();
   const canManage = clan.viewerRole === "OWNER" || clan.viewerRole === "OFFICER";
   const isOwner = clan.viewerRole === "OWNER";
+  const [activeTab, setActiveTab] = useState<ClanTab>("overview");
   const [inviteNick, setInviteNick] = useState("");
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const tabs: { id: ClanTab; label: string; icon: typeof LayoutDashboard; badge?: number }[] = [
+    { id: "overview", label: t("tabOverview"), icon: LayoutDashboard },
+    { id: "members", label: t("tabMembers"), icon: Users, badge: clan.stats.memberCount },
+    { id: "chat", label: t("tabChat"), icon: MessageSquare },
+    ...(canManage ? [{ id: "settings" as const, label: t("tabSettings"), icon: Settings }] : []),
+  ];
 
   async function uploadAvatar(file: File) {
     const form = new FormData();
@@ -468,11 +481,11 @@ function ClanDashboard({
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-card glass-strong p-5 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="rounded-card glass-strong p-4 sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-center gap-4">
-            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-border">
+            <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-border sm:h-16 sm:w-16">
               <AvatarImage src={clan.avatarUrl ?? getDefaultAvatarPresetUrl()} alt="" size={64} />
               {isOwner && (
                 <>
@@ -498,8 +511,8 @@ function ClanDashboard({
                 </>
               )}
             </div>
-            <div>
-              <p className="font-display text-2xl font-bold text-foreground">
+            <div className="min-w-0">
+              <p className="truncate font-display text-xl font-bold text-foreground sm:text-2xl">
                 <span className="text-primary">[{clan.tag}]</span> {clan.name}
               </p>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
@@ -512,31 +525,18 @@ function ClanDashboard({
                     <Lock className="h-3 w-3" /> {t("joinModeClosed")}
                   </span>
                 )}
+                <span>{t("memberCount", { count: clan.stats.memberCount })}</span>
               </div>
-              {isOwner && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {(["OPEN", "CLOSED"] as const).map((mode) => (
-                    <Button
-                      key={mode}
-                      type="button"
-                      size="sm"
-                      variant={clan.joinMode === mode ? "primary" : "outline"}
-                      disabled={busy || clan.joinMode === mode}
-                      onClick={() =>
-                        onManage({ action: "settings", joinMode: mode }, t("settingsSaved"))
-                      }
-                    >
-                      {mode === "OPEN" ? t("joinModeOpen") : t("joinModeClosed")}
-                    </Button>
-                  ))}
-                </div>
-              )}
+              {clan.description ? (
+                <p className="mt-2 max-w-2xl text-sm text-muted">{clan.description}</p>
+              ) : null}
             </div>
           </div>
           <Button
             type="button"
             variant="outline"
             size="sm"
+            className="shrink-0 self-start"
             disabled={busy}
             confirm={{
               title: isOwner ? t("disbandConfirmTitle") : t("leaveConfirmTitle"),
@@ -551,9 +551,36 @@ function ClanDashboard({
           </Button>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="mt-4 flex gap-1 overflow-x-auto border-b border-border pb-px">
+          {tabs.map((tab) => {
+            const TabIcon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-t-lg px-3 py-2.5 text-xs font-semibold transition-colors sm:px-4 sm:text-sm",
+                  activeTab === tab.id
+                    ? "border-b-2 border-primary text-primary"
+                    : "text-muted hover:text-foreground",
+                )}
+              >
+                <TabIcon className="h-4 w-4" />
+                {tab.label}
+                {tab.badge != null && (
+                  <span className="rounded-full bg-black/25 px-1.5 text-[10px]">{tab.badge}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {activeTab === "overview" && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {stats.map((stat) => (
-            <div key={stat.label} className="rounded-xl border border-border px-3 py-2 text-center">
+            <div key={stat.label} className="rounded-xl border border-border px-3 py-3 text-center">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
                 {stat.label}
               </p>
@@ -561,191 +588,222 @@ function ClanDashboard({
             </div>
           ))}
         </div>
-      </div>
-
-      {canManage && (
-        <div className="rounded-card glass p-4 sm:p-5">
-          <h3 className="flex items-center gap-2 font-display text-sm font-bold text-foreground">
-            <UserPlus className="h-4 w-4 text-primary" />
-            {t("inviteTitle")}
-          </h3>
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-            <Input
-              label={t("invitePlaceholder")}
-              value={inviteNick}
-              onChange={(e) => setInviteNick(e.target.value)}
-              placeholder={t("invitePlaceholder")}
-            />
-            <Button
-              type="button"
-              variant="primary"
-              disabled={busy || inviteNick.trim().length < 2}
-              onClick={() => {
-                onManage({ action: "invite", nickname: inviteNick.trim() }, t("invited"));
-                setInviteNick("");
-              }}
-            >
-              {t("inviteButton")}
-            </Button>
-          </div>
-        </div>
       )}
 
-      {canManage && clan.pendingRequests.length > 0 && (
+      {activeTab === "members" && (
         <section>
-          <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-foreground">
-            <Users className="h-5 w-5 text-primary" />
-            {t("requestsTitle", { count: clan.pendingRequests.length })}
-          </h2>
           <ul className="overflow-hidden rounded-card glass">
-            {clan.pendingRequests.map((req) => (
-              <li
-                key={req.id}
-                className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-0"
-              >
-                <SocialUserRow
-                  user={{ ...req, avatarUrl: req.avatarUrl, nickname: req.nickname }}
-                  subtitle={
-                    <>
+            {clan.members.map((member) => {
+              const RoleIcon = roleIcon[member.role];
+              return (
+                <motion.li
+                  key={member.userId}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-0"
+                >
+                  <SocialUserRow
+                    user={member}
+                    link
+                    subtitle={
                       <p className="text-xs text-muted">
-                        {getCountryFlag(req.country)} · <EloRankBadgeI18n elo={req.elo} size="sm" />
+                        {getCountryFlag(member.country)} {t("memberLevel", { level: member.level })}{" "}
+                        · {member.points.toLocaleString("pt-BR")} {t("points")}
                       </p>
-                      {req.message ? <p className="mt-1 text-xs text-muted">{req.message}</p> : null}
-                    </>
-                  }
-                />
-                <div className="flex shrink-0 gap-1.5">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="primary"
-                    disabled={busy}
-                    onClick={() =>
-                      onManage(
-                        { action: "review_request", requestId: req.id, approve: true },
-                        t("requestApproved"),
-                      )
                     }
-                  >
-                    {t("approve")}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    disabled={busy}
-                    onClick={() =>
-                      onManage(
-                        { action: "review_request", requestId: req.id, approve: false },
-                        t("requestRejected"),
-                      )
-                    }
-                  >
-                    {t("reject")}
-                  </Button>
-                </div>
-              </li>
-            ))}
+                  />
+                  <RoleIcon
+                    className={cn(
+                      "h-4 w-4 shrink-0",
+                      member.role === "OWNER"
+                        ? "text-amber-400"
+                        : member.role === "OFFICER"
+                          ? "text-primary"
+                          : "text-muted",
+                    )}
+                  />
+                  {canManage && member.role !== "OWNER" && (
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {isOwner && member.role === "MEMBER" && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          disabled={busy}
+                          onClick={() =>
+                            onManage(
+                              { action: "role", targetUserId: member.userId, role: "OFFICER" },
+                              t("promoted"),
+                            )
+                          }
+                        >
+                          <ShieldCheck className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {isOwner && member.role === "OFFICER" && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          disabled={busy}
+                          onClick={() =>
+                            onManage(
+                              { action: "role", targetUserId: member.userId, role: "MEMBER" },
+                              t("demoted"),
+                            )
+                          }
+                        >
+                          <Shield className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        disabled={busy}
+                        onClick={() =>
+                          onManage({ action: "kick", targetUserId: member.userId }, t("kicked"))
+                        }
+                      >
+                        <UserMinus className="h-4 w-4 text-rose-400" />
+                      </Button>
+                    </div>
+                  )}
+                </motion.li>
+              );
+            })}
           </ul>
         </section>
       )}
 
-      <section>
-        <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-foreground">
-          <Users className="h-5 w-5 text-primary" />
-          {t("membersTitle")}
-        </h2>
-        <ul className="overflow-hidden rounded-card glass">
-          {clan.members.map((member) => {
-            const RoleIcon = roleIcon[member.role];
-            return (
-              <motion.li
-                key={member.userId}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-0"
+      {activeTab === "chat" && user && (
+        <ClanChatPanel clanId={clan.id} currentUserId={user.id} />
+      )}
+
+      {activeTab === "settings" && canManage && (
+        <div className="space-y-6">
+          {isOwner && (
+            <div className="rounded-card glass p-4 sm:p-5">
+              <h3 className="font-display text-sm font-bold text-foreground">{t("joinModeLabel")}</h3>
+              <p className="mt-1 text-xs text-muted">
+                {clan.joinMode === "OPEN" ? t("joinModeOpenHint") : t("joinModeClosedHint")}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {(["OPEN", "CLOSED"] as const).map((mode) => (
+                  <Button
+                    key={mode}
+                    type="button"
+                    size="sm"
+                    variant={clan.joinMode === mode ? "primary" : "outline"}
+                    disabled={busy || clan.joinMode === mode}
+                    onClick={() =>
+                      onManage({ action: "settings", joinMode: mode }, t("settingsSaved"))
+                    }
+                  >
+                    {mode === "OPEN" ? (
+                      <>
+                        <Unlock className="h-4 w-4" /> {t("joinModeOpen")}
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="h-4 w-4" /> {t("joinModeClosed")}
+                      </>
+                    )}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-card glass p-4 sm:p-5">
+            <h3 className="flex items-center gap-2 font-display text-sm font-bold text-foreground">
+              <UserPlus className="h-4 w-4 text-primary" />
+              {t("inviteTitle")}
+            </h3>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <Input
+                label={t("invitePlaceholder")}
+                value={inviteNick}
+                onChange={(e) => setInviteNick(e.target.value)}
+                placeholder={t("invitePlaceholder")}
+              />
+              <Button
+                type="button"
+                variant="primary"
+                disabled={busy || inviteNick.trim().length < 2}
+                onClick={() => {
+                  onManage({ action: "invite", nickname: inviteNick.trim() }, t("invited"));
+                  setInviteNick("");
+                }}
               >
-                <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-border">
-                  <AvatarImage
-                    src={member.avatarUrl ?? getDefaultAvatarPresetUrl()}
-                    alt=""
-                    size={40}
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <RoleIcon
-                      className={cn(
-                        "h-3.5 w-3.5 shrink-0",
-                        member.role === "OWNER"
-                          ? "text-amber-400"
-                          : member.role === "OFFICER"
-                            ? "text-primary"
-                            : "text-muted",
-                      )}
-                    />
-                    <SocialUserName user={member} link nameClassName="text-sm" />
-                  </div>
-                  <p className="text-xs text-muted">
-                    {getCountryFlag(member.country)} {t("memberLevel", { level: member.level })} ·{" "}
-                    {member.points.toLocaleString("pt-BR")} {t("points")}
-                  </p>
-                </div>
+                {t("inviteButton")}
+              </Button>
+            </div>
+          </div>
 
-                {canManage && member.role !== "OWNER" && (
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    {isOwner && member.role === "MEMBER" && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        disabled={busy}
-                        onClick={() =>
-                          onManage(
-                            { action: "role", targetUserId: member.userId, role: "OFFICER" },
-                            t("promoted"),
-                          )
-                        }
-                      >
-                        <ShieldCheck className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {isOwner && member.role === "OFFICER" && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        disabled={busy}
-                        onClick={() =>
-                          onManage(
-                            { action: "role", targetUserId: member.userId, role: "MEMBER" },
-                            t("demoted"),
-                          )
-                        }
-                      >
-                        <Shield className="h-4 w-4" />
-                      </Button>
-                    )}
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      disabled={busy}
-                      onClick={() =>
-                        onManage({ action: "kick", targetUserId: member.userId }, t("kicked"))
+          {clan.pendingRequests.length > 0 && (
+            <section>
+              <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-foreground">
+                <Users className="h-5 w-5 text-primary" />
+                {t("requestsTitle", { count: clan.pendingRequests.length })}
+              </h2>
+              <ul className="overflow-hidden rounded-card glass">
+                {clan.pendingRequests.map((req) => (
+                  <li
+                    key={req.id}
+                    className="flex flex-col gap-3 border-b border-border px-4 py-3 last:border-0 sm:flex-row sm:items-center"
+                  >
+                    <SocialUserRow
+                      user={req}
+                      subtitle={
+                        <>
+                          <p className="text-xs text-muted">
+                            {getCountryFlag(req.country)} ·{" "}
+                            <EloRankBadgeI18n elo={req.elo} size="sm" />
+                          </p>
+                          {req.message ? (
+                            <p className="mt-1 text-xs text-muted">{req.message}</p>
+                          ) : null}
+                        </>
                       }
-                    >
-                      <UserMinus className="h-4 w-4 text-rose-400" />
-                    </Button>
-                  </div>
-                )}
-              </motion.li>
-            );
-          })}
-        </ul>
+                    />
+                    <div className="flex shrink-0 gap-1.5 sm:ml-auto">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="primary"
+                        disabled={busy}
+                        onClick={() =>
+                          onManage(
+                            { action: "review_request", requestId: req.id, approve: true },
+                            t("requestApproved"),
+                          )
+                        }
+                      >
+                        {t("approve")}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        disabled={busy}
+                        onClick={() =>
+                          onManage(
+                            { action: "review_request", requestId: req.id, approve: false },
+                            t("requestRejected"),
+                          )
+                        }
+                      >
+                        {t("reject")}
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
-        {isOwner && (
-          <div className="mt-4">
+          {isOwner && (
             <Button
               type="button"
               variant="ghost"
@@ -762,9 +820,9 @@ function ClanDashboard({
               <Trash2 className="h-4 w-4 text-rose-400" />
               {t("disband")}
             </Button>
-          </div>
-        )}
-      </section>
+          )}
+        </div>
+      )}
     </div>
   );
 }

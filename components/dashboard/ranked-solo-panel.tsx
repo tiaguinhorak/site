@@ -25,7 +25,9 @@ export function RankedSoloPanel() {
   async function ensureSoloParty() {
     if (party) return true;
     return createTeam({
-      name: t("defaultPartyName", { nickname: user?.nickname ?? t("defaultPlayer") }),
+      name: t("defaultPartyName", {
+        nickname: user?.displayName ?? user?.nickname ?? t("defaultPlayer"),
+      }),
       region: "BR",
       visibility: "public",
       minLevel: 1,

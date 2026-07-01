@@ -1002,6 +1002,13 @@
       "WEEKLY": "Weekly",
       "MONTHLY": "Monthly"
     },
+    "periodHint": {
+      "DAILY": "· reset daily",
+      "WEEKLY": "· reset weekly",
+      "MONTHLY": "· reset monthly"
+    },
+    "summary": "{completed} of {total} completed · {claimable} to claim",
+    "filterAll": "All",
     "claim": "Claim",
     "claimed": "Claimed",
     "inProgress": "In progress",
@@ -1015,6 +1022,9 @@
       "PLATINUM": "Platinum",
       "DIAMOND": "Diamond"
     },
+    "filterAll": "All",
+    "trophyShowcase": "Trophy showcase",
+    "noTrophiesYet": "Complete achievements to display trophies here.",
     "unlocked": "Unlocked",
     "summary": "{unlocked} of {total} achievements unlocked"
   },
@@ -1164,7 +1174,17 @@
     "changeAvatar": "Change clan photo",
     "avatarUpdated": "Clan photo updated.",
     "avatarError": "Failed to upload photo.",
-    "settingsSaved": "Clan settings updated."
+    "settingsSaved": "Clan settings updated.",
+    "tabOverview": "Overview",
+    "tabMembers": "Members",
+    "tabChat": "Chat",
+    "tabSettings": "Manage",
+    "chat": {
+      "title": "Clan chat",
+      "placeholder": "Message the clan...",
+      "empty": "Be the first to speak in clan chat!",
+      "send": "Send"
+    }
   },
   "wallet": {
     "title": "Wallet",
@@ -1197,6 +1217,11 @@
     "claim": "Claim",
     "claimed": "Claimed",
     "claimedToast": "Reward claimed!",
+    "claimableCount": "{count} to claim",
+    "currentLevelXp": "Current level XP",
+    "seasonProgress": "Season progress",
+    "scrollLeft": "Scroll rewards left",
+    "scrollRight": "Scroll rewards right",
     "premiumActive": "Premium active",
     "premiumActivated": "Premium pass activated!",
     "premiumName": "Premium Battle Pass",

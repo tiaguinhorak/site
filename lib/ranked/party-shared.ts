@@ -74,6 +74,8 @@ export type RankedChallengeView = {
   expiresAt: string;
   fromLeaderNickname: string;
   toLeaderNickname: string;
+  fromLeaderDisplayName: string;
+  toLeaderDisplayName: string;
   isIncoming: boolean;
   isOutgoing: boolean;
 };

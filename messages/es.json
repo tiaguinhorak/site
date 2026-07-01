@@ -1002,6 +1002,13 @@
       "WEEKLY": "Semanales",
       "MONTHLY": "Mensuales"
     },
+    "periodHint": {
+      "DAILY": "· se renuevan cada día",
+      "WEEKLY": "· se renuevan cada semana",
+      "MONTHLY": "· se renuevan cada mes"
+    },
+    "summary": "{completed} de {total} completadas · {claimable} por reclamar",
+    "filterAll": "Todas",
     "claim": "Reclamar",
     "claimed": "Reclamado",
     "inProgress": "En progreso",
@@ -1015,6 +1022,9 @@
       "PLATINUM": "Platino",
       "DIAMOND": "Diamante"
     },
+    "filterAll": "Todas",
+    "trophyShowcase": "Vitrina de trofeos",
+    "noTrophiesYet": "Completa logros para mostrar trofeos aquí.",
     "unlocked": "Desbloqueado",
     "summary": "{unlocked} de {total} logros desbloqueados"
   },
@@ -1164,7 +1174,17 @@
     "changeAvatar": "Cambiar foto del clan",
     "avatarUpdated": "Foto del clan actualizada.",
     "avatarError": "Error al subir la foto.",
-    "settingsSaved": "Configuración del clan actualizada."
+    "settingsSaved": "Configuración del clan actualizada.",
+    "tabOverview": "Resumen",
+    "tabMembers": "Miembros",
+    "tabChat": "Chat",
+    "tabSettings": "Gestionar",
+    "chat": {
+      "title": "Chat del clan",
+      "placeholder": "Mensaje para el clan...",
+      "empty": "¡Sé el primero en hablar en el chat del clan!",
+      "send": "Enviar"
+    }
   },
   "wallet": {
     "title": "Cartera",
@@ -1197,6 +1217,11 @@
     "claim": "Reclamar",
     "claimed": "Reclamado",
     "claimedToast": "¡Recompensa reclamada!",
+    "claimableCount": "{count} por reclamar",
+    "currentLevelXp": "XP del nivel actual",
+    "seasonProgress": "Progreso de la temporada",
+    "scrollLeft": "Desplazar recompensas a la izquierda",
+    "scrollRight": "Desplazar recompensas a la derecha",
     "premiumActive": "Premium activo",
     "premiumActivated": "¡Pase Premium activado!",
     "premiumName": "Pase de Batalla Premium",

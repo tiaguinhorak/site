@@ -781,8 +781,8 @@ export async function listPartyChallenges(userId: string) {
       OR: [{ fromPartyId: membership.partyId }, { toPartyId: membership.partyId }],
     },
     include: {
-      fromParty: { include: { leader: { select: { nickname: true } } } },
-      toParty: { include: { leader: { select: { nickname: true } } } },
+      fromParty: { include: { leader: { select: STEAM_DISPLAY_NAME_SELECT } } },
+      toParty: { include: { leader: { select: STEAM_DISPLAY_NAME_SELECT } } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -795,6 +795,8 @@ export async function listPartyChallenges(userId: string) {
     expiresAt: c.expiresAt.toISOString(),
     fromLeaderNickname: c.fromParty.leader.nickname,
     toLeaderNickname: c.toParty.leader.nickname,
+    fromLeaderDisplayName: resolveSteamDisplayName(c.fromParty.leader),
+    toLeaderDisplayName: resolveSteamDisplayName(c.toParty.leader),
     isIncoming: c.toPartyId === membership.partyId,
     isOutgoing: c.fromPartyId === membership.partyId,
   });
@@ -871,8 +873,8 @@ export async function sendChallenge(fromUserId: string, toPartyId: string) {
       expiresAt: new Date(Date.now() + RANKED_CHALLENGE_TTL_MS),
     },
     include: {
-      fromParty: { include: { leader: { select: { nickname: true } } } },
-      toParty: { include: { leader: { select: { nickname: true } } } },
+      fromParty: { include: { leader: { select: STEAM_DISPLAY_NAME_SELECT } } },
+      toParty: { include: { leader: { select: STEAM_DISPLAY_NAME_SELECT } } },
     },
   });
 
@@ -886,6 +888,8 @@ export async function sendChallenge(fromUserId: string, toPartyId: string) {
     expiresAt: challenge.expiresAt.toISOString(),
     fromLeaderNickname: challenge.fromParty.leader.nickname,
     toLeaderNickname: challenge.toParty.leader.nickname,
+    fromLeaderDisplayName: resolveSteamDisplayName(challenge.fromParty.leader),
+    toLeaderDisplayName: resolveSteamDisplayName(challenge.toParty.leader),
     isIncoming: false,
     isOutgoing: true,
   } satisfies RankedChallengeView;

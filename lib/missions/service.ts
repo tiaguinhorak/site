@@ -4,7 +4,7 @@ import type { MissionMetric, MissionPeriod } from "@/lib/generated/prisma/client
 import { prisma } from "@/lib/prisma";
 import { creditCoins } from "@/lib/economy/wallet";
 import { grantXp } from "@/lib/progression/grant-xp";
-import { ensureMissionsSeeded } from "@/lib/missions/definitions";
+import { ensurePeriodMissions } from "@/lib/missions/generator";
 import { periodKeyFor } from "@/lib/missions/period";
 
 export type MissionView = {
@@ -25,12 +25,28 @@ export type MissionView = {
 
 export class MissionClaimError extends Error {}
 
+async function ensureMissionsReady(): Promise<void> {
+  await ensurePeriodMissions();
+}
+
+function activePeriodFilter() {
+  const periods = ["DAILY", "WEEKLY", "MONTHLY"] as MissionPeriod[];
+  return periods.map((period) => ({
+    period,
+    periodKey: periodKeyFor(period),
+    enabled: true,
+  }));
+}
+
 /** Merged view of every active mission for the user in the current period windows. */
 export async function listUserMissions(userId: string): Promise<MissionView[]> {
-  await ensureMissionsSeeded();
+  await ensureMissionsReady();
 
   const definitions = await prisma.missionDefinition.findMany({
-    where: { enabled: true },
+    where: {
+      enabled: true,
+      OR: activePeriodFilter().map(({ period, periodKey }) => ({ period, periodKey })),
+    },
     orderBy: [{ period: "asc" }, { sortOrder: "asc" }],
   });
 
@@ -77,7 +93,7 @@ export async function applyMissionProgress(
   userId: string,
   deltas: MetricDeltas,
 ): Promise<string[]> {
-  await ensureMissionsSeeded();
+  await ensureMissionsReady();
 
   const metrics = Object.entries(deltas)
     .filter(([, value]) => (value ?? 0) > 0)
@@ -85,7 +101,11 @@ export async function applyMissionProgress(
   if (metrics.length === 0) return [];
 
   const definitions = await prisma.missionDefinition.findMany({
-    where: { enabled: true, metric: { in: metrics } },
+    where: {
+      enabled: true,
+      metric: { in: metrics },
+      OR: activePeriodFilter().map(({ period, periodKey }) => ({ period, periodKey })),
+    },
   });
   if (definitions.length === 0) return [];
 

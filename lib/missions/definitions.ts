@@ -32,37 +32,12 @@ export const DEFAULT_MISSIONS: MissionSeed[] = [
 
 let seeded = false;
 
-/** Idempotently upsert the default mission catalog. Cached per process. */
+/** Legacy static missions are retired in favor of procedural period missions. */
 export async function ensureMissionsSeeded(): Promise<void> {
   if (seeded) return;
-  for (const m of DEFAULT_MISSIONS) {
-    await prisma.missionDefinition.upsert({
-      where: { code: m.code },
-      create: {
-        code: m.code,
-        period: m.period,
-        metric: m.metric,
-        target: m.target,
-        title: m.title,
-        description: m.description,
-        rewardXp: m.rewardXp,
-        rewardCoins: m.rewardCoins,
-        icon: m.icon,
-        sortOrder: m.sortOrder,
-      },
-      update: {
-        // Keep catalog content fresh, but never disable here.
-        period: m.period,
-        metric: m.metric,
-        target: m.target,
-        title: m.title,
-        description: m.description,
-        rewardXp: m.rewardXp,
-        rewardCoins: m.rewardCoins,
-        icon: m.icon,
-        sortOrder: m.sortOrder,
-      },
-    });
-  }
+  await prisma.missionDefinition.updateMany({
+    where: { code: { in: DEFAULT_MISSIONS.map((m) => m.code) } },
+    data: { enabled: false },
+  });
   seeded = true;
 }

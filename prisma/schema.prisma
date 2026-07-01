@@ -352,6 +352,7 @@ model User {
   clanMembership          ClanMember?
   clansOwned              Clan[]                       @relation("ClanOwner")
   clanJoinRequests        ClanJoinRequest[]
+  clanMessages            ClanMessage[]
   coinPackCheckouts       CoinPackCheckout[]
   friendRequestsSent      Friendship[]                 @relation("FriendRequester")
   friendRequestsReceived  Friendship[]                 @relation("FriendAddressee")
@@ -428,6 +429,7 @@ model MissionDefinition {
   id          String        @id @default(cuid())
   code        String        @unique
   period      MissionPeriod
+  periodKey   String?
   metric      MissionMetric
   target      Int
   title       String
@@ -443,6 +445,7 @@ model MissionDefinition {
   userMissions UserMission[]
 
   @@index([period, enabled])
+  @@index([period, periodKey, enabled])
 }
 
 model UserMission {
@@ -1713,8 +1716,23 @@ model Clan {
   owner        User              @relation("ClanOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members      ClanMember[]
   joinRequests ClanJoinRequest[]
+  messages     ClanMessage[]
 
   @@index([ownerId])
+}
+
+model ClanMessage {
+  id        String   @id @default(cuid())
+  clanId    String
+  userId    String
+  body      String
+  createdAt DateTime @default(now())
+
+  clan Clan @relation(fields: [clanId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([clanId, createdAt])
+  @@index([userId])
 }
 
 model ClanJoinRequest {

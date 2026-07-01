@@ -135,7 +135,7 @@ export function RankedChallengesPanel({ className }: { className?: string }) {
               >
                 <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
                   <Crown className={cn("h-3.5 w-3.5", textWarningSoftClass)} />
-                  {c.fromLeaderNickname}
+                  {c.fromLeaderDisplayName}
                 </p>
                 <p className="mt-0.5 text-[11px] text-muted">{t("wantPlay")}</p>
                 {isLeader ? (
@@ -188,7 +188,7 @@ export function RankedChallengesPanel({ className }: { className?: string }) {
                 key={c.id}
                 className="flex items-center justify-between gap-2 rounded-xl border border-border px-3 py-2.5 text-sm"
               >
-                <span className="truncate font-medium">{c.toLeaderNickname}</span>
+                <span className="truncate font-medium">{c.toLeaderDisplayName}</span>
                 <span className={cn("inline-flex shrink-0 items-center gap-1 text-[10px]", textWarningSoftClass)}>
                   <Loader2 className="h-3 w-3 motion-safe-spin" />
                   {t("pending")}

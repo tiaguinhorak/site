@@ -1002,6 +1002,13 @@
       "WEEKLY": "Semanais",
       "MONTHLY": "Mensais"
     },
+    "periodHint": {
+      "DAILY": "· renovam todo dia",
+      "WEEKLY": "· renovam toda semana",
+      "MONTHLY": "· renovam todo mês"
+    },
+    "summary": "{completed} de {total} concluídas · {claimable} para resgatar",
+    "filterAll": "Todas",
     "claim": "Resgatar",
     "claimed": "Resgatado",
     "inProgress": "Em progresso",
@@ -1015,6 +1022,9 @@
       "PLATINUM": "Platina",
       "DIAMOND": "Diamante"
     },
+    "filterAll": "Todas",
+    "trophyShowcase": "Vitrine de troféus",
+    "noTrophiesYet": "Complete conquistas para exibir troféus aqui.",
     "unlocked": "Desbloqueada",
     "summary": "{unlocked} de {total} conquistas desbloqueadas"
   },
@@ -1164,7 +1174,17 @@
     "changeAvatar": "Alterar foto do clã",
     "avatarUpdated": "Foto do clã atualizada.",
     "avatarError": "Falha ao enviar foto.",
-    "settingsSaved": "Configurações do clã atualizadas."
+    "settingsSaved": "Configurações do clã atualizadas.",
+    "tabOverview": "Visão geral",
+    "tabMembers": "Membros",
+    "tabChat": "Chat",
+    "tabSettings": "Gerenciar",
+    "chat": {
+      "title": "Chat do clã",
+      "placeholder": "Mensagem para o clã...",
+      "empty": "Seja o primeiro a falar no chat do clã!",
+      "send": "Enviar"
+    }
   },
   "wallet": {
     "title": "Carteira",
@@ -1197,6 +1217,11 @@
     "claim": "Resgatar",
     "claimed": "Resgatado",
     "claimedToast": "Recompensa resgatada!",
+    "claimableCount": "{count} para resgatar",
+    "currentLevelXp": "XP do nível atual",
+    "seasonProgress": "Progresso da temporada",
+    "scrollLeft": "Rolar recompensas para a esquerda",
+    "scrollRight": "Rolar recompensas para a direita",
     "premiumActive": "Premium ativo",
     "premiumActivated": "Passe Premium ativado!",
     "premiumName": "Passe de Batalha Premium",
