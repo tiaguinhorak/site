@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { resolveSteamDisplayName, STEAM_DISPLAY_NAME_SELECT } from "@/lib/steam/display-name";
 
 export type RankedPartyActivityType =
   | "created"
@@ -11,27 +12,29 @@ export type RankedPartyActivityView = {
   id: string;
   type: RankedPartyActivityType;
   nickname: string;
+  displayName: string;
   actorNickname: string | null;
+  actorDisplayName: string | null;
   createdAt: string;
   message: string;
 };
 
 function buildMessage(
   type: RankedPartyActivityType,
-  nickname: string,
-  actorNickname?: string | null,
+  displayName: string,
+  actorDisplayName?: string | null,
 ): string {
   switch (type) {
     case "created":
-      return `${nickname} criou a sala`;
+      return `${displayName} criou a sala`;
     case "joined":
-      return `${nickname} entrou na sala`;
+      return `${displayName} entrou na sala`;
     case "left":
-      return `${nickname} saiu da sala`;
+      return `${displayName} saiu da sala`;
     case "kicked":
-      return actorNickname
-        ? `${nickname} foi removido por ${actorNickname}`
-        : `${nickname} foi removido da sala`;
+      return actorDisplayName
+        ? `${displayName} foi removido por ${actorDisplayName}`
+        : `${displayName} foi removido da sala`;
     case "disbanded":
       return "Sala desfeita pelo líder";
     default: {
@@ -39,6 +42,25 @@ function buildMessage(
       return _exhaustive;
     }
   }
+}
+
+async function resolveDisplayNames(nicknames: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(nicknames.filter(Boolean))];
+  if (unique.length === 0) return new Map();
+
+  const users = await prisma.user.findMany({
+    where: { nickname: { in: unique, mode: "insensitive" } },
+    select: STEAM_DISPLAY_NAME_SELECT,
+  });
+
+  const map = new Map<string, string>();
+  for (const user of users) {
+    map.set(user.nickname.toLowerCase(), resolveSteamDisplayName(user));
+  }
+  for (const nick of unique) {
+    if (!map.has(nick.toLowerCase())) map.set(nick.toLowerCase(), nick);
+  }
+  return map;
 }
 
 export async function logRankedPartyActivity(
@@ -67,18 +89,31 @@ export async function listPartyActivities(
     take: limit,
   });
 
-  return rows.map((row) => ({
-    id: row.id,
-    type: row.type as RankedPartyActivityType,
-    nickname: row.nickname,
-    actorNickname: row.actorNickname,
-    createdAt: row.createdAt.toISOString(),
-    message: buildMessage(
-      row.type as RankedPartyActivityType,
-      row.nickname,
-      row.actorNickname,
-    ),
-  }));
+  const nicknames = rows.flatMap((row) =>
+    [row.nickname, row.actorNickname].filter((n): n is string => Boolean(n)),
+  );
+  const nameMap = await resolveDisplayNames(nicknames);
+
+  return rows.map((row) => {
+    const displayName = nameMap.get(row.nickname.toLowerCase()) ?? row.nickname;
+    const actorDisplayName = row.actorNickname
+      ? nameMap.get(row.actorNickname.toLowerCase()) ?? row.actorNickname
+      : null;
+    return {
+      id: row.id,
+      type: row.type as RankedPartyActivityType,
+      nickname: row.nickname,
+      displayName,
+      actorNickname: row.actorNickname,
+      actorDisplayName,
+      createdAt: row.createdAt.toISOString(),
+      message: buildMessage(
+        row.type as RankedPartyActivityType,
+        displayName,
+        actorDisplayName,
+      ),
+    };
+  });
 }
 
 export async function getPartyActivitiesForUser(userId: string) {

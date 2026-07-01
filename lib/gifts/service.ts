@@ -22,6 +22,7 @@ export type GiftRecipientInput =
 export type ResolvedRecipient = {
   id: string;
   nickname: string;
+  displayName: string;
 };
 
 /** Resolve a gift recipient from an internal user id or a Steam id/url/vanity. */
@@ -29,12 +30,12 @@ export async function resolveRecipient(
   input: GiftRecipientInput,
   senderId: string,
 ): Promise<ResolvedRecipient> {
-  let user: { id: string; nickname: string } | null = null;
+  let user: { id: string; nickname: string; steamId?: string | null; steamPersonaName?: string | null } | null = null;
 
   if (input.type === "user") {
     user = await prisma.user.findUnique({
       where: { id: input.value },
-      select: { id: true, nickname: true },
+      select: { id: true, ...STEAM_DISPLAY_NAME_SELECT },
     });
   } else {
     const steamId = await resolveSteamId64(input.value);
@@ -43,7 +44,7 @@ export async function resolveRecipient(
     }
     user = await prisma.user.findUnique({
       where: { steamId },
-      select: { id: true, nickname: true },
+      select: { id: true, ...STEAM_DISPLAY_NAME_SELECT },
     });
   }
 
@@ -53,7 +54,11 @@ export async function resolveRecipient(
   if (user.id === senderId) {
     throw new GiftError("Você não pode presentear a si mesmo.", 400);
   }
-  return user;
+  return {
+    id: user.id,
+    nickname: user.nickname,
+    displayName: resolveSteamDisplayName(user),
+  };
 }
 
 export async function giftCoins(
@@ -78,7 +83,7 @@ export async function giftCoins(
         userId: senderId,
         amount: value,
         kind: "GIFT_SENT",
-        reason: `Presente para ${recipient.nickname}`,
+        reason: `Presente para ${recipient.displayName}`,
         metadata: { recipientId: recipient.id },
       });
     } catch (err) {

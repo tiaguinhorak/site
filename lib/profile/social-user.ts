@@ -8,6 +8,19 @@ export type SocialUserFields = SteamDisplayNameUser & {
   customization?: PublicProfileCustomization | null;
 };
 
+/** Usuário serializado com avatar/nome Steam — espelha lib/profile/serialize-social-user. */
+export type SerializedSocialUser = {
+  userId: string;
+  nickname: string;
+  displayName: string;
+  country: string;
+  avatarUrl: string | null;
+  plan: string;
+  level: number;
+  elo: number;
+  customization: PublicProfileCustomization | null;
+};
+
 export function resolveSocialDisplayName(user: SocialUserFields): string {
   if (user.displayName?.trim()) return user.displayName.trim();
   return resolveSteamDisplayName(user);

@@ -73,7 +73,7 @@ export async function getAdminStats() {
     prisma.adminAuditLog.findMany({
       orderBy: { createdAt: "desc" },
       take: 6,
-      include: { admin: { select: { nickname: true } } },
+      include: { admin: { select: { id: true, ...STEAM_DISPLAY_NAME_SELECT } } },
     }),
   ]);
 
@@ -223,8 +223,8 @@ export async function getAdminUserDetail(userId: string) {
         orderBy: { createdAt: "desc" },
         take: 25,
         include: {
-          admin: { select: { id: true, nickname: true } },
-          revokedBy: { select: { id: true, nickname: true } },
+          admin: { select: { id: true, ...STEAM_DISPLAY_NAME_SELECT } },
+          revokedBy: { select: { id: true, ...STEAM_DISPLAY_NAME_SELECT } },
         },
       },
     },
@@ -283,8 +283,8 @@ export async function listAdminPunishments(options: {
             steamAvatarUrl: true,
           },
         },
-        admin: { select: { id: true, nickname: true } },
-        revokedBy: { select: { id: true, nickname: true } },
+        admin: { select: { id: true, ...STEAM_DISPLAY_NAME_SELECT } },
+        revokedBy: { select: { id: true, ...STEAM_DISPLAY_NAME_SELECT } },
       },
     }),
     prisma.punishment.count({ where }),
@@ -335,7 +335,7 @@ export async function listAdminAuditLogs(options: {
       orderBy: { createdAt: "desc" },
       skip,
       take: limit,
-      include: { admin: { select: { id: true, nickname: true } } },
+      include: { admin: { select: { id: true, ...STEAM_DISPLAY_NAME_SELECT } } },
     }),
     prisma.adminAuditLog.count(),
   ]);

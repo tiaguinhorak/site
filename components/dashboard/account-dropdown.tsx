@@ -45,7 +45,7 @@ export function AccountDropdown({ className }: Props) {
   if (!user) return null;
 
   const isDark = resolvedTheme === "dark";
-  const avatarSrc = user.avatarUrl ?? getDefaultAvatarPresetUrl();
+  const avatarSrc = user.avatarUrl ?? user.steamAvatarUrl ?? getDefaultAvatarPresetUrl();
 
   const links = [
     {

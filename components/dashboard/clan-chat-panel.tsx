@@ -3,20 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, MessageSquare, Send } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { AvatarImage } from "@/components/ui/avatar-image";
 import { Button } from "@/components/ui/button";
-import { SocialUserName } from "@/components/social/social-user-name";
+import { SocialUserRow } from "@/components/social/social-user-row";
 import { secureApi } from "@/lib/api/client";
-import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import type { SerializedSocialUser } from "@/lib/profile/social-user";
 
-type ClanMessage = {
+type ClanMessage = SerializedSocialUser & {
   id: string;
-  userId: string;
-  nickname: string;
-  displayName: string;
-  avatarUrl: string | null;
   body: string;
   createdAt: string;
 };
@@ -96,31 +91,28 @@ export function ClanChatPanel({
                 key={msg.id}
                 className={cn("flex gap-2.5", isYou ? "flex-row-reverse" : "flex-row")}
               >
-                <div className="h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-border">
-                  <AvatarImage
-                    src={msg.avatarUrl ?? getDefaultAvatarPresetUrl()}
-                    alt=""
-                    size={32}
-                  />
-                </div>
-                <div
-                  className={cn(
-                    "max-w-[min(100%,20rem)] rounded-xl px-3 py-2",
-                    isYou
-                      ? "bg-primary/15 text-foreground"
-                      : "bg-black/25 text-foreground",
+                <div className="min-w-0 max-w-[min(100%,20rem)]">
+                  {!isYou && (
+                    <div className="mb-1">
+                      <SocialUserRow user={msg} link showPlanBadge nameClassName="text-[11px]" />
+                    </div>
                   )}
-                >
-                  <p className="mb-0.5 text-[11px] font-semibold text-primary">
-                    <SocialUserName user={msg} nameClassName="text-[11px]" />
-                  </p>
-                  <p className="whitespace-pre-wrap break-words text-sm">{msg.body}</p>
-                  <p className="mt-1 text-[10px] text-muted">
-                    {new Date(msg.createdAt).toLocaleTimeString(undefined, {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
+                  <div
+                    className={cn(
+                      "rounded-xl px-3 py-2",
+                      isYou
+                        ? "bg-primary/15 text-foreground"
+                        : "bg-black/25 text-foreground",
+                    )}
+                  >
+                    <p className="whitespace-pre-wrap break-words text-sm">{msg.body}</p>
+                    <p className="mt-1 text-[10px] text-muted">
+                      {new Date(msg.createdAt).toLocaleTimeString(undefined, {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </div>
                 </div>
               </div>
             );

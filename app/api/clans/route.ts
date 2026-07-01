@@ -7,9 +7,11 @@ import { RATE_LIMITS } from "@/lib/security/constants";
 import { zodErrorResponse } from "@/lib/i18n/api-route";
 import {
   createClan,
-  listClanRanking,
+  searchClanRanking,
   getUserClanDetail,
   ClanError,
+  type ClanBrowseJoinMode,
+  type ClanBrowseSort,
 } from "@/lib/clans/service";
 
 const createSchema = z.object({
@@ -19,13 +21,27 @@ const createSchema = z.object({
   joinMode: z.enum(["OPEN", "CLOSED"]).optional(),
 });
 
+const SORT_VALUES: ClanBrowseSort[] = ["points", "elo", "members", "wins"];
+const JOIN_MODE_VALUES: ClanBrowseJoinMode[] = ["OPEN", "CLOSED", "ALL"];
+
 export async function GET(request: NextRequest) {
   const userId = await getSessionUserId(request);
+  const { searchParams } = request.nextUrl;
+  const q = searchParams.get("q") ?? undefined;
+  const sortParam = searchParams.get("sort") ?? "points";
+  const joinModeParam = searchParams.get("joinMode") ?? "ALL";
+  const sort = SORT_VALUES.includes(sortParam as ClanBrowseSort)
+    ? (sortParam as ClanBrowseSort)
+    : "points";
+  const joinMode = JOIN_MODE_VALUES.includes(joinModeParam as ClanBrowseJoinMode)
+    ? (joinModeParam as ClanBrowseJoinMode)
+    : "ALL";
+
   const [ranking, myClan] = await Promise.all([
-    listClanRanking(50),
+    searchClanRanking({ q, sort, joinMode, limit: 50 }),
     userId ? getUserClanDetail(userId) : Promise.resolve(null),
   ]);
-  return NextResponse.json({ ranking, myClan });
+  return NextResponse.json({ ranking, myClan, topClan: ranking[0] ?? null });
 }
 
 export async function POST(request: NextRequest) {

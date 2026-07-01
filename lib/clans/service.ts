@@ -2,8 +2,12 @@ import "server-only";
 
 import type { ClanRole, Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { resolveUserAvatarUrl } from "@/lib/profile/avatar";
-import { resolveSteamDisplayName, STEAM_DISPLAY_NAME_SELECT } from "@/lib/steam/display-name";
+import {
+  serializeSocialUser,
+  SOCIAL_USER_SELECT,
+} from "@/lib/profile/serialize-social-user";
+import type { SerializedSocialUser } from "@/lib/profile/social-user";
+import { resolveSteamId64 } from "@/lib/steam/friends";
 
 export const CLAN_MAX_MEMBERS = 20;
 export const CLAN_TAG_REGEX = /^[A-Z0-9]{2,6}$/;
@@ -19,15 +23,7 @@ export class ClanError extends Error {
 }
 
 const MEMBER_USER_SELECT = {
-  id: true,
-  ...STEAM_DISPLAY_NAME_SELECT,
-  country: true,
-  avatarUrl: true,
-  avatarPreset: true,
-  steamAvatarUrl: true,
-  plan: true,
-  level: true,
-  elo: true,
+  ...SOCIAL_USER_SELECT,
   competitivePoints: true,
   xp: true,
   rankedKills: true,
@@ -35,21 +31,16 @@ const MEMBER_USER_SELECT = {
   rankedMvps: true,
 } satisfies Prisma.UserSelect;
 
-export type ClanMemberView = {
-  userId: string;
-  nickname: string;
-  displayName: string;
-  country: string;
-  avatarUrl: string | null;
+export type ClanMemberView = SerializedSocialUser & {
   role: ClanRole;
-  level: number;
-  elo: number;
   points: number;
   kills: number;
   wins: number;
   mvps: number;
   joinedAt: string;
 };
+
+export type ClanLeaderPreview = SerializedSocialUser;
 
 export type ClanStats = {
   memberCount: number;
@@ -76,15 +67,8 @@ export type ClanDetail = {
   pendingRequests: ClanJoinRequestView[];
 };
 
-export type ClanJoinRequestView = {
+export type ClanJoinRequestView = SerializedSocialUser & {
   id: string;
-  userId: string;
-  nickname: string;
-  displayName: string;
-  avatarUrl: string | null;
-  country: string;
-  level: number;
-  elo: number;
   message: string;
   createdAt: string;
 };
@@ -93,14 +77,22 @@ export type ClanRankingEntry = {
   id: string;
   tag: string;
   name: string;
+  description: string;
   avatarUrl: string | null;
   joinMode: "OPEN" | "CLOSED";
   rank: number;
   memberCount: number;
   totalPoints: number;
   totalXp: number;
+  totalKills: number;
+  totalWins: number;
+  totalMvps: number;
   avgElo: number;
+  leader: ClanLeaderPreview | null;
 };
+
+export type ClanBrowseSort = "points" | "elo" | "members" | "wins";
+export type ClanBrowseJoinMode = "OPEN" | "CLOSED" | "ALL";
 
 type ClanWithMembers = Prisma.ClanGetPayload<{
   include: { members: { include: { user: { select: typeof MEMBER_USER_SELECT } } } };
@@ -135,21 +127,46 @@ function computeStats(clan: ClanWithMembers): ClanStats {
 }
 
 function serializeMember(member: ClanWithMembers["members"][number]): ClanMemberView {
+  const base = serializeSocialUser(member.user);
   const u = member.user;
   return {
-    userId: u.id,
-    nickname: u.nickname,
-    displayName: resolveSteamDisplayName(u),
-    country: u.country,
-    avatarUrl: resolveUserAvatarUrl(u),
+    ...base,
     role: member.role,
-    level: u.level,
-    elo: u.elo,
     points: u.competitivePoints,
     kills: u.rankedKills,
     wins: u.rankedWins,
     mvps: u.rankedMvps,
     joinedAt: member.joinedAt.toISOString(),
+  };
+}
+
+function serializeLeader(clan: ClanWithMembers): ClanLeaderPreview | null {
+  const ownerMember = clan.members.find((m) => m.role === "OWNER");
+  if (!ownerMember) return null;
+  return serializeSocialUser(ownerMember.user);
+}
+
+function buildRankingEntry(
+  clan: ClanWithMembers,
+  stats: ClanStats,
+  rank: number,
+): Omit<ClanRankingEntry, "rank"> & { rank: number } {
+  return {
+    id: clan.id,
+    tag: clan.tag,
+    name: clan.name,
+    description: clan.description,
+    avatarUrl: clan.avatarUrl,
+    joinMode: clan.joinMode,
+    rank,
+    memberCount: stats.memberCount,
+    totalPoints: stats.totalPoints,
+    totalXp: stats.totalXp,
+    totalKills: stats.totalKills,
+    totalWins: stats.totalWins,
+    totalMvps: stats.totalMvps,
+    avgElo: stats.avgElo,
+    leader: serializeLeader(clan),
   };
 }
 
@@ -379,12 +396,22 @@ export async function reviewJoinRequest(
 export async function inviteMemberByNickname(
   actorId: string,
   clanId: string,
-  nickname: string,
+  query: string,
 ): Promise<ClanDetail> {
   await requireManager(actorId, clanId);
 
+  const trimmed = query.trim();
+  if (trimmed.length < 2) throw new ClanError("Informe nickname, nome Steam ou SteamID.", 400);
+
+  const steamId = await resolveSteamId64(trimmed);
+  const orFilters: Prisma.UserWhereInput[] = [
+    { nickname: { equals: trimmed, mode: "insensitive" } },
+    { steamPersonaName: { equals: trimmed, mode: "insensitive" } },
+  ];
+  if (steamId) orFilters.push({ steamId });
+
   const target = await prisma.user.findFirst({
-    where: { nickname: { equals: nickname.trim(), mode: "insensitive" } },
+    where: { OR: orFilters },
     select: { id: true },
   });
   if (!target) throw new ClanError("Jogador não encontrado.", 404);
@@ -499,16 +526,7 @@ export async function getClanDetail(
         where: { status: "PENDING" },
         include: {
           user: {
-            select: {
-              id: true,
-              ...STEAM_DISPLAY_NAME_SELECT,
-              country: true,
-              avatarUrl: true,
-              avatarPreset: true,
-              steamAvatarUrl: true,
-              level: true,
-              elo: true,
-            },
+            select: SOCIAL_USER_SELECT,
           },
         },
         orderBy: { createdAt: "asc" },
@@ -533,13 +551,7 @@ export async function getClanDetail(
   const pendingRequests: ClanJoinRequestView[] = canSeeRequests
     ? clan.joinRequests.map((req) => ({
         id: req.id,
-        userId: req.userId,
-        nickname: req.user.nickname,
-        displayName: resolveSteamDisplayName(req.user),
-        country: req.user.country,
-        avatarUrl: resolveUserAvatarUrl(req.user),
-        level: req.user.level,
-        elo: req.user.elo,
+        ...serializeSocialUser(req.user),
         message: req.message,
         createdAt: req.createdAt.toISOString(),
       }))
@@ -568,27 +580,53 @@ export async function getUserClanDetail(userId: string): Promise<ClanDetail | nu
 }
 
 export async function listClanRanking(limit = 50): Promise<ClanRankingEntry[]> {
+  return searchClanRanking({ limit });
+}
+
+export async function searchClanRanking(input: {
+  q?: string;
+  sort?: ClanBrowseSort;
+  joinMode?: ClanBrowseJoinMode;
+  limit?: number;
+}): Promise<ClanRankingEntry[]> {
+  const q = input.q?.trim() ?? "";
+  const sort = input.sort ?? "points";
+  const joinMode = input.joinMode ?? "ALL";
+  const limit = Math.min(Math.max(input.limit ?? 50, 1), 100);
+
   const clans = await prisma.clan.findMany({
+    where: {
+      ...(joinMode !== "ALL" ? { joinMode } : {}),
+      ...(q
+        ? {
+            OR: [
+              { tag: { contains: q, mode: "insensitive" } },
+              { name: { contains: q, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    },
     include: { members: { include: { user: { select: MEMBER_USER_SELECT } } } },
   });
 
   const entries = clans
     .map((clan) => {
       const stats = computeStats(clan);
-      return {
-        id: clan.id,
-        tag: clan.tag,
-        name: clan.name,
-        avatarUrl: clan.avatarUrl,
-        joinMode: clan.joinMode,
-        rank: 0,
-        memberCount: stats.memberCount,
-        totalPoints: stats.totalPoints,
-        totalXp: stats.totalXp,
-        avgElo: stats.avgElo,
-      };
+      return buildRankingEntry(clan, stats, 0);
     })
-    .sort((a, b) => b.totalPoints - a.totalPoints || b.totalXp - a.totalXp)
+    .sort((a, b) => {
+      switch (sort) {
+        case "elo":
+          return b.avgElo - a.avgElo || b.totalPoints - a.totalPoints;
+        case "members":
+          return b.memberCount - a.memberCount || b.totalPoints - a.totalPoints;
+        case "wins":
+          return b.totalWins - a.totalWins || b.totalPoints - a.totalPoints;
+        case "points":
+        default:
+          return b.totalPoints - a.totalPoints || b.totalXp - a.totalXp;
+      }
+    })
     .slice(0, limit)
     .map((entry, index) => ({ ...entry, rank: index + 1 }));
 

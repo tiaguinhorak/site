@@ -14,7 +14,6 @@ import {
   ShieldCheck,
   Swords,
   Trash2,
-  Trophy,
   UserMinus,
   UserPlus,
   Users,
@@ -36,18 +35,15 @@ import { useUser } from "@/lib/hooks/use-user";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { ClanChatPanel } from "@/components/dashboard/clan-chat-panel";
+import { ClanBrowseHub, type ClanBrowseEntry } from "@/components/dashboard/clan-browse-hub";
+import { ClanPublicSheet } from "@/components/dashboard/clan-public-sheet";
+import { ClanComparePanel } from "@/components/dashboard/clan-compare-panel";
+import type { SerializedSocialUser } from "@/lib/profile/social-user";
 
 type ClanRole = "OWNER" | "OFFICER" | "MEMBER";
 
-type ClanMemberView = {
-  userId: string;
-  nickname: string;
-  displayName: string;
-  country: string;
-  avatarUrl: string | null;
+type ClanMemberView = SerializedSocialUser & {
   role: ClanRole;
-  level: number;
-  elo: number;
   points: number;
   kills: number;
   wins: number;
@@ -65,15 +61,8 @@ type ClanStats = {
   avgElo: number;
 };
 
-type ClanJoinRequestView = {
+type ClanJoinRequestView = SerializedSocialUser & {
   id: string;
-  userId: string;
-  nickname: string;
-  displayName: string;
-  avatarUrl: string | null;
-  country: string;
-  level: number;
-  elo: number;
   message: string;
   createdAt: string;
 };
@@ -93,29 +82,19 @@ type ClanDetail = {
   pendingRequests: ClanJoinRequestView[];
 };
 
-type ClanRankingEntry = {
-  id: string;
-  tag: string;
-  name: string;
-  avatarUrl: string | null;
-  joinMode: "OPEN" | "CLOSED";
-  rank: number;
-  memberCount: number;
-  totalPoints: number;
-  totalXp: number;
-  avgElo: number;
-};
+type ClanRankingEntry = ClanBrowseEntry;
 
-const roleIcon: Record<ClanRole, typeof Crown> = {
-  OWNER: Crown,
-  OFFICER: ShieldCheck,
-  MEMBER: Shield,
+type BrowseParams = {
+  q: string;
+  sort: "points" | "elo" | "members" | "wins";
+  joinMode: "ALL" | "OPEN" | "CLOSED";
 };
 
 export function ClansSection() {
   const t = useTranslations("clans");
   const { user } = useUser();
   const [ranking, setRanking] = useState<ClanRankingEntry[]>([]);
+  const [topClan, setTopClan] = useState<ClanRankingEntry | null>(null);
   const [myClan, setMyClan] = useState<ClanDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -123,17 +102,33 @@ export function ClansSection() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [joinMode, setJoinMode] = useState<"OPEN" | "CLOSED">("OPEN");
+  const [viewClanId, setViewClanId] = useState<string | null>(null);
+  const [compareClanId, setCompareClanId] = useState<string | null>(null);
+  const [browseParams, setBrowseParams] = useState<BrowseParams>({
+    q: "",
+    sort: "points",
+    joinMode: "ALL",
+  });
+  const browseParamsRef = useRef(browseParams);
+  browseParamsRef.current = browseParams;
 
-  const load = useCallback(() => {
+  const load = useCallback((params?: BrowseParams) => {
+    const p = params ?? browseParamsRef.current;
     setLoading(true);
-    fetch("/api/clans", { credentials: "same-origin" })
+    const search = new URLSearchParams();
+    if (p.q) search.set("q", p.q);
+    search.set("sort", p.sort);
+    search.set("joinMode", p.joinMode);
+    fetch(`/api/clans?${search.toString()}`, { credentials: "same-origin" })
       .then((r) => r.json())
       .then((d) => {
         setRanking(d.ranking ?? []);
+        setTopClan(d.topClan ?? d.ranking?.[0] ?? null);
         setMyClan(d.myClan ?? null);
       })
       .catch(() => {
         setRanking([]);
+        setTopClan(null);
         setMyClan(null);
       })
       .finally(() => setLoading(false));
@@ -142,6 +137,11 @@ export function ClansSection() {
   useEffect(() => {
     load();
   }, [load]);
+
+  function handleBrowseSearch(params: BrowseParams) {
+    setBrowseParams(params);
+    load(params);
+  }
 
   async function handleCreate() {
     if (busy) return;
@@ -209,7 +209,7 @@ export function ClansSection() {
     load();
   }
 
-  if (loading) {
+  if (loading && ranking.length === 0 && !myClan) {
     return (
       <div className="flex justify-center rounded-card glass p-12">
         <Loader2 className="h-8 w-8 motion-safe-spin text-primary" />
@@ -225,7 +225,7 @@ export function ClansSection() {
           busy={busy}
           onLeave={handleLeave}
           onManage={manage}
-          onRefresh={load}
+          onRefresh={() => load()}
           t={t}
         />
       ) : (
@@ -245,71 +245,52 @@ export function ClansSection() {
         />
       )}
 
-      <section>
-        <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-foreground">
-          <Trophy className="h-5 w-5 text-primary" />
-          {t("rankingTitle")}
-        </h2>
-        {ranking.length === 0 ? (
-          <div className="rounded-card glass p-8 text-center text-muted">{t("noClans")}</div>
-        ) : (
-          <ul className="overflow-hidden rounded-card glass">
-            {ranking.map((clan) => (
-              <li
-                key={clan.id}
-                className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-0"
-              >
-                <span
-                  className={cn(
-                    "w-7 text-center font-display text-lg font-bold",
-                    clan.rank === 1
-                      ? "text-amber-400"
-                      : clan.rank === 2
-                        ? "text-zinc-300"
-                        : clan.rank === 3
-                          ? "text-orange-400"
-                          : "text-muted",
-                  )}
-                >
-                  {clan.rank}
-                </span>
-                <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-border">
-                  <AvatarImage src={clan.avatarUrl ?? getDefaultAvatarPresetUrl()} alt="" size={40} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-display text-sm font-semibold text-foreground">
-                    <span className="text-primary">[{clan.tag}]</span> {clan.name}
-                  </p>
-                  <p className="text-xs text-muted">
-                    {t("memberCount", { count: clan.memberCount })} ·{" "}
-                    <EloRankBadgeI18n elo={clan.avgElo} size="sm" />
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-mono text-sm font-semibold text-gradient">
-                    {clan.totalPoints.toLocaleString("pt-BR")}
-                  </p>
-                  <p className="text-[10px] uppercase tracking-wider text-muted">{t("points")}</p>
-                </div>
-                {!myClan && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() => handleJoin(clan.id)}
-                  >
-                    {clan.joinMode === "CLOSED" ? t("requestJoin") : t("join")}
-                  </Button>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <ClanBrowseHub
+        ranking={ranking}
+        topClan={topClan}
+        myClanId={myClan?.id ?? null}
+        busy={busy}
+        onSearch={handleBrowseSearch}
+        onJoin={handleJoin}
+        onView={setViewClanId}
+        onCompare={setCompareClanId}
+      />
+
+      {viewClanId && (
+        <ClanPublicSheet
+          clanId={viewClanId}
+          myClanId={myClan?.id ?? null}
+          busy={busy}
+          onClose={() => setViewClanId(null)}
+          onJoin={(id) => {
+            void handleJoin(id);
+            setViewClanId(null);
+          }}
+        />
+      )}
+
+      {myClan && compareClanId && (
+        <ClanComparePanel
+          myClan={{
+            id: myClan.id,
+            tag: myClan.tag,
+            name: myClan.name,
+            avatarUrl: myClan.avatarUrl,
+            stats: myClan.stats,
+          }}
+          otherClanId={compareClanId}
+          onClose={() => setCompareClanId(null)}
+        />
+      )}
     </div>
   );
 }
+
+const roleIcon: Record<ClanRole, typeof Crown> = {
+  OWNER: Crown,
+  OFFICER: ShieldCheck,
+  MEMBER: Shield,
+};
 
 function CreateClanCard({
   tag,
@@ -605,6 +586,7 @@ function ClanDashboard({
                   <SocialUserRow
                     user={member}
                     link
+                    showPlanBadge
                     subtitle={
                       <p className="text-xs text-muted">
                         {getCountryFlag(member.country)} {t("memberLevel", { level: member.level })}{" "}

@@ -14,7 +14,9 @@ type FeedItem =
       id: string;
       type: RankedPartyActivityType;
       nickname: string;
+      displayName: string;
       actor: string | null;
+      actorDisplayName: string | null;
       at: number;
       iso: string;
     }
@@ -45,7 +47,9 @@ export function RankedRoomChat({ className }: { className?: string }) {
         id: `a-${a.id}`,
         type: a.type,
         nickname: a.nickname,
+        displayName: a.displayName,
         actor: a.actorNickname,
+        actorDisplayName: a.actorDisplayName,
         at: new Date(a.createdAt).getTime(),
         iso: a.createdAt,
       })),
@@ -71,15 +75,18 @@ export function RankedRoomChat({ className }: { className?: string }) {
   function systemText(item: Extract<FeedItem, { kind: "system" }>): string {
     switch (item.type) {
       case "kicked":
-        return item.actor
-          ? t("system.kickedBy", { nickname: item.nickname, actor: item.actor })
-          : t("system.kicked", { nickname: item.nickname });
+        return item.actorDisplayName
+          ? t("system.kickedBy", {
+              nickname: item.displayName,
+              actor: item.actorDisplayName,
+            })
+          : t("system.kicked", { nickname: item.displayName });
       case "created":
       case "joined":
       case "left":
-        return t(`system.${item.type}`, { nickname: item.nickname });
+        return t(`system.${item.type}`, { nickname: item.displayName });
       case "disbanded":
-        return t("system.disbanded", { nickname: item.nickname });
+        return t("system.disbanded", { nickname: item.displayName });
       default: {
         const _exhaustive: never = item.type;
         return _exhaustive;

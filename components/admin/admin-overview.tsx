@@ -56,7 +56,7 @@ type Stats = {
     summary: string;
     action: string;
     createdAt: string;
-    admin: { nickname: string };
+    admin: { nickname: string; steamPersonaName?: string | null; steamId?: string | null };
   }>;
 };
 
@@ -215,7 +215,9 @@ export function AdminOverview() {
               <li key={log.id} className="px-5 py-4">
                 <p className="text-sm font-medium">{log.summary}</p>
                 <p className="mt-1 text-xs text-muted">
-                  {log.admin.nickname} · {new Date(log.createdAt).toLocaleString("pt-BR")}
+                  <SocialUserName user={log.admin} nameClassName="text-xs" />
+                  {" · "}
+                  {new Date(log.createdAt).toLocaleString("pt-BR")}
                 </p>
               </li>
             ))}

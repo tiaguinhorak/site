@@ -23,13 +23,14 @@ type PunishmentRow = {
   user: {
     id: string;
     nickname: string;
+    steamId?: string | null;
     email: string | null;
     steamPersonaName: string | null;
     avatarUrl: string | null;
     steamAvatarUrl: string | null;
   };
-  admin: { nickname: string };
-  revokedBy: { nickname: string } | null;
+  admin: { nickname: string; steamPersonaName?: string | null; steamId?: string | null };
+  revokedBy: { nickname: string; steamPersonaName?: string | null; steamId?: string | null } | null;
 };
 
 const TYPES: PunishmentType[] = ["BAN", "MUTE", "WARNING", "KICK", "RESTRICT"];
@@ -159,7 +160,9 @@ export function AdminPunishmentsSection() {
                     <td className="px-4 py-3 max-w-[200px] truncate text-muted">
                       {p.reason}
                     </td>
-                    <td className="px-4 py-3 text-muted">{p.admin.nickname}</td>
+                    <td className="px-4 py-3 text-muted">
+                      <SocialUserName user={p.admin} nameClassName="text-sm" />
+                    </td>
                     <td className="px-4 py-3 text-muted">
                       {p.expiresAt
                         ? new Date(p.expiresAt).toLocaleDateString("pt-BR")

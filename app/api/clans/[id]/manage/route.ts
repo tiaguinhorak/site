@@ -28,7 +28,7 @@ const manageSchema = z.discriminatedUnion("action", [
     requestId: z.string().min(1),
     approve: z.boolean(),
   }),
-  z.object({ action: z.literal("invite"), nickname: z.string().min(2).max(24) }),
+  z.object({ action: z.literal("invite"), nickname: z.string().min(2).max(64) }),
   z.object({
     action: z.literal("settings"),
     description: z.string().max(500).optional(),

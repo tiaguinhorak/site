@@ -1,15 +1,21 @@
-import "server-only";
-
 import { prisma } from "@/lib/prisma";
+import {
+  serializeSocialUser,
+  SOCIAL_USER_SELECT,
+} from "@/lib/profile/serialize-social-user";
 import { ClanError } from "@/lib/clans/service";
-import { resolveSteamDisplayName, STEAM_DISPLAY_NAME_SELECT } from "@/lib/steam/display-name";
 
 export type ClanMessageView = {
   id: string;
   userId: string;
   nickname: string;
   displayName: string;
+  country: string;
   avatarUrl: string | null;
+  plan: string;
+  level: number;
+  elo: number;
+  customization: ReturnType<typeof serializeSocialUser>["customization"];
   body: string;
   createdAt: string;
 };
@@ -38,23 +44,13 @@ export async function listClanMessages(
     orderBy: { createdAt: "desc" },
     take: limit,
     include: {
-      user: {
-        select: {
-          ...STEAM_DISPLAY_NAME_SELECT,
-          avatarUrl: true,
-          avatarPreset: true,
-          steamAvatarUrl: true,
-        },
-      },
+      user: { select: SOCIAL_USER_SELECT },
     },
   });
 
   return rows.reverse().map((row) => ({
     id: row.id,
-    userId: row.userId,
-    nickname: row.user.nickname,
-    displayName: resolveSteamDisplayName(row.user),
-    avatarUrl: row.user.steamAvatarUrl ?? row.user.avatarUrl,
+    ...serializeSocialUser(row.user),
     body: row.body,
     createdAt: row.createdAt.toISOString(),
   }));
@@ -72,22 +68,13 @@ export async function postClanMessage(userId: string, clanId: string, rawBody: s
   const msg = await prisma.clanMessage.create({
     data: { clanId, userId, body },
     include: {
-      user: {
-        select: {
-          ...STEAM_DISPLAY_NAME_SELECT,
-          avatarUrl: true,
-          steamAvatarUrl: true,
-        },
-      },
+      user: { select: SOCIAL_USER_SELECT },
     },
   });
 
   return {
     id: msg.id,
-    userId: msg.userId,
-    nickname: msg.user.nickname,
-    displayName: resolveSteamDisplayName(msg.user),
-    avatarUrl: msg.user.steamAvatarUrl ?? msg.user.avatarUrl,
+    ...serializeSocialUser(msg.user),
     body: msg.body,
     createdAt: msg.createdAt.toISOString(),
   } satisfies ClanMessageView;
