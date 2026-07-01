@@ -22,6 +22,10 @@ export type EquippedLoadoutEntry = {
   rarity: string;
   equippedT: boolean;
   equippedCT: boolean;
+  floatValue?: number;
+  seed?: number;
+  stattrak?: boolean;
+  nametag?: string | null;
   stickersT: Array<{ slot: number; defIndex: number; name: string; imageUrl: string | null }>;
   stickersCT: Array<{ slot: number; defIndex: number; name: string; imageUrl: string | null }>;
 };

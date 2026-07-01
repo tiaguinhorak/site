@@ -18,6 +18,7 @@ import {
   type LoadoutTeam,
 } from "@/lib/inventory/loadout-team";
 import type { InventoryCategoryKey } from "@/lib/profile";
+import { DEFAULT_SKIN_FLOAT } from "@/lib/inventory/skin-wear";
 
 export async function equipCatalogSkinForUser(
   userId: string,
@@ -91,14 +92,14 @@ export async function equipCatalogSkinForUser(
             ? buildBothTeamsEquipCreateData({
                 steamId: user.steamId!,
                 skinId: catalog.id,
-                wear: "field_tested",
+                floatValue: DEFAULT_SKIN_FLOAT,
                 seed: 0,
                 stattrak: false,
               })
             : buildTeamEquipCreateData(team as LoadoutTeam, {
                 steamId: user.steamId!,
                 skinId: catalog.id,
-                wear: "field_tested",
+                floatValue: DEFAULT_SKIN_FLOAT,
                 seed: 0,
                 stattrak: false,
               }),

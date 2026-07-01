@@ -1294,6 +1294,32 @@ enum CsgoSkinWear {
   battle_scarred
 }
 
+/// Gameplay tuning applied to CS servers by pool (ranked, warmup, deathmatch, ...).
+/// api-csgo fetches this by pool on server start + ranked match start and applies via RCON + clutch_warmup_rules.
+model ServerGameConfig {
+  id                String   @id @default(cuid())
+  /// Matches api-csgo server pool (e.g. "ranked", "warmup", "deathmatch").
+  pool              String   @unique
+  enabled           Boolean  @default(true)
+  /// Warmup duration in seconds (ranked uses this instead of the old hardcoded 15s).
+  warmupSeconds     Int      @default(60)
+  /// Money granted during warmup only.
+  warmupStartMoney  Int      @default(16000)
+  warmupMaxMoney    Int      @default(16000)
+  /// Allow buying anywhere / anytime during warmup.
+  warmupBuyAnywhere Boolean  @default(true)
+  /// Always randomize spawn points.
+  randomSpawns      Boolean  @default(true)
+  /// Deathmatch-style respawn on death.
+  dmRespawn         Boolean  @default(false)
+  gameType          Int      @default(0)
+  gameMode          Int      @default(1)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([enabled])
+}
+
 model CsgoServer {
   id            String   @id @default(uuid())
   name          String
@@ -1381,7 +1407,9 @@ model CsgoPlayerSkin {
   id            String       @id @default(cuid())
   steamId       String
   skinId        String
-  wear          CsgoSkinWear @default(field_tested)
+  wear          CsgoSkinWear @default(factory_new)
+  /// Continuous wear 0.0 (Factory New / max quality) .. 1.0 (Battle-Scarred). Preferred over `wear` enum when syncing.
+  floatValue    Float        @default(0)
   seed          Int          @default(0)
   stattrak      Boolean      @default(false)
   stattrakCount Int          @default(0)

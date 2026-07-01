@@ -235,6 +235,10 @@ function loadoutToWorkspace(item: EquippedLoadoutEntry): SkinWorkspaceData {
     owned: true,
     equippedT: item.equippedT,
     equippedCT: item.equippedCT,
+    floatValue: item.floatValue,
+    seed: item.seed,
+    stattrak: item.stattrak,
+    nametag: item.nametag,
   };
 }
 

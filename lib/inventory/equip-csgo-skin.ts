@@ -15,6 +15,7 @@ import {
   type LoadoutTeam,
 } from "@/lib/inventory/loadout-team";
 import type { InventoryCategory } from "@/lib/generated/prisma/client";
+import { DEFAULT_SKIN_FLOAT } from "@/lib/inventory/skin-wear";
 
 const CATEGORY_WEAPON_SLOT: Partial<Record<InventoryCategory, string>> = {
   KNIFE: "weapon_knife",
@@ -107,14 +108,14 @@ export async function equipInventoryItemForUser(
             ? buildBothTeamsEquipCreateData({
                 steamId: user.steamId!,
                 skinId: catalog.id,
-                wear: "field_tested",
+                floatValue: DEFAULT_SKIN_FLOAT,
                 seed: 0,
                 stattrak: false,
               })
             : buildTeamEquipCreateData(team as LoadoutTeam, {
                 steamId: user.steamId!,
                 skinId: catalog.id,
-                wear: "field_tested",
+                floatValue: DEFAULT_SKIN_FLOAT,
                 seed: 0,
                 stattrak: false,
               }),

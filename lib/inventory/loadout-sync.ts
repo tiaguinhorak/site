@@ -1,9 +1,9 @@
-import type { CsgoPlayerSkin, CsgoSkinCatalog, CsgoSkinWear } from "@/lib/generated/prisma/client";
-import { WEAR_FLOAT } from "@/lib/csgo-api/serializers";
+import type { CsgoPlayerSkin, CsgoSkinCatalog } from "@/lib/generated/prisma/client";
 import {
   isGlovesWeaponId,
   resolveGloveDefIndex,
 } from "@/lib/inventory/glove-defindex";
+import { clampSkinFloat } from "@/lib/inventory/skin-wear";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
 
 export type SyncWeaponEntry = {
@@ -34,7 +34,7 @@ function mapRowToSyncWeapon(row: EquippedRow, team?: LoadoutTeam): SyncWeaponEnt
   return {
     weaponId: row.skin.weaponId,
     paintkit: row.skin.paintkit,
-    wear: parseFloat(WEAR_FLOAT[row.wear as CsgoSkinWear] ?? "0.15"),
+    wear: clampSkinFloat(row.floatValue),
     seed: row.seed,
     stattrak: row.stattrak,
     stattrakCount: row.stattrakCount,

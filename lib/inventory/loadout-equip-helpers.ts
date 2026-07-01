@@ -1,9 +1,25 @@
-import type { Prisma } from "@/lib/generated/prisma/client";
+import type { CsgoSkinWear, Prisma } from "@/lib/generated/prisma/client";
 import {
   mergeEquippedFlags,
   teamEquipField,
   type LoadoutTeam,
 } from "@/lib/inventory/loadout-team";
+import { DEFAULT_SKIN_FLOAT, floatToWearTier } from "@/lib/inventory/skin-wear";
+
+type EquipBase = {
+  steamId: string;
+  skinId: string;
+  wear?: CsgoSkinWear;
+  floatValue?: number;
+  seed: number;
+  stattrak: boolean;
+};
+
+function resolveWearFields(base: EquipBase): { wear: CsgoSkinWear; floatValue: number } {
+  const floatValue = base.floatValue ?? DEFAULT_SKIN_FLOAT;
+  const wear = base.wear ?? floatToWearTier(floatValue);
+  return { wear, floatValue };
+}
 
 type PlayerSkinDb = {
   csgoPlayerSkin: {
@@ -50,18 +66,14 @@ export async function unequipSlotForTeam(
 }
 
 export function buildBothTeamsEquipCreateData(
-  base: {
-    steamId: string;
-    skinId: string;
-    wear: "factory_new" | "minimal_wear" | "field_tested" | "well_worn" | "battle_scarred";
-    seed: number;
-    stattrak: boolean;
-  },
+  base: EquipBase,
 ): Prisma.CsgoPlayerSkinUncheckedCreateInput {
+  const { wear, floatValue } = resolveWearFields(base);
   return {
     steamId: base.steamId,
     skinId: base.skinId,
-    wear: base.wear,
+    wear,
+    floatValue,
     seed: base.seed,
     stattrak: base.stattrak,
     equipped: true,
@@ -80,20 +92,16 @@ export function buildBothTeamsEquipUpdateData(): Prisma.CsgoPlayerSkinUpdateInpu
 
 export function buildTeamEquipCreateData(
   team: LoadoutTeam,
-  base: {
-    steamId: string;
-    skinId: string;
-    wear: "factory_new" | "minimal_wear" | "field_tested" | "well_worn" | "battle_scarred";
-    seed: number;
-    stattrak: boolean;
-  },
+  base: EquipBase,
 ): Prisma.CsgoPlayerSkinUncheckedCreateInput {
   const equippedT = team === "T";
   const equippedCT = team === "CT";
+  const { wear, floatValue } = resolveWearFields(base);
   return {
     steamId: base.steamId,
     skinId: base.skinId,
-    wear: base.wear,
+    wear,
+    floatValue,
     seed: base.seed,
     stattrak: base.stattrak,
     equipped: true,

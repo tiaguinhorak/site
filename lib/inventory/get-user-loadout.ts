@@ -31,6 +31,10 @@ export type UserLoadoutItem = {
   imageUrl: string | null;
   rarity: string;
   accent: string;
+  floatValue: number;
+  seed: number;
+  stattrak: boolean;
+  nametag: string | null;
   equippedT: boolean;
   equippedCT: boolean;
   equippedAt: string;
@@ -136,6 +140,10 @@ export async function getUserServerLoadout(userId: string, team?: LoadoutTeam) {
     imageUrl: row.skin.imageUrl ?? catalogSkinImageUrl(row.skinId) ?? null,
     rarity: row.skin.rarity,
     accent: rarityAccent(row.skin.rarity),
+    floatValue: row.floatValue,
+    seed: row.seed,
+    stattrak: row.stattrak,
+    nametag: row.nametag,
     equippedT: row.equippedT,
     equippedCT: row.equippedCT,
     equippedAt: row.createdAt.toISOString(),
@@ -155,6 +163,10 @@ export async function getUserServerLoadout(userId: string, team?: LoadoutTeam) {
       imageUrl: agents.agentTImage,
       rarity: "lendário",
       accent: rarityAccent("lendário"),
+      floatValue: 0,
+      seed: 0,
+      stattrak: false,
+      nametag: null,
       equippedT: true,
       equippedCT: false,
       equippedAt: new Date().toISOString(),
@@ -173,6 +185,10 @@ export async function getUserServerLoadout(userId: string, team?: LoadoutTeam) {
       imageUrl: agents.agentCTImage,
       rarity: "lendário",
       accent: rarityAccent("lendário"),
+      floatValue: 0,
+      seed: 0,
+      stattrak: false,
+      nametag: null,
       equippedT: false,
       equippedCT: true,
       equippedAt: new Date().toISOString(),

@@ -10,6 +10,7 @@ const MIME: Record<string, string> = {
   jpg: "image/jpeg",
   jpeg: "image/jpeg",
   png: "image/png",
+  dem: "application/octet-stream",
 };
 
 function contentTypeFor(filename: string): string {
@@ -36,12 +37,16 @@ export async function GET(
 
   try {
     const buffer = await readFile(filepath);
+    const headers: Record<string, string> = {
+      "Content-Type": contentTypeFor(relative),
+      "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+    };
+    if (relative.endsWith(".dem")) {
+      headers["Content-Disposition"] = `attachment; filename="${path.basename(relative)}"`;
+    }
     return new NextResponse(buffer, {
       status: 200,
-      headers: {
-        "Content-Type": contentTypeFor(relative),
-        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
-      },
+      headers,
     });
   } catch {
     return NextResponse.json({ error: "Not found" }, { status: 404 });

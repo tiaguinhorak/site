@@ -25,6 +25,7 @@ import {
   Zap,
   Flame,
   ImageIcon,
+  Sliders,
   type LucideIcon,
 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
@@ -55,6 +56,7 @@ const iconMap: Record<string, LucideIcon> = {
   ImageIcon,
   Zap,
   Flame,
+  Sliders,
 };
 
 function isActive(pathname: string, href: string) {

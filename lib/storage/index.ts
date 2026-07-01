@@ -100,3 +100,15 @@ export async function storeAdminUpload(
   const filename = `${randomUUID()}.${optimized.ext}`;
   return storeOptimized(folder, filename, optimized.buffer, optimized.contentType);
 }
+
+/** Ranked match GOTV demo (`.dem`), keyed by csgo match id. */
+export async function storeMatchDemo(
+  matchId: string,
+  fileBuffer: Buffer,
+): Promise<StoredObject> {
+  const safeId = matchId.replace(/[^a-zA-Z0-9_-]/g, "");
+  if (!safeId) {
+    throw new Error("Invalid match id.");
+  }
+  return storeOptimized("demos", `${safeId}.dem`, fileBuffer, "application/octet-stream");
+}

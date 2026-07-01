@@ -6,7 +6,8 @@ export type UploadFolder =
   | "clans"
   | "news"
   | "store"
-  | "general";
+  | "general"
+  | "demos";
 
 export type StoredObject = {
   key: string;

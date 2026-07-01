@@ -291,6 +291,13 @@ export const adminNav = [
     title: "Auditoria",
     description: "Log de ações administrativas para rastreabilidade.",
   },
+  {
+    label: "Regras de jogo",
+    href: "/admin/regras-jogo",
+    icon: "Sliders",
+    title: "Regras de jogo",
+    description: "Aquecimento (1 min), gold no warmup, comprar em qualquer lugar, spawns aleatórios e respawn DM por pool.",
+  },
 ] as const;
 
 export type AdminNavItem = {
@@ -327,7 +334,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     id: "infra",
     label: "Infra",
     icon: "Server",
-    items: [adminNav[5], adminNav[6], adminNav[7], adminNav[8]],
+    items: [adminNav[5], adminNav[6], adminNav[7], adminNav[8], adminNav[13]],
   },
   {
     id: "system",

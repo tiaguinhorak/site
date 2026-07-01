@@ -38,6 +38,7 @@ import {
   surfaceSubtleClass,
 } from "@/lib/ui/theme-surfaces";
 import { WeaponStickerSlotGrid } from "@/components/inventory/weapon-sticker-slot-grid";
+import { SkinFloatPatternEditor } from "@/components/inventory/skin-float-pattern-editor";
 import { StickerPickerTile } from "@/components/inventory/sticker-picker-tile";
 import { TeamScopePicker } from "@/components/inventory/team-scope-picker";
 import type { StickerFinishVariant } from "@/lib/inventory/sticker-finish-variant";
@@ -73,6 +74,10 @@ export type SkinWorkspaceData = {
   owned?: boolean;
   equippedT: boolean;
   equippedCT: boolean;
+  floatValue?: number;
+  seed?: number;
+  stattrak?: boolean;
+  nametag?: string | null;
 };
 
 type SkinWorkspaceProps = {
@@ -784,6 +789,20 @@ export function SkinWorkspace({
                   </button>
                 </div>
               )}
+
+              {displaySkin.owned &&
+                anyEquipped &&
+                displaySkin.floatValue !== undefined && (
+                  <div className="shrink-0 pt-3">
+                    <SkinFloatPatternEditor
+                      catalogSkinId={displaySkin.catalogSkinId}
+                      floatValue={displaySkin.floatValue}
+                      seed={displaySkin.seed}
+                      disabled={busy}
+                      onSaved={() => onSaved?.()}
+                    />
+                  </div>
+                )}
             </div>
           ) : (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
