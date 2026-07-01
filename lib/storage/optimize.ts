@@ -1,4 +1,14 @@
-import sharp from "sharp";
+type SharpInstance = import("sharp").Sharp;
+type SharpFactory = (input?: Parameters<typeof import("sharp")["default"]>[0]) => SharpInstance;
+
+let sharpFactoryPromise: Promise<SharpFactory> | null = null;
+
+async function getSharp(): Promise<SharpFactory> {
+  if (!sharpFactoryPromise) {
+    sharpFactoryPromise = import("sharp").then((mod) => mod.default);
+  }
+  return sharpFactoryPromise;
+}
 
 export type OptimizedImage = {
   buffer: Buffer;
@@ -9,6 +19,7 @@ export type OptimizedImage = {
 const WEBP_OPTIONS = { quality: 85, effort: 4 } as const;
 
 export async function optimizeAvatar(buffer: Buffer): Promise<OptimizedImage> {
+  const sharp = await getSharp();
   const output = await sharp(buffer)
     .rotate()
     .resize(256, 256, { fit: "cover", position: "centre" })
@@ -19,6 +30,7 @@ export async function optimizeAvatar(buffer: Buffer): Promise<OptimizedImage> {
 }
 
 export async function optimizeClanAvatar(buffer: Buffer): Promise<OptimizedImage> {
+  const sharp = await getSharp();
   const output = await sharp(buffer)
     .rotate()
     .resize(256, 256, { fit: "cover", position: "centre" })
@@ -29,6 +41,7 @@ export async function optimizeClanAvatar(buffer: Buffer): Promise<OptimizedImage
 }
 
 export async function optimizeBanner(buffer: Buffer): Promise<OptimizedImage> {
+  const sharp = await getSharp();
   const output = await sharp(buffer)
     .rotate()
     .resize(1600, 560, { fit: "inside", withoutEnlargement: true })
@@ -46,6 +59,7 @@ export async function optimizeAdminImage(
     return { buffer, contentType: "image/gif", ext: "gif" };
   }
 
+  const sharp = await getSharp();
   const output = await sharp(buffer)
     .rotate()
     .resize(1920, 1920, { fit: "inside", withoutEnlargement: true })
