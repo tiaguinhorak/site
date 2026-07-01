@@ -10,6 +10,10 @@ import { serializePublicPlayer } from "@/lib/profile/serialize-public";
 import { getPublicPlayerSkins } from "@/lib/inventory/get-public-player-skins";
 import { resolveEloRankLabels } from "@/lib/ranked/resolve-elo-rank-labels";
 import { getPublicUserMedals } from "@/lib/achievements/service";
+import {
+  refreshSteamProfileForUserId,
+  userNeedsSteamProfileRefresh,
+} from "@/lib/steam/sync-profiles";
 
 type PageProps = {
   params: Promise<{ nickname: string }>;
@@ -32,11 +36,21 @@ export default async function PlayerProfilePage({ params }: PageProps) {
   const { nickname } = await params;
   const normalized = nickname.trim().toUpperCase();
 
-  const user = await prisma.user.findFirst({
+  let user = await prisma.user.findFirst({
     where: { nickname: normalized },
   });
 
   if (!user) notFound();
+
+  if (userNeedsSteamProfileRefresh(user)) {
+    try {
+      await refreshSteamProfileForUserId(user.id);
+      const refreshed = await prisma.user.findFirst({ where: { id: user.id } });
+      if (refreshed) user = refreshed;
+    } catch {
+      // Exibe dados em cache se a API Steam falhar.
+    }
+  }
 
   const player = serializePublicPlayer(user);
   const eloLabels = await resolveEloRankLabels(player.elo);

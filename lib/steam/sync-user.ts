@@ -22,6 +22,15 @@ export function mapSteamCountry(code: string | null): string | null {
   return STEAM_COUNTRY_MAP[upper] ?? "BR";
 }
 
+export function isSteamAvatarUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  return (
+    url.includes("steamstatic.com") ||
+    url.includes("steamcdn-a.akamaihd.net") ||
+    url.includes("steamcommunity.com/public/images/avatars")
+  );
+}
+
 function splitPersonName(name: string): { firstName: string; lastName: string } {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return { firstName: "", lastName: "" };
@@ -39,6 +48,13 @@ type UserProfileFields = Pick<
   | "lastName"
   | "country"
 >;
+
+function userUsesSteamAvatar(user: UserProfileFields): boolean {
+  if (user.avatarPreset) return false;
+  if (!user.avatarUrl) return true;
+  if (user.avatarUrl === user.steamAvatarUrl) return true;
+  return isSteamAvatarUrl(user.avatarUrl);
+}
 
 export function buildUserSteamUpdate(
   user: UserProfileFields | null,
@@ -61,9 +77,7 @@ export function buildUserSteamUpdate(
     update.steamAccountCreatedAt = steam.accountCreatedAt;
   }
 
-  const usingSteamAvatar =
-    !user?.avatarUrl && !user?.avatarPreset;
-  if (usingSteamAvatar && steam.avatarUrl) {
+  if (user && userUsesSteamAvatar(user) && steam.avatarUrl) {
     update.avatarUrl = steam.avatarUrl;
   }
 
@@ -114,7 +128,11 @@ export function buildUserSteamUnlink(
     steamLinkedAt: null,
   };
 
-  if (!user.avatarPreset && user.avatarUrl && user.avatarUrl === user.steamAvatarUrl) {
+  if (
+    !user.avatarPreset &&
+    user.avatarUrl &&
+    (user.avatarUrl === user.steamAvatarUrl || isSteamAvatarUrl(user.avatarUrl))
+  ) {
     update.avatarUrl = null;
   }
 

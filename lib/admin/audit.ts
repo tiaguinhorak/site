@@ -59,6 +59,7 @@ export type AuditAction =
   | "AVATAR_REJECT"
   | "BANNER_APPROVE"
   | "BANNER_REJECT"
+  | "STEAM_PROFILE_SYNC"
   | "SMURF_STATUS_UPDATE";
 
 export async function logAdminAction(params: {

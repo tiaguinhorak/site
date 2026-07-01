@@ -4,6 +4,13 @@ export function isSteamId64(steamId: string): boolean {
   return /^\d{17}$/.test(steamId.trim());
 }
 
+/** Normalize any supported Steam id to SteamID64 for Web API calls. */
+export function normalizeSteamId64(steamId: string): string | null {
+  const trimmed = steamId.trim();
+  if (isSteamId64(trimmed)) return trimmed;
+  return steam2ToSteamId64(trimmed);
+}
+
 export function isSteam2(steamId: string): boolean {
   return /^STEAM_[0-5]:[0-1]:\d+$/i.test(steamId.trim());
 }

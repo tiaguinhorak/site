@@ -1,5 +1,6 @@
 import type { SteamProfileData } from "@/lib/steam/sync-user";
 import { fetchWithTimeout } from "@/lib/steam/fetch-with-timeout";
+import { normalizeSteamId64 } from "@/lib/steam/steam-id";
 
 type SteamPlayerSummary = {
   steamid: string;
@@ -55,14 +56,23 @@ async function fetchSteamPlayerSummaryBatch(
     result.set(player.steamid, mapSteamPlayer(player));
   }
 
+  for (const requestedId of steamIds) {
+    if (result.has(requestedId)) continue;
+    const normalized = normalizeSteamId64(requestedId);
+    if (normalized && result.has(normalized)) {
+      result.set(requestedId, result.get(normalized)!);
+    }
+  }
+
   return result;
 }
 
 export async function fetchSteamPlayerSummary(
   steamId: string,
 ): Promise<SteamProfileData | null> {
-  const map = await fetchSteamPlayerSummaries([steamId]);
-  return map.get(steamId) ?? null;
+  const normalized = normalizeSteamId64(steamId) ?? steamId;
+  const map = await fetchSteamPlayerSummaries([normalized]);
+  return map.get(normalized) ?? map.get(steamId) ?? null;
 }
 
 export async function fetchSteamPlayerSummaries(
@@ -75,7 +85,13 @@ export async function fetchSteamPlayerSummaries(
     return result;
   }
 
-  const unique = [...new Set(steamIds.map((id) => id.trim()).filter(Boolean))];
+  const unique = [
+    ...new Set(
+      steamIds
+        .map((id) => normalizeSteamId64(id.trim()) ?? id.trim())
+        .filter(Boolean),
+    ),
+  ];
   for (let i = 0; i < unique.length; i += STEAM_SUMMARY_BATCH_SIZE) {
     const chunk = unique.slice(i, i + STEAM_SUMMARY_BATCH_SIZE);
     const batch = await fetchSteamPlayerSummaryBatch(chunk, apiKey);
