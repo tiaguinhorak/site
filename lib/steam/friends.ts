@@ -1,5 +1,7 @@
 import "server-only";
 
+import { getSteamApiKey } from "@/lib/steam/api-key";
+
 type SteamFriend = { steamid: string; relationship: string; friend_since: number };
 
 /**
@@ -8,7 +10,7 @@ type SteamFriend = { steamid: string; relationship: string; friend_since: number
  * Returns an empty array when unavailable (private list, no key, errors).
  */
 export async function fetchSteamFriendIds(steamId: string): Promise<string[]> {
-  const apiKey = process.env.STEAM_API_KEY;
+  const apiKey = getSteamApiKey();
   if (!apiKey || !steamId) return [];
 
   const url = new URL("https://api.steampowered.com/ISteamUser/GetFriendList/v0001/");
@@ -30,7 +32,7 @@ export async function fetchSteamFriendIds(steamId: string): Promise<string[]> {
 
 /** Resolve a Steam vanity URL (custom id) to a SteamID64. */
 export async function resolveSteamVanity(vanity: string): Promise<string | null> {
-  const apiKey = process.env.STEAM_API_KEY;
+  const apiKey = getSteamApiKey();
   if (!apiKey || !vanity) return null;
 
   const url = new URL("https://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/");

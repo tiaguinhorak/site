@@ -1,10 +1,27 @@
 import "dotenv/config";
+import { getSteamApiKey } from "../lib/steam/api-key";
+import { probeSteamPlayerSummariesApi } from "../lib/steam/profile";
 import { createScriptPrismaClient } from "../lib/prisma-script";
 import { refreshAllLinkedSteamProfiles } from "../lib/steam/sync-profiles-core";
 
 async function main() {
-  if (!process.env.STEAM_API_KEY?.trim()) {
-    console.error("STEAM_API_KEY não definida no .env");
+  const apiKey = getSteamApiKey();
+  if (!apiKey) {
+    console.error("[sync-steam-profiles] STEAM_API_KEY não definida no .env");
+    process.exit(1);
+  }
+
+  console.log(`[sync-steam-profiles] STEAM_API_KEY ok (len=${apiKey.length})`);
+
+  const probe = await probeSteamPlayerSummariesApi();
+  console.log(
+    `[sync-steam-profiles] probe HTTP=${probe.httpStatus ?? "—"} players=${probe.playerCount}`,
+  );
+  if (!probe.ok) {
+    console.error(`[sync-steam-profiles] API Steam indisponível: ${probe.error ?? "erro desconhecido"}`);
+    console.error(
+      "[sync-steam-profiles] Verifique a chave em https://steamcommunity.com/dev/apikey (domínio do VPS).",
+    );
     process.exit(1);
   }
 
@@ -15,13 +32,32 @@ async function main() {
   try {
     const result = await refreshAllLinkedSteamProfiles(prisma, { limit });
     console.log(
-      `[sync-steam-profiles] total=${result.total} updated=${result.updated} skipped=${result.skipped} failed=${result.failed}`,
+      `[sync-steam-profiles] total=${result.total} updated=${result.updated} skipped=${result.skipped} failed=${result.failed} invalidSteamId=${result.invalidSteamId}`,
     );
 
-    if (result.failed > 0) {
+    if (result.apiHttpStatus != null) {
+      console.log(`[sync-steam-profiles] API HTTP=${result.apiHttpStatus}`);
+    }
+    if (result.apiError) {
+      console.warn(`[sync-steam-profiles] API error: ${result.apiError}`);
+    }
+
+    if (result.invalidSteamId > 0) {
       console.warn(
-        "[sync-steam-profiles] Alguns perfis falharam (perfil privado, API ou steamId inválido).",
+        `[sync-steam-profiles] ${result.invalidSteamId} usuário(s) com steamId inválido no Postgres (precisa relink Steam).`,
       );
+    }
+
+    if (result.failed > 0 && result.updated === 0) {
+      const sample = await prisma.user.findMany({
+        where: { steamId: { not: null } },
+        select: { nickname: true, steamId: true },
+        take: 3,
+      });
+      console.warn("[sync-steam-profiles] Amostra steamId no banco:");
+      for (const row of sample) {
+        console.warn(`  - ${row.nickname}: ${row.steamId}`);
+      }
     }
   } finally {
     await prisma.$disconnect();

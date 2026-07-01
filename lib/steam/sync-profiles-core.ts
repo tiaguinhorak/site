@@ -1,6 +1,6 @@
 import type { PrismaClient, User } from "@/lib/generated/prisma/client";
-import { fetchSteamPlayerSummaries } from "@/lib/steam/profile";
-import { normalizeSteamId64 } from "@/lib/steam/steam-id";
+import { fetchSteamPlayerSummariesWithMeta } from "@/lib/steam/profile";
+import { isSteamId64, normalizeSteamId64 } from "@/lib/steam/steam-id";
 import { buildUserSteamUpdate } from "@/lib/steam/sync-user";
 
 const STEAM_USER_SELECT = {
@@ -30,6 +30,12 @@ type SteamUserRow = Pick<
 
 const FALLBACK_PERSONA = /^Player_\d{4}$/;
 
+function resolveApiSteamId(steamId: string | null | undefined): string | null {
+  if (!steamId?.trim()) return null;
+  const trimmed = steamId.trim();
+  return normalizeSteamId64(trimmed) ?? (isSteamId64(trimmed) ? trimmed : null);
+}
+
 export function userNeedsSteamProfileRefresh(
   user: Pick<User, "steamId" | "steamPersonaName" | "steamAvatarUrl">,
 ): boolean {
@@ -55,11 +61,11 @@ export async function refreshSteamProfileForUser(
   prisma: PrismaClient,
   user: SteamUserRow,
 ): Promise<boolean> {
-  if (!user.steamId) return false;
+  const steamId = resolveApiSteamId(user.steamId);
+  if (!steamId) return false;
 
-  const steamId = normalizeSteamId64(user.steamId) ?? user.steamId;
-  const profiles = await fetchSteamPlayerSummaries([steamId]);
-  const profile = profiles.get(steamId) ?? profiles.get(user.steamId);
+  const { profiles } = await fetchSteamPlayerSummariesWithMeta([steamId]);
+  const profile = profiles.get(steamId) ?? (user.steamId ? profiles.get(user.steamId) : undefined);
   if (!profile) return false;
 
   await prisma.user.update({
@@ -74,6 +80,9 @@ export type SteamProfileSyncResult = {
   updated: number;
   skipped: number;
   failed: number;
+  invalidSteamId: number;
+  apiHttpStatus: number | null;
+  apiError: string | null;
 };
 
 export async function refreshAllLinkedSteamProfiles(
@@ -99,24 +108,44 @@ export async function refreshAllLinkedSteamProfiles(
     updated: 0,
     skipped: 0,
     failed: 0,
+    invalidSteamId: 0,
+    apiHttpStatus: null,
+    apiError: null,
   };
 
   if (users.length === 0) return result;
 
-  const steamIds = users
-    .map((user) => (user.steamId ? normalizeSteamId64(user.steamId) ?? user.steamId : null))
-    .filter((id): id is string => Boolean(id));
-
-  const profiles = await fetchSteamPlayerSummaries(steamIds);
+  const usersWithValidSteamId: Array<SteamUserRow & { apiSteamId: string }> = [];
 
   for (const user of users) {
-    if (!user.steamId) {
-      result.skipped += 1;
+    const apiSteamId = resolveApiSteamId(user.steamId);
+    if (!apiSteamId) {
+      result.invalidSteamId += 1;
+      result.failed += 1;
       continue;
     }
+    usersWithValidSteamId.push({ ...user, apiSteamId });
+  }
 
-    const steamId = normalizeSteamId64(user.steamId) ?? user.steamId;
-    const profile = profiles.get(steamId) ?? profiles.get(user.steamId);
+  if (usersWithValidSteamId.length === 0) {
+    result.apiError = "Nenhum steamId válido (SteamID64) no banco.";
+    return result;
+  }
+
+  const steamIds = [...new Set(usersWithValidSteamId.map((user) => user.apiSteamId))];
+  const { profiles, meta } = await fetchSteamPlayerSummariesWithMeta(steamIds);
+  result.apiHttpStatus = meta.httpStatus;
+  result.apiError = meta.error;
+
+  if (profiles.size === 0 && meta.error) {
+    result.failed += usersWithValidSteamId.length;
+    return result;
+  }
+
+  for (const user of usersWithValidSteamId) {
+    const profile =
+      profiles.get(user.apiSteamId) ??
+      (user.steamId ? profiles.get(user.steamId) : undefined);
     if (!profile) {
       result.failed += 1;
       continue;

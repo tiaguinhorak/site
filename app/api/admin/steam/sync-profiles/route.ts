@@ -10,6 +10,7 @@ import { requireAdmin } from "@/lib/auth/admin";
 import { RATE_LIMITS } from "@/lib/security/constants";
 import { firstZodError } from "@/lib/security/schemas";
 import { logAdminAction } from "@/lib/admin/audit";
+import { hasSteamApiKey } from "@/lib/steam/api-key";
 import {
   refreshAllLinkedSteamProfiles,
   refreshSteamProfileForUserId,
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
   const { user: admin, error } = await requireAdmin(request);
   if (error) return error;
 
-  if (!process.env.STEAM_API_KEY?.trim()) {
+  if (!hasSteamApiKey()) {
     return jsonError(503, "STEAM_API_KEY não configurada no servidor.");
   }
 

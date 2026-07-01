@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { probeOutboundUrl } from "@/lib/steam/fetch-with-timeout";
 import { checkStorageHealth, getStorageConfig } from "@/lib/storage";
+import { hasSteamApiKey } from "@/lib/steam/api-key";
 
 function appUrlWarnings(appUrl: string): string[] {
   const warnings: string[] = [];
@@ -34,7 +35,7 @@ export async function GET() {
     appUrl: appUrl || null,
     hasSessionSecret: sessionSecret.length >= 32,
     hasDatabaseUrl: Boolean(databaseUrl),
-    hasSteamApiKey: Boolean(process.env.STEAM_API_KEY?.trim()),
+    hasSteamApiKey: hasSteamApiKey(),
     warnings: appUrlWarnings(appUrl),
   };
 
