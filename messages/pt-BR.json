@@ -973,6 +973,16 @@
         "title": "Banner GIF rejeitado",
         "body": "Seu banner GIF não foi aprovado pela moderação. Envie outro arquivo seguindo as regras."
       }
+    },
+    "friends": {
+      "requestReceived": {
+        "title": "Novo pedido de amizade",
+        "body": "{name} quer ser seu amigo."
+      },
+      "requestAccepted": {
+        "title": "Pedido de amizade aceito",
+        "body": "{name} aceitou seu pedido de amizade."
+      }
     }
   },
   "gameModes": {
@@ -1027,9 +1037,16 @@
     "pending": "Pendente",
     "cancel": "Cancelar",
     "searchLabel": "Buscar jogadores",
-    "searchPlaceholder": "Nome do jogador...",
+    "searchPlaceholder": "Nickname, nome Steam ou SteamID64...",
     "noResults": "Nenhum jogador encontrado.",
     "add": "Adicionar",
+    "addConfirmTitle": "Enviar pedido de amizade?",
+    "addConfirmDesc": "Enviar convite de amizade para {nickname}?",
+    "reject": "Recusar",
+    "rejectConfirmTitle": "Recusar convite?",
+    "rejectConfirmDesc": "Recusar o pedido de amizade de {nickname}?",
+    "acceptConfirmTitle": "Aceitar amizade?",
+    "acceptConfirmDesc": "Aceitar o pedido de amizade de {nickname}?",
     "requestSent": "Convite enviado!",
     "alreadyFriends": "Já são amigos",
     "respondInRequests": "Responda nos convites",
@@ -1039,6 +1056,16 @@
     "steamUnavailable": "Vincule sua Steam e deixe sua lista de amigos pública.",
     "steamNoneOnPlatform": "Nenhum amigo da Steam está na plataforma ainda.",
     "inviteRanked": "Convidar ranked",
+    "inviteRankedFriends": "Convidar amigos para a sala",
+    "inviteRankedConfirmTitle": "Convidar para rankeada?",
+    "inviteRankedConfirmDesc": "Enviar convite de sala rankeada para {nickname}?",
+    "giftSomeone": "Presentear jogador",
+    "giftSomeoneTitle": "Presentear jogador",
+    "giftSearchLabel": "Buscar destinatário",
+    "giftChangeRecipient": "Trocar destinatário",
+    "giftConfirmTitle": "Confirmar presente",
+    "giftConfirmCoins": "Enviar {amount} moedas para {nickname}?",
+    "giftConfirmItem": "Presentear {item} para {nickname}?",
     "close": "Fechar",
     "giftTo": "Presentear {nickname}",
     "giftCoins": "Moedas",
@@ -1069,7 +1096,8 @@
       "offlineNow": "Offline",
       "inviteRanked": "Convidar para rankeada",
       "loading": "Carregando conversa...",
-      "minimize": "Minimizar",
+      "minimizeChat": "Minimizar chat",
+      "restoreChat": "Restaurar chat com {nickname}",
       "closeChat": "Fechar chat"
     },
     "invite": {

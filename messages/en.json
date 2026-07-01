@@ -973,6 +973,16 @@
         "title": "GIF banner rejected",
         "body": "Your GIF banner was not approved. Please upload another file following the rules."
       }
+    },
+    "friends": {
+      "requestReceived": {
+        "title": "New friend request",
+        "body": "{name} wants to be your friend."
+      },
+      "requestAccepted": {
+        "title": "Friend request accepted",
+        "body": "{name} accepted your friend request."
+      }
     }
   },
   "gameModes": {
@@ -1027,9 +1037,16 @@
     "pending": "Pending",
     "cancel": "Cancel",
     "searchLabel": "Search players",
-    "searchPlaceholder": "Player name...",
+    "searchPlaceholder": "Nickname, Steam name or SteamID64...",
     "noResults": "No players found.",
     "add": "Add",
+    "addConfirmTitle": "Send friend request?",
+    "addConfirmDesc": "Send a friend request to {nickname}?",
+    "reject": "Decline",
+    "rejectConfirmTitle": "Decline request?",
+    "rejectConfirmDesc": "Decline the friend request from {nickname}?",
+    "acceptConfirmTitle": "Accept friendship?",
+    "acceptConfirmDesc": "Accept the friend request from {nickname}?",
     "requestSent": "Request sent!",
     "alreadyFriends": "Already friends",
     "respondInRequests": "Respond in requests",
@@ -1039,6 +1056,16 @@
     "steamUnavailable": "Link your Steam and make your friends list public.",
     "steamNoneOnPlatform": "No Steam friends are on the platform yet.",
     "inviteRanked": "Invite to ranked",
+    "inviteRankedFriends": "Invite friends to the room",
+    "inviteRankedConfirmTitle": "Invite to ranked?",
+    "inviteRankedConfirmDesc": "Send a ranked room invite to {nickname}?",
+    "giftSomeone": "Gift a player",
+    "giftSomeoneTitle": "Gift a player",
+    "giftSearchLabel": "Search recipient",
+    "giftChangeRecipient": "Change recipient",
+    "giftConfirmTitle": "Confirm gift",
+    "giftConfirmCoins": "Send {amount} coins to {nickname}?",
+    "giftConfirmItem": "Gift {item} to {nickname}?",
     "close": "Close",
     "giftTo": "Gift {nickname}",
     "giftCoins": "Coins",
@@ -1069,7 +1096,8 @@
       "offlineNow": "Offline",
       "inviteRanked": "Invite to ranked",
       "loading": "Loading conversation...",
-      "minimize": "Minimize",
+      "minimizeChat": "Minimize chat",
+      "restoreChat": "Restore chat with {nickname}",
       "closeChat": "Close chat"
     },
     "invite": {

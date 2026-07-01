@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { creditCoins, debitCoins, InsufficientCoinsError } from "@/lib/economy/wallet";
 import { resolveSteamId64 } from "@/lib/steam/friends";
+import { resolveSteamDisplayName, STEAM_DISPLAY_NAME_SELECT } from "@/lib/steam/display-name";
 import { purchaseStoreItem, type StorePurchaseCurrency } from "@/lib/store/fulfill-purchase";
 import { CsgoApiError } from "@/lib/csgo-api/http";
 
@@ -67,8 +68,9 @@ export async function giftCoins(
 
   const sender = await prisma.user.findUnique({
     where: { id: senderId },
-    select: { nickname: true },
+    select: STEAM_DISPLAY_NAME_SELECT,
   });
+  const senderName = sender ? resolveSteamDisplayName(sender) : "Um jogador";
 
   await prisma.$transaction(async (tx) => {
     try {
@@ -90,7 +92,7 @@ export async function giftCoins(
       userId: recipient.id,
       amount: value,
       kind: "GIFT_RECEIVED",
-      reason: `Presente de ${sender?.nickname ?? "um jogador"}`,
+        reason: `Presente de ${senderName}`,
       metadata: { senderId },
     });
   });
@@ -101,7 +103,7 @@ export async function giftCoins(
         userId: recipient.id,
         type: "SOCIAL",
         title: "Você recebeu um presente!",
-        body: `${sender?.nickname ?? "Um jogador"} te enviou ${value.toLocaleString("pt-BR")} moedas.`,
+        body: `${senderName} te enviou ${value.toLocaleString("pt-BR")} moedas.`,
       },
     })
     .catch(() => undefined);
@@ -115,8 +117,9 @@ export async function giftStoreItem(
 ): Promise<void> {
   const sender = await prisma.user.findUnique({
     where: { id: senderId },
-    select: { nickname: true },
+    select: STEAM_DISPLAY_NAME_SELECT,
   });
+  const senderName = sender ? resolveSteamDisplayName(sender) : "Um jogador";
 
   try {
     await purchaseStoreItem(senderId, storeItemId, {
@@ -137,7 +140,7 @@ export async function giftStoreItem(
         userId: recipient.id,
         type: "SOCIAL",
         title: "Você recebeu um presente!",
-        body: `${sender?.nickname ?? "Um jogador"} te presenteou com um item da loja.`,
+        body: `${senderName} te presenteou com um item da loja.`,
       },
     })
     .catch(() => undefined);

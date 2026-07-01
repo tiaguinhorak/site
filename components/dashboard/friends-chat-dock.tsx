@@ -1,16 +1,23 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Send, Swords, X } from "lucide-react";
+import { Loader2, Minus, Send, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
+import { SocialUserName } from "@/components/social/social-user-name";
 import {
   useFriendsOptional,
   type FriendEntryLite,
 } from "@/components/providers/friends-provider";
 import { cn } from "@/lib/utils";
 
-function ChatWindow({ friend }: { friend: FriendEntryLite }) {
+function ChatWindow({
+  friend,
+  minimized,
+}: {
+  friend: FriendEntryLite;
+  minimized: boolean;
+}) {
   const friends = useFriendsOptional();
   const t = useTranslations("friends.chat");
   const [draft, setDraft] = useState("");
@@ -22,9 +29,10 @@ function ChatWindow({ friend }: { friend: FriendEntryLite }) {
   const online = friends?.isOnline(friend.id) ?? false;
 
   useEffect(() => {
+    if (minimized) return;
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messages.length, loading]);
+  }, [messages.length, loading, minimized]);
 
   if (!friends) return null;
 
@@ -35,6 +43,30 @@ function ChatWindow({ friend }: { friend: FriendEntryLite }) {
     const ok = await friends!.sendMessage(friend.id, body);
     setSending(false);
     if (ok) setDraft("");
+  }
+
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        onClick={() => friends.toggleMinimizeChat(friend.id)}
+        className="pointer-events-auto flex h-10 max-w-[12rem] items-center gap-2 rounded-t-xl border border-border glass-strong px-3 shadow-lg transition-colors hover:bg-[color-mix(in_srgb,var(--primary)_8%,transparent)]"
+        aria-label={t("restoreChat", { nickname: friend.displayName })}
+      >
+        <UserProfileAvatar
+          avatarUrl={friend.avatarUrl}
+          nickname={friend.nickname}
+          customization={friend.customization}
+          size="sm"
+        />
+        <span className="truncate text-sm font-semibold text-foreground">{friend.displayName}</span>
+        {(friends.unread[friend.id] ?? 0) > 0 && (
+          <span className="ml-auto rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
+            {friends.unread[friend.id]}
+          </span>
+        )}
+      </button>
+    );
   }
 
   return (
@@ -56,19 +88,19 @@ function ChatWindow({ friend }: { friend: FriendEntryLite }) {
           />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-foreground">{friend.displayName}</p>
+          <SocialUserName user={friend} nameClassName="text-sm font-bold" />
           <p className={cn("text-[11px]", online ? "text-emerald-300" : "text-muted")}>
             {online ? t("onlineNow") : t("offlineNow")}
           </p>
         </div>
         <button
           type="button"
-          onClick={() => void friends!.inviteToRanked(friend.id)}
-          className="rounded-lg p-1.5 text-violet-300 transition-colors hover:bg-[color-mix(in_srgb,var(--primary)_12%,transparent)]"
-          aria-label={t("inviteRanked")}
-          title={t("inviteRanked")}
+          onClick={() => friends!.toggleMinimizeChat(friend.id)}
+          className="rounded-lg p-1.5 text-muted transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_8%,transparent)] hover:text-foreground"
+          aria-label={t("minimizeChat")}
+          title={t("minimizeChat")}
         >
-          <Swords className="h-4 w-4" />
+          <Minus className="h-4 w-4" />
         </button>
         <button
           type="button"
@@ -147,7 +179,7 @@ export function FriendsChatDock() {
   const friends = useFriendsOptional();
   if (!friends) return null;
 
-  const { openChats, friends: list } = friends;
+  const { openChats, minimizedChats, friends: list } = friends;
   if (openChats.length === 0) return null;
 
   const windows = openChats
@@ -157,7 +189,11 @@ export function FriendsChatDock() {
   return (
     <div className="pointer-events-none fixed bottom-0 right-4 z-[95] flex items-end gap-3">
       {windows.map((friend) => (
-        <ChatWindow key={friend.id} friend={friend} />
+        <ChatWindow
+          key={friend.id}
+          friend={friend}
+          minimized={minimizedChats.has(friend.id)}
+        />
       ))}
     </div>
   );

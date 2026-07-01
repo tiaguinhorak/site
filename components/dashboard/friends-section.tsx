@@ -1,21 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import {
   Check,
   Gift,
   Loader2,
   Search,
-  Swords,
   UserPlus,
-  Users,
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
-import { ProfileDisplayName } from "@/components/profile/profile-display-name";
+import { SocialUserName } from "@/components/social/social-user-name";
 import type { PublicProfileCustomization } from "@/lib/profile/serialize-customization";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,10 +23,6 @@ import { toast } from "@/lib/toast";
 import { dispatchInventoryRefresh } from "@/lib/inventory/inventory-refresh-events";
 import { cn } from "@/lib/utils";
 import { ModalPortal } from "@/components/ui/modal-portal";
-import {
-  useRankedPartyOptional,
-  RANKED_TEAM_SIZE,
-} from "@/components/providers/ranked-party-provider";
 
 type FriendUser = {
   id: string;
@@ -79,10 +72,6 @@ function Avatar({ user, size = 40 }: { user: FriendUser; size?: number }) {
 
 export function FriendsSection() {
   const t = useTranslations("friends");
-  const tInvite = useTranslations("ranked.inviteJoin");
-  const tInviteRanked = useTranslations("friends.invite");
-  const rankedCtx = useRankedPartyOptional();
-  const party = rankedCtx?.party ?? null;
   const { refresh } = useUser();
   const [tab, setTab] = useState<Tab>("friends");
   const [friends, setFriends] = useState<FriendEntry[]>([]);
@@ -90,7 +79,7 @@ export function FriendsSection() {
   const [outgoing, setOutgoing] = useState<FriendRequestView[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [giftTarget, setGiftTarget] = useState<FriendUser | null>(null);
+  const [giftTarget, setGiftTarget] = useState<FriendUser | null | undefined>(undefined);
   const [giftOpen, setGiftOpen] = useState(false);
 
   const load = useCallback(() => {
@@ -124,32 +113,9 @@ export function FriendsSection() {
     return true;
   }
 
-  function openGift(user: FriendUser) {
-    setGiftTarget(user);
+  function openGift(user?: FriendUser) {
+    setGiftTarget(user ?? null);
     setGiftOpen(true);
-  }
-
-  const canInviteToRanked =
-    Boolean(party?.isLeader) &&
-    (party?.memberCount ?? 0) < RANKED_TEAM_SIZE &&
-    Boolean(party?.inviteCode);
-
-  async function inviteFriendToRanked(friend: FriendEntry) {
-    if (!party?.inviteCode) return;
-    const memberIds = new Set(party.members.map((m) => m.id));
-    if (memberIds.has(friend.id)) {
-      toast.error(tInvite("alreadyInTeam"));
-      return;
-    }
-    const result = await secureApi("/api/ranked/party/invite", {
-      method: "POST",
-      json: { toUserId: friend.id },
-    });
-    if (!result.ok) {
-      toast.error(result.error);
-      return;
-    }
-    toast.success(tInviteRanked("sent", { nickname: friend.displayName }));
   }
 
   const tabs: { id: Tab; label: string; count?: number }[] = [
@@ -160,7 +126,8 @@ export function FriendsSection() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
         {tabs.map((item) => (
           <button
             key={item.id}
@@ -181,6 +148,11 @@ export function FriendsSection() {
             )}
           </button>
         ))}
+        </div>
+        <Button type="button" size="sm" variant="outline" onClick={() => openGift()}>
+          <Gift className="h-4 w-4" />
+          {t("giftSomeone")}
+        </Button>
       </div>
 
       {loading ? (
@@ -193,7 +165,6 @@ export function FriendsSection() {
           busy={busy}
           onGift={openGift}
           onAction={action}
-          onInviteRanked={canInviteToRanked ? inviteFriendToRanked : undefined}
           t={t}
         />
       ) : tab === "requests" ? (
@@ -209,12 +180,17 @@ export function FriendsSection() {
       )}
 
       <AnimatePresence>
-        {giftOpen && giftTarget && (
+        {giftOpen && (
           <GiftModal
-            target={giftTarget}
-            onClose={() => setGiftOpen(false)}
+            key={giftTarget?.id ?? "search"}
+            target={giftTarget ?? null}
+            onClose={() => {
+              setGiftOpen(false);
+              setGiftTarget(undefined);
+            }}
             onDone={() => {
               setGiftOpen(false);
+              setGiftTarget(undefined);
               void refresh();
             }}
             t={t}
@@ -230,14 +206,12 @@ function FriendsList({
   busy,
   onGift,
   onAction,
-  onInviteRanked,
   t,
 }: {
   friends: FriendEntry[];
   busy: boolean;
   onGift: (user: FriendUser) => void;
   onAction: (path: string, body: Record<string, unknown>, msg?: string) => Promise<boolean>;
-  onInviteRanked?: (friend: FriendEntry) => void;
   t: ReturnType<typeof useTranslations<"friends">>;
 }) {
   if (friends.length === 0) {
@@ -252,24 +226,12 @@ function FriendsList({
         >
           <Avatar user={friend} />
           <div className="min-w-0 flex-1">
-            <Link
-              href={`/player/${friend.nickname}`}
-              prefetch={false}
-              className="truncate font-display text-sm font-semibold text-foreground hover:text-primary"
-            >
-              {friend.displayName}
-            </Link>
+            <SocialUserName user={friend} link nameClassName="text-sm" />
             <p className="text-xs text-muted">
               {getCountryFlag(friend.country)} {t("level", { level: friend.level })} · ELO{" "}
               {friend.elo}
             </p>
           </div>
-          {onInviteRanked && (
-            <Button type="button" size="sm" variant="outline" onClick={() => onInviteRanked(friend)}>
-              <Swords className="h-4 w-4" />
-              {t("inviteRanked")}
-            </Button>
-          )}
           <Button type="button" size="sm" variant="primary" onClick={() => onGift(friend)}>
             <Gift className="h-4 w-4" />
             {t("gift")}
@@ -281,7 +243,7 @@ function FriendsList({
             disabled={busy}
             confirm={{
               title: t("removeConfirmTitle"),
-              description: t("removeConfirmDesc", { nickname: friend.nickname }),
+              description: t("removeConfirmDesc", { nickname: friend.displayName }),
               confirmLabel: t("remove"),
               tone: "warning",
             }}
@@ -329,9 +291,7 @@ function RequestsView({
               >
                 <Avatar user={req.user} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-display text-sm font-semibold text-foreground">
-                    {req.user.displayName}
-                  </p>
+                  <SocialUserName user={req.user} nameClassName="text-sm" />
                   <p className="text-xs text-muted">{t("level", { level: req.user.level })}</p>
                 </div>
                 <Button
@@ -339,6 +299,11 @@ function RequestsView({
                   size="sm"
                   variant="primary"
                   disabled={busy}
+                  confirm={{
+                    title: t("acceptConfirmTitle"),
+                    description: t("acceptConfirmDesc", { nickname: req.user.displayName }),
+                    confirmLabel: t("accept"),
+                  }}
                   onClick={() =>
                     onAction(`/api/friends/${req.friendshipId}`, { action: "accept" }, t("accepted"))
                   }
@@ -351,11 +316,18 @@ function RequestsView({
                   size="sm"
                   variant="ghost"
                   disabled={busy}
+                  confirm={{
+                    title: t("rejectConfirmTitle"),
+                    description: t("rejectConfirmDesc", { nickname: req.user.displayName }),
+                    confirmLabel: t("reject"),
+                    tone: "warning",
+                  }}
                   onClick={() =>
                     onAction(`/api/friends/${req.friendshipId}`, { action: "reject" })
                   }
                 >
                   <X className="h-4 w-4" />
+                  {t("reject")}
                 </Button>
               </li>
             ))}
@@ -380,9 +352,7 @@ function RequestsView({
               >
                 <Avatar user={req.user} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-display text-sm font-semibold text-foreground">
-                    {req.user.displayName}
-                  </p>
+                  <SocialUserName user={req.user} nameClassName="text-sm" />
                   <p className="text-xs text-muted">{t("pending")}</p>
                 </div>
                 <Button
@@ -480,13 +450,7 @@ function AddFriends({
       >
         <Avatar user={user} />
         <div className="min-w-0 flex-1">
-          <Link
-            href={`/player/${user.nickname}`}
-            prefetch={false}
-            className="truncate font-display text-sm font-semibold text-foreground hover:text-primary"
-          >
-            {user.displayName}
-          </Link>
+          <SocialUserName user={user} link nameClassName="text-sm" />
           <p className="text-xs text-muted">
             {getCountryFlag(user.country)} {t("level", { level: user.level })}
           </p>
@@ -498,7 +462,18 @@ function AddFriends({
         ) : user.relationship === "incoming" ? (
           <span className="text-xs text-primary">{t("respondInRequests")}</span>
         ) : (
-          <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => add(user)}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            confirm={{
+              title: t("addConfirmTitle"),
+              description: t("addConfirmDesc", { nickname: user.displayName }),
+              confirmLabel: t("add"),
+            }}
+            onClick={() => add(user)}
+          >
             <UserPlus className="h-4 w-4" />
             {t("add")}
           </Button>
@@ -555,21 +530,27 @@ function AddFriends({
 }
 
 function GiftModal({
-  target,
+  target: initialTarget,
   onClose,
   onDone,
   t,
 }: {
-  target: FriendUser;
+  target: FriendUser | null;
   onClose: () => void;
   onDone: () => void;
   t: ReturnType<typeof useTranslations<"friends">>;
 }) {
+  const [recipient, setRecipient] = useState<FriendUser | null>(initialTarget);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<FriendUser[]>([]);
+  const [searching, setSearching] = useState(false);
+  const searchDebounceRef = useRef<number | null>(null);
   const [mode, setMode] = useState<"coins" | "item">("coins");
   const [amount, setAmount] = useState("100");
   const [items, setItems] = useState<StoreItemLite[]>([]);
   const [itemId, setItemId] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     fetch("/api/store", { credentials: "same-origin" })
@@ -590,26 +571,63 @@ function GiftModal({
       .catch(() => setItems([]));
   }, []);
 
+  useEffect(() => {
+    if (recipient || searchQuery.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    if (searchDebounceRef.current) window.clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = window.setTimeout(() => {
+      setSearching(true);
+      fetch(`/api/friends/search?q=${encodeURIComponent(searchQuery.trim())}`, {
+        credentials: "same-origin",
+      })
+        .then((r) => r.json())
+        .then((d) => setSearchResults(d.results ?? []))
+        .catch(() => setSearchResults([]))
+        .finally(() => setSearching(false));
+    }, 300);
+    return () => {
+      if (searchDebounceRef.current) window.clearTimeout(searchDebounceRef.current);
+    };
+  }, [searchQuery, recipient]);
+
+  const selectedItem = items.find((i) => i.id === itemId);
+  const giftLabel =
+    mode === "coins"
+      ? t("giftConfirmCoins", { amount, nickname: recipient?.displayName ?? "?" })
+      : t("giftConfirmItem", {
+          item: selectedItem?.name ?? "—",
+          nickname: recipient?.displayName ?? "?",
+        });
+
   async function send() {
-    if (busy) return;
+    if (busy || !recipient) return;
     setBusy(true);
-    const recipient = { type: "user" as const, value: target.id };
     const result =
       mode === "coins"
         ? await secureApi("/api/gifts/coins", {
             method: "POST",
-            json: { recipient, amount: Number(amount) },
+            json: {
+              recipient: { type: "user" as const, value: recipient.id },
+              amount: Number(amount),
+            },
           })
         : await secureApi("/api/gifts/item", {
             method: "POST",
-            json: { recipient, storeItemId: itemId, currency: "coins" },
+            json: {
+              recipient: { type: "user" as const, value: recipient.id },
+              storeItemId: itemId,
+              currency: "coins",
+            },
           });
     setBusy(false);
+    setConfirmOpen(false);
     if (!result.ok) {
       toast.error(result.error);
       return;
     }
-    toast.success(t("giftSent", { nickname: target.nickname }));
+    toast.success(t("giftSent", { nickname: recipient.displayName }));
     if (mode === "item") {
       dispatchInventoryRefresh();
     }
@@ -637,63 +655,112 @@ function GiftModal({
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 font-display text-lg font-bold text-foreground">
             <Gift className="h-5 w-5 text-primary" />
-            {t("giftTo", { nickname: target.nickname })}
+            {recipient
+              ? t("giftTo", { nickname: recipient.displayName })
+              : t("giftSomeoneTitle")}
           </h2>
           <button type="button" onClick={onClose} className="text-muted hover:text-foreground">
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="mt-4 flex gap-2">
-          {(["coins", "item"] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMode(m)}
-              className={cn(
-                "flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
-                mode === m
-                  ? "bg-[color-mix(in_srgb,var(--primary)_18%,transparent)] text-primary"
-                  : "text-muted hover:text-foreground",
-              )}
-            >
-              {m === "coins" ? t("giftCoins") : t("giftItem")}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-4">
-          {mode === "coins" ? (
+        {!recipient && (
+          <div className="mt-4">
             <Input
-              label={t("amount")}
-              type="number"
-              min={1}
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              label={t("giftSearchLabel")}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t("searchPlaceholder")}
             />
-          ) : items.length === 0 ? (
-            <p className="text-sm text-muted">{t("noGiftItems")}</p>
-          ) : (
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted">
-                {t("selectItem")}
-              </label>
-              <select
-                value={itemId}
-                onChange={(e) => setItemId(e.target.value)}
-                className="w-full rounded-xl border border-border bg-[color-mix(in_srgb,var(--background)_80%,transparent)] px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
-              >
-                {items.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                    {item.productKind === "SUBSCRIPTION" ? ` (${t("giftSubscription")})` : ""}
-                    {item.coinPrice ? ` — ${item.coinPrice.toLocaleString("pt-BR")} ` : ""}
-                  </option>
+            {searching ? (
+              <div className="mt-3 flex justify-center py-3">
+                <Loader2 className="h-5 w-5 motion-safe-spin text-primary" />
+              </div>
+            ) : searchResults.length > 0 ? (
+              <ul className="mt-3 max-h-40 overflow-y-auto rounded-card border border-border">
+                {searchResults.map((user) => (
+                  <li key={user.id}>
+                    <button
+                      type="button"
+                      onClick={() => setRecipient(user)}
+                      className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-[color-mix(in_srgb,var(--primary)_8%,transparent)]"
+                    >
+                      <Avatar user={user} size={32} />
+                      <SocialUserName user={user} nameClassName="text-sm" />
+                    </button>
+                  </li>
                 ))}
-              </select>
+              </ul>
+            ) : searchQuery.trim().length >= 2 ? (
+              <p className="mt-2 text-xs text-muted">{t("noResults")}</p>
+            ) : null}
+          </div>
+        )}
+
+        {recipient && (
+          <>
+            {!initialTarget && (
+              <button
+                type="button"
+                onClick={() => setRecipient(null)}
+                className="mt-3 text-xs font-medium text-primary hover:underline"
+              >
+                {t("giftChangeRecipient")}
+              </button>
+            )}
+
+            <div className="mt-4 flex gap-2">
+              {(["coins", "item"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMode(m)}
+                  className={cn(
+                    "flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
+                    mode === m
+                      ? "bg-[color-mix(in_srgb,var(--primary)_18%,transparent)] text-primary"
+                      : "text-muted hover:text-foreground",
+                  )}
+                >
+                  {m === "coins" ? t("giftCoins") : t("giftItem")}
+                </button>
+              ))}
             </div>
-          )}
-        </div>
+
+            <div className="mt-4">
+              {mode === "coins" ? (
+                <Input
+                  label={t("amount")}
+                  type="number"
+                  min={1}
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
+              ) : items.length === 0 ? (
+                <p className="text-sm text-muted">{t("noGiftItems")}</p>
+              ) : (
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted">
+                    {t("selectItem")}
+                  </label>
+                  <select
+                    value={itemId}
+                    onChange={(e) => setItemId(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-[color-mix(in_srgb,var(--background)_80%,transparent)] px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
+                  >
+                    {items.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                        {item.productKind === "SUBSCRIPTION" ? ` (${t("giftSubscription")})` : ""}
+                        {item.coinPrice ? ` — ${item.coinPrice.toLocaleString("pt-BR")} ` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
         <div className="mt-6 flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={onClose}>
@@ -702,13 +769,36 @@ function GiftModal({
           <Button
             type="button"
             variant="primary"
-            disabled={busy || (mode === "item" && !itemId)}
-            onClick={send}
+            disabled={busy || !recipient || (mode === "item" && !itemId)}
+            onClick={() => setConfirmOpen(true)}
           >
             {busy ? <Loader2 className="h-4 w-4 motion-safe-spin" /> : <Gift className="h-4 w-4" />}
             {t("send")}
           </Button>
         </div>
+
+        {confirmOpen && recipient && (
+          <>
+            <motion.button
+              type="button"
+              aria-label={t("cancel")}
+              className="fixed inset-0 z-92 bg-black/40"
+              onClick={() => setConfirmOpen(false)}
+            />
+            <div className="fixed left-1/2 top-1/2 z-93 w-[min(90vw,22rem)] -translate-x-1/2 -translate-y-1/2 rounded-card glass-strong p-5">
+              <h3 className="font-display text-base font-bold text-foreground">{t("giftConfirmTitle")}</h3>
+              <p className="mt-2 text-sm text-muted">{giftLabel}</p>
+              <div className="mt-4 flex justify-end gap-2">
+                <Button type="button" variant="ghost" onClick={() => setConfirmOpen(false)}>
+                  {t("cancel")}
+                </Button>
+                <Button type="button" variant="primary" disabled={busy} onClick={() => void send()}>
+                  {t("send")}
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
       </motion.div>
       </>
     </ModalPortal>

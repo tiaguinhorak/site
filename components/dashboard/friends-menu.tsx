@@ -6,6 +6,7 @@ import { MessageCircle, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { GlassPortal } from "@/components/ui/glass-portal";
 import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
+import { SocialUserName } from "@/components/social/social-user-name";
 import { useFriendsOptional } from "@/components/providers/friends-provider";
 import { cn } from "@/lib/utils";
 
@@ -106,9 +107,7 @@ export function FriendsMenu() {
                     />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-foreground">
-                      {friend.displayName}
-                    </p>
+                    <SocialUserName user={friend} nameClassName="text-sm font-semibold" />
                     <p
                       className={cn(
                         "text-[11px]",

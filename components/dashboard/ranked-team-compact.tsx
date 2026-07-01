@@ -19,6 +19,10 @@ import {
   useRankedParty,
   RANKED_TEAM_SIZE,
 } from "@/components/providers/ranked-party-provider";
+import { useFriendsOptional } from "@/components/providers/friends-provider";
+import { SocialUserName } from "@/components/social/social-user-name";
+import { secureApi } from "@/lib/api/client";
+import { toast } from "@/lib/toast";
 import { MapChip } from "@/components/ui/map-chip";
 import type { RankedPartyMemberView, RankedPartyView } from "@/lib/ranked/party-shared";
 import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
@@ -80,6 +84,79 @@ function CompactSlot({
           )}
         </button>
       )}
+    </div>
+  );
+}
+
+function RankedFriendsInvite({ team }: { team: RankedPartyView }) {
+  const friendsCtx = useFriendsOptional();
+  const t = useTranslations("friends");
+  const tInvite = useTranslations("friends.invite");
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  if (!team.isLeader || team.memberCount >= RANKED_TEAM_SIZE || !friendsCtx) return null;
+
+  const memberIds = new Set(team.members.map((m) => m.id));
+  const inviteable = friendsCtx.friends.filter((f) => !memberIds.has(f.id));
+  if (inviteable.length === 0) return null;
+
+  async function inviteFriend(friendId: string, displayName: string) {
+    setBusyId(friendId);
+    const result = await secureApi("/api/ranked/party/invite", {
+      method: "POST",
+      json: { toUserId: friendId },
+    });
+    setBusyId(null);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(tInvite("sent", { nickname: displayName }));
+  }
+
+  return (
+    <div className="mt-4">
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+        {t("inviteRankedFriends")}
+      </p>
+      <ul className="mt-2 max-h-44 space-y-1 overflow-y-auto">
+        {inviteable.map((friend) => (
+          <li
+            key={friend.id}
+            className="flex items-center gap-2 rounded-lg border border-border/60 bg-black/10 px-2 py-1.5"
+          >
+            <UserProfileAvatar
+              avatarUrl={friend.avatarUrl}
+              nickname={friend.nickname}
+              customization={friend.customization}
+              size="sm"
+            />
+            <div className="min-w-0 flex-1">
+              <SocialUserName user={friend} nameClassName="text-xs" />
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 shrink-0 px-2 text-xs"
+              disabled={busyId === friend.id}
+              confirm={{
+                title: t("inviteRankedConfirmTitle"),
+                description: t("inviteRankedConfirmDesc", { nickname: friend.displayName }),
+                confirmLabel: t("inviteRanked"),
+                tone: "default",
+              }}
+              onClick={() => void inviteFriend(friend.id, friend.displayName)}
+            >
+              {busyId === friend.id ? (
+                <Loader2 className="h-3.5 w-3.5 motion-safe-spin" />
+              ) : (
+                <Swords className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -216,6 +293,8 @@ export function RankedTeamCompact({
         </div>
         <p className="text-[11px] text-muted">{t("inviteHint")}</p>
       </div>
+
+      <RankedFriendsInvite team={team} />
 
       <div className="mt-4 flex flex-wrap gap-2">
         {team.isLeader && onEditTeam && (

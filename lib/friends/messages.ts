@@ -43,6 +43,9 @@ export async function getConversation(
   limit = 50,
 ): Promise<DirectMessageView[]> {
   if (userId === otherUserId) return [];
+  if (!(await areFriends(userId, otherUserId))) {
+    throw new FriendError("Vocês não são amigos.", 403);
+  }
   const rows = await prisma.directMessage.findMany({
     where: {
       OR: [

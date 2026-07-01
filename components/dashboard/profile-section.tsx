@@ -318,7 +318,9 @@ export function ProfileSection() {
               <p className="mt-1 text-sm text-muted">
                 <span className="mr-1">{getCountryFlag(profile.country)}</span>
                 {profile.firstName} {profile.lastName}
-                {profile.steamLinked && profile.steamPersonaName && (
+                {profile.steamLinked &&
+                  profile.steamPersonaName &&
+                  profile.steamPersonaName !== profile.displayName && (
                   <span className="inline-flex items-center gap-1">
                     <SteamIcon className="h-3.5 w-3.5 text-primary" />
                     {profile.steamPersonaName}

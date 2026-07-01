@@ -49,13 +49,14 @@ type FriendsContextValue = {
   totalUnread: number;
   threads: Record<string, ChatMessage[]>;
   openChats: string[];
+  minimizedChats: Set<string>;
   loadingThread: Record<string, boolean>;
   refresh: () => void;
   isOnline: (userId: string) => boolean;
   openChat: (friendId: string) => void;
   closeChat: (friendId: string) => void;
+  toggleMinimizeChat: (friendId: string) => void;
   sendMessage: (friendId: string, body: string) => Promise<boolean>;
-  inviteToRanked: (friendId: string) => Promise<boolean>;
   incomingInvite: RankedInvitePayload | null;
   acceptInvite: () => void;
   dismissInvite: () => void;
@@ -74,6 +75,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
   const [unread, setUnread] = useState<Record<string, number>>({});
   const [threads, setThreads] = useState<Record<string, ChatMessage[]>>({});
   const [openChats, setOpenChats] = useState<string[]>([]);
+  const [minimizedChats, setMinimizedChats] = useState<Set<string>>(new Set());
   const [loadingThread, setLoadingThread] = useState<Record<string, boolean>>({});
   const [incomingInvite, setIncomingInvite] = useState<RankedInvitePayload | null>(null);
 
@@ -158,7 +160,18 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
 
   const openChat = useCallback(
     (friendId: string) => {
+      const isFriend = friends.some((f) => f.id === friendId);
+      if (!isFriend) {
+        toast.error("Você só pode conversar com amigos.");
+        return;
+      }
       setOpenChats((prev) => (prev.includes(friendId) ? prev : [...prev, friendId]));
+      setMinimizedChats((prev) => {
+        if (!prev.has(friendId)) return prev;
+        const next = new Set(prev);
+        next.delete(friendId);
+        return next;
+      });
       setUnread((prev) => {
         if (!prev[friendId]) return prev;
         const next = { ...prev };
@@ -176,17 +189,36 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
         .catch(() => undefined)
         .finally(() => setLoadingThread((prev) => ({ ...prev, [friendId]: false })));
     },
-    [],
+    [friends],
   );
 
   const closeChat = useCallback((friendId: string) => {
     setOpenChats((prev) => prev.filter((id) => id !== friendId));
+    setMinimizedChats((prev) => {
+      if (!prev.has(friendId)) return prev;
+      const next = new Set(prev);
+      next.delete(friendId);
+      return next;
+    });
+  }, []);
+
+  const toggleMinimizeChat = useCallback((friendId: string) => {
+    setMinimizedChats((prev) => {
+      const next = new Set(prev);
+      if (next.has(friendId)) next.delete(friendId);
+      else next.add(friendId);
+      return next;
+    });
   }, []);
 
   const sendMessage = useCallback(
     async (friendId: string, body: string) => {
       const trimmed = body.trim();
       if (!trimmed) return false;
+      if (!friends.some((f) => f.id === friendId)) {
+        toast.error("Você só pode enviar mensagens para amigos.");
+        return false;
+      }
       const result = await secureApi<{ ok: boolean; message: ChatMessage }>(
         "/api/friends/messages",
         { method: "POST", json: { toUserId: friendId, body: trimmed } },
@@ -198,20 +230,8 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
       appendMessage(friendId, result.data.message);
       return true;
     },
-    [appendMessage],
+    [appendMessage, friends],
   );
-
-  const inviteToRanked = useCallback(async (friendId: string) => {
-    const result = await secureApi<{ ok: boolean; delivered: boolean }>(
-      "/api/ranked/party/invite",
-      { method: "POST", json: { toUserId: friendId } },
-    );
-    if (!result.ok) {
-      toast.error(result.error);
-      return false;
-    }
-    return true;
-  }, []);
 
   const acceptInvite = useCallback(() => {
     const invite = incomingInvite;
@@ -236,13 +256,14 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
       totalUnread,
       threads,
       openChats,
+      minimizedChats,
       loadingThread,
       refresh,
       isOnline,
       openChat,
       closeChat,
+      toggleMinimizeChat,
       sendMessage,
-      inviteToRanked,
       incomingInvite,
       acceptInvite,
       dismissInvite,
@@ -255,13 +276,14 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
       totalUnread,
       threads,
       openChats,
+      minimizedChats,
       loadingThread,
       refresh,
       isOnline,
       openChat,
       closeChat,
+      toggleMinimizeChat,
       sendMessage,
-      inviteToRanked,
       incomingInvite,
       acceptInvite,
       dismissInvite,

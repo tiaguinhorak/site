@@ -8,7 +8,12 @@ import {
   type PublicProfileCustomization,
 } from "@/lib/profile/serialize-customization";
 import { fetchSteamFriendIds } from "@/lib/steam/friends";
+import { resolveSteamId64 } from "@/lib/steam/friends";
 import { resolveSteamDisplayName, STEAM_DISPLAY_NAME_SELECT } from "@/lib/steam/display-name";
+import {
+  notifyFriendRequestAccepted,
+  notifyFriendRequestReceived,
+} from "@/lib/friends/notifications";
 
 export class FriendError extends Error {
   status: number;
@@ -165,6 +170,7 @@ export async function sendFriendRequest(
         where: { id: existing.id },
         data: { status: "ACCEPTED" },
       });
+      void notifyFriendRequestAccepted(existing.requesterId, userId);
       return {
         friendshipId: accepted.id,
         user: serializeFriendUser(target),
@@ -177,6 +183,7 @@ export async function sendFriendRequest(
   const created = await prisma.friendship.create({
     data: { requesterId: userId, addresseeId: targetUserId, status: "PENDING" },
   });
+  void notifyFriendRequestReceived(targetUserId, userId);
   return {
     friendshipId: created.id,
     user: serializeFriendUser(target),
@@ -198,6 +205,7 @@ export async function respondToRequest(
   }
   if (accept) {
     await prisma.friendship.update({ where: { id: friendshipId }, data: { status: "ACCEPTED" } });
+    void notifyFriendRequestAccepted(friendship.requesterId, userId);
   } else {
     await prisma.friendship.delete({ where: { id: friendshipId } });
   }
@@ -243,9 +251,19 @@ export async function searchUsers(
   const trimmed = query.trim();
   if (trimmed.length < 2) return [];
 
+  const steamId = await resolveSteamId64(trimmed);
+
+  const orFilters: Prisma.UserWhereInput[] = [
+    { nickname: { contains: trimmed, mode: "insensitive" } },
+    { steamPersonaName: { contains: trimmed, mode: "insensitive" } },
+  ];
+  if (steamId) {
+    orFilters.push({ steamId });
+  }
+
   const users = await prisma.user.findMany({
     where: {
-      nickname: { contains: trimmed, mode: "insensitive" },
+      OR: orFilters,
       id: { not: userId },
     },
     select: FRIEND_USER_SELECT,

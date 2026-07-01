@@ -51,6 +51,8 @@ export function resolveNotificationHref(
       return "/dashboard/ranked";
     case "lobby":
       return p.lobbyId ? `/dashboard/lobby/${p.lobbyId}` : "/dashboard/lobby";
+    case "friends":
+      return "/dashboard/amigos";
     case "profile":
       if (p.nickname) return `/player/${encodeURIComponent(p.nickname)}`;
       return "/dashboard/perfil";
@@ -86,8 +88,10 @@ export function resolveNotificationHref(
     case "match":
       return "/dashboard/ranked";
     case "social":
+      if (p.href && safeInternalPath(p.href)) return p.href;
+      if (p.action === "friends") return "/dashboard/amigos";
       if (p.nickname) return `/player/${encodeURIComponent(p.nickname)}`;
-      return "/dashboard/perfil";
+      return "/dashboard/amigos";
     case "promo":
       return "/dashboard/loja";
     case "system":

@@ -21,8 +21,15 @@ export async function GET(request: NextRequest) {
 
   const withUserId = request.nextUrl.searchParams.get("withUserId");
   if (withUserId) {
-    const messages = await getConversation(userId, withUserId);
-    return NextResponse.json({ messages });
+    try {
+      const messages = await getConversation(userId, withUserId);
+      return NextResponse.json({ messages });
+    } catch (err) {
+      if (err instanceof FriendError) {
+        return NextResponse.json({ error: err.message }, { status: err.status });
+      }
+      return NextResponse.json({ error: "Falha ao carregar conversa." }, { status: 500 });
+    }
   }
 
   const unread = await getUnreadCounts(userId);
