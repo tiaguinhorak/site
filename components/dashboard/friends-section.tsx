@@ -27,7 +27,7 @@ import { dispatchInventoryRefresh } from "@/lib/inventory/inventory-refresh-even
 import { cn } from "@/lib/utils";
 import { ModalPortal } from "@/components/ui/modal-portal";
 import {
-  useRankedParty,
+  useRankedPartyOptional,
   RANKED_TEAM_SIZE,
 } from "@/components/providers/ranked-party-provider";
 
@@ -80,7 +80,9 @@ function Avatar({ user, size = 40 }: { user: FriendUser; size?: number }) {
 export function FriendsSection() {
   const t = useTranslations("friends");
   const tInvite = useTranslations("ranked.inviteJoin");
-  const { party } = useRankedParty();
+  const tInviteRanked = useTranslations("friends.invite");
+  const rankedCtx = useRankedPartyOptional();
+  const party = rankedCtx?.party ?? null;
   const { refresh } = useUser();
   const [tab, setTab] = useState<Tab>("friends");
   const [friends, setFriends] = useState<FriendEntry[]>([]);
@@ -129,8 +131,8 @@ export function FriendsSection() {
 
   const canInviteToRanked =
     Boolean(party?.isLeader) &&
-    party!.memberCount < RANKED_TEAM_SIZE &&
-    Boolean(party!.inviteCode);
+    (party?.memberCount ?? 0) < RANKED_TEAM_SIZE &&
+    Boolean(party?.inviteCode);
 
   async function inviteFriendToRanked(friend: FriendEntry) {
     if (!party?.inviteCode) return;
@@ -139,9 +141,15 @@ export function FriendsSection() {
       toast.error(tInvite("alreadyInTeam"));
       return;
     }
-    const link = `${window.location.origin}/dashboard/ranked?join=${party.inviteCode}`;
-    await navigator.clipboard.writeText(link);
-    toast.success(tInvite("linkCopied", { nickname: friend.displayName }));
+    const result = await secureApi("/api/ranked/party/invite", {
+      method: "POST",
+      json: { toUserId: friend.id },
+    });
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(tInviteRanked("sent", { nickname: friend.displayName }));
   }
 
   const tabs: { id: Tab; label: string; count?: number }[] = [

@@ -1048,7 +1048,37 @@
     "selectItem": "Selecciona el artículo",
     "noGiftItems": "No hay artículos disponibles para regalar con monedas.",
     "send": "Enviar",
-    "giftSent": "¡Regalo enviado a {nickname}!"
+    "giftSent": "¡Regalo enviado a {nickname}!",
+    "menu": {
+      "title": "Amigos",
+      "ariaLabel": "Amigos y chat",
+      "online": "En línea",
+      "offline": "Desconectado",
+      "onlineCount": "{count} en línea",
+      "empty": "Aún no tienes amigos. Agrega jugadores para chatear y jugar juntos.",
+      "openChat": "Abrir chat",
+      "viewAll": "Ver todos los amigos",
+      "requests": "{count} solicitud(es) de amistad"
+    },
+    "chat": {
+      "title": "Chat",
+      "placeholder": "Mensaje para {nickname}...",
+      "send": "Enviar",
+      "empty": "¡Saluda a {nickname}!",
+      "onlineNow": "En línea ahora",
+      "offlineNow": "Desconectado",
+      "inviteRanked": "Invitar a clasificatoria",
+      "loading": "Cargando conversación...",
+      "minimize": "Minimizar",
+      "closeChat": "Cerrar chat"
+    },
+    "invite": {
+      "sent": "¡Invitación de clasificatoria enviada a {nickname}!",
+      "incomingTitle": "Invitación a clasificatoria",
+      "incomingBody": "{nickname} te invitó a la sala {party}.",
+      "accept": "Entrar a la sala",
+      "decline": "Ahora no"
+    }
   },
   "clans": {
     "createTitle": "Crear un clan",
@@ -1579,6 +1609,9 @@
     "hub": {
       "yourRoom": "Tu sala clasificatoria",
       "live": "EN VIVO",
+      "matchLive": "Partida en vivo",
+      "readyBadge": "Listo 5/5",
+      "activeRoom": "Sala activa",
       "createPrompt": "Crea tu sala clasificatoria para armar tu equipo 5v5 y seguir todo en el chat de la sala.",
       "createCta": "Crear sala clasificatoria",
       "joinByCode": "Entrar con código",
@@ -1614,7 +1647,10 @@
       "disbandConfirmTitle": "¿Deshacer equipo?",
       "disbandConfirmDesc": "Todos los miembros serán eliminados.",
       "disbandConfirm": "Deshacer",
-      "regionLevel": "{region} · Nv {min}–{max}"
+      "regionLevel": "{region} · Nv {min}–{max}",
+      "inviteTitle": "Invitar amigos",
+      "copyInviteLink": "Copiar enlace de invitación",
+      "inviteHint": "Comparte el enlace — quien entre aparecerá en tu sala automáticamente."
     },
     "challenges": {
       "title": "Desafíos",
@@ -1734,7 +1770,9 @@
     },
     "inviteJoin": {
       "title": "Entrar a la sala",
+      "invitedTitle": "¡Te invitaron!",
       "description": "Pega el código de invitación que compartió el líder de la sala.",
+      "invitedDescription": "Un amigo te invitó a su sala clasificatoria. Confirma el código abajo y únete al equipo.",
       "codeLabel": "Código de invitación",
       "codePlaceholder": "Ej. abc123…",
       "error": "Código inválido o sala no disponible.",
@@ -1749,7 +1787,49 @@
       "findMatch": "Buscar partida",
       "leaveQueue": "Salir de la cola",
       "searching": "Buscando… {players} jugadores en cola · {parties} grupos",
-      "partialTeamHint": "Con equipo incompleto también puedes entrar en cola — faltan jugadores para completar 5."
+      "estimatedWait": "Tiempo estimado: ~{seconds}s",
+      "partialTeamHint": "Con equipo incompleto también puedes entrar en cola — faltan jugadores para completar 5.",
+      "defaultPartyName": "Solo · {nickname}",
+      "defaultPlayer": "Jugador",
+      "restrictedTitle": "Cola bloqueada temporalmente",
+      "restrictedWait": "Espera {duration} antes de volver a la cola (por rechazar partidas).",
+      "queueActiveHint": "Mantén esta pestaña abierta — te avisaremos cuando se encuentre partida."
+    },
+    "flow": {
+      "queueTitle": "En cola de matchmaking",
+      "matchTitle": "Partida clasificatoria",
+      "queueHint": "{players} jugadores · {parties} grupos en cola",
+      "searching": "Buscando oponentes…",
+      "estimatedWait": "Estimación: ~{seconds}s",
+      "openAccept": "Confirmar partida",
+      "connectInline": "Conectar al servidor",
+      "liveRound": "Ronda {round}",
+      "status": {
+        "accepting": "Confirma que estás listo para jugar",
+        "voting": "Votación de mapas en curso",
+        "starting": "Preparando el servidor",
+        "live": "Partida en curso"
+      },
+      "steps": {
+        "queue": "Cola",
+        "accepting": "Aceptar",
+        "voting": "Mapas",
+        "starting": "Servidor",
+        "live": "En vivo"
+      }
+    },
+    "acceptModal": {
+      "closeModal": "Cerrar modal",
+      "close": "Cerrar",
+      "title": "¡Partida encontrada!",
+      "subtitle": "Confirma en unos segundos — si alguien rechaza, la partida se cancela.",
+      "confirmed": "{accepted}/{required} confirmaron",
+      "teamAlpha": "Equipo Alpha",
+      "teamBravo": "Equipo Bravo",
+      "you": "(tú)",
+      "ready": "Estoy listo",
+      "waitingOthers": "Esperando a los demás jugadores…",
+      "cancel": "Rechazar partida"
     },
     "experience": {
       "steamTitle": "Steam requerida para clasificatoria",
@@ -1784,9 +1864,13 @@
       "eyebrow": "Partida finalizada",
       "title": "¿Qué hacer ahora?",
       "description": "Juega de nuevo con el mismo grupo, cambia los equipos o sal para entrar en otra sala.",
-      "teamA": "Equipo A",
-      "teamB": "Equipo B",
+      "teamA": "Equipo Alpha",
+      "teamB": "Equipo Bravo",
       "players": "{count} jugadores",
+      "finalScore": "Marcador final",
+      "youWon": "¡Victoria!",
+      "youLost": "Derrota",
+      "mapPlayed": "Mapa: {map}",
       "rematchSame": "Jugar de nuevo (mismos equipos)",
       "rematchSwap": "Jugar de nuevo (cambiar equipos)",
       "leaveRoom": "Salir de la sala y buscar otro equipo"

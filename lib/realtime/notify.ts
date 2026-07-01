@@ -1,8 +1,13 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { publishInvalidate } from "@/lib/realtime/bus";
-import type { RealtimeChannel, RealtimeInvalidateScope } from "@/lib/realtime/types";
+import { publishInvalidate, publishRealtime } from "@/lib/realtime/bus";
+import type {
+  DirectMessagePayload,
+  RankedInvitePayload,
+  RealtimeChannel,
+  RealtimeInvalidateScope,
+} from "@/lib/realtime/types";
 
 export function notifyRankedRooms(scope: RealtimeInvalidateScope = "rooms") {
   publishInvalidate([{ kind: "ranked_rooms" }], scope);
@@ -42,6 +47,47 @@ export async function notifyParties(
   for (const partyId of unique) {
     await notifyPartyMembers(partyId, scope);
   }
+}
+
+/** Return the userIds of accepted friends for a given user. */
+async function getAcceptedFriendIds(userId: string): Promise<string[]> {
+  const edges = await prisma.friendship.findMany({
+    where: {
+      status: "ACCEPTED",
+      OR: [{ requesterId: userId }, { addresseeId: userId }],
+    },
+    select: { requesterId: true, addresseeId: true },
+  });
+  return edges.map((e) => (e.requesterId === userId ? e.addresseeId : e.requesterId));
+}
+
+/** Tell a user's friends that their online status changed. */
+export async function broadcastPresence(userId: string, online: boolean) {
+  const friendIds = await getAcceptedFriendIds(userId);
+  if (friendIds.length === 0) return;
+  const channels: RealtimeChannel[] = friendIds.map((id) => ({
+    kind: "user" as const,
+    userId: id,
+  }));
+  publishRealtime(channels, { type: "presence", at: Date.now(), userId, online });
+}
+
+/** Deliver a direct message to both recipient and sender (multi-tab sync). */
+export function publishDirectMessage(message: DirectMessagePayload) {
+  const channels: RealtimeChannel[] = [
+    { kind: "user", userId: message.recipientId },
+    { kind: "user", userId: message.senderId },
+  ];
+  publishRealtime(channels, { type: "dm", at: Date.now(), message });
+}
+
+/** Deliver a ranked party invite to a target user. */
+export function publishRankedInvite(targetUserId: string, invite: RankedInvitePayload) {
+  publishRealtime([{ kind: "user", userId: targetUserId }], {
+    type: "ranked_invite",
+    at: Date.now(),
+    invite,
+  });
 }
 
 export async function notifySessionParticipants(

@@ -5,6 +5,8 @@ import { DashboardNavbar } from "@/components/dashboard/dashboard-navbar";
 import { StoreCartDrawer, StoreCartFab } from "@/components/dashboard/store-cart-drawer";
 import { StoreCartProvider } from "@/lib/hooks/use-store-cart";
 import { RouteKey } from "@/components/layout/route-key";
+import { FriendsChatDock } from "@/components/dashboard/friends-chat-dock";
+import { RankedInviteToast } from "@/components/dashboard/ranked-invite-toast";
 
 function StoreCartUi() {
   return (
@@ -37,6 +39,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </main>
 
           <StoreCartUi />
+          <FriendsChatDock />
+          <RankedInviteToast />
         </div>
       </StoreCartProvider>
     </Suspense>

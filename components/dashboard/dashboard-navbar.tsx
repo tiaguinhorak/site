@@ -36,6 +36,7 @@ import { Logo } from "@/components/ui/logo";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { AccountDropdown } from "@/components/dashboard/account-dropdown";
 import { WalletDropdown } from "@/components/dashboard/wallet-dropdown";
+import { FriendsMenu } from "@/components/dashboard/friends-menu";
 import { useUser } from "@/lib/hooks/use-user";
 import { cn } from "@/lib/utils";
 
@@ -449,6 +450,7 @@ export function DashboardNavbar() {
 
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
             <WalletDropdown />
+            <FriendsMenu />
             <AccountDropdown />
             <NotificationsDropdown />
 

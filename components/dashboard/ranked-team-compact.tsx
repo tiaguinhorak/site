@@ -199,16 +199,22 @@ export function RankedTeamCompact({
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => void handleCopyInvite()}
-          className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 font-mono text-xs text-muted hover:border-primary/40"
-        >
-          {team.inviteCode.slice(0, 8)}…
-          <Copy className="h-3 w-3" />
-        </button>
-        {copied && <span className="text-xs text-emerald-400">{t("copied")}</span>}
+      <div className="mt-4 space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted">{t("inviteTitle")}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void handleCopyInvite()}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2.5 text-sm font-semibold text-primary hover:bg-primary/15"
+          >
+            <Copy className="h-4 w-4" />
+            {copied ? t("copied") : t("copyInviteLink")}
+          </button>
+          <code className="rounded-lg border border-border/60 bg-black/20 px-2 py-1 font-mono text-[10px] text-muted">
+            {team.inviteCode.slice(0, 10)}…
+          </code>
+        </div>
+        <p className="text-[11px] text-muted">{t("inviteHint")}</p>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">

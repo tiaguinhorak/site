@@ -15,6 +15,7 @@ import {
   type RankedRoomsFilterState,
 } from "@/components/dashboard/ranked-rooms-filters";
 import { useRankedParty } from "@/components/providers/ranked-party-provider";
+import { deriveRankedFlowStep, isActiveRankedFlow } from "@/lib/ranked/match-flow";
 import type { RankedPartyView } from "@/lib/ranked/party-shared";
 import { cn } from "@/lib/utils";
 
@@ -43,9 +44,16 @@ export function RankedHubLayout({
   onJoinPrivate,
   onJoinByCode,
 }: Props) {
-  const { rooms, roomStats, error } = useRankedParty();
+  const { rooms, roomStats, error, session, queue } = useRankedParty();
   const t = useTranslations("ranked");
   const [filters, setFilters] = useState<RankedRoomsFilterState>(DEFAULT_RANKED_FILTERS);
+
+  const flowStep = deriveRankedFlowStep({
+    session,
+    queueSearching: Boolean(queue?.searching),
+  });
+  const inActiveFlow = isActiveRankedFlow(flowStep);
+  const isLiveMatch = session?.status === "live";
 
   const activeFilterCount = countActiveFilters(filters);
 
@@ -68,7 +76,7 @@ export function RankedHubLayout({
 
       <RankedMatchFlow />
 
-      <RankedSoloPanel />
+      {!inActiveFlow && <RankedSoloPanel />}
 
       <div
         className={cn(
@@ -77,7 +85,6 @@ export function RankedHubLayout({
             : "space-y-5",
         )}
       >
-        {/* Coluna principal: lista de salas */}
         <div className="min-w-0 space-y-5">
           <div className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-primary" />
@@ -86,7 +93,7 @@ export function RankedHubLayout({
             </h2>
           </div>
 
-          {!party && (onCreateTeam || onJoinByCode) && (
+          {!party && !inActiveFlow && (onCreateTeam || onJoinByCode) && (
             <div className="flex flex-col items-center gap-3 rounded-card border border-dashed border-primary/30 glass p-6 text-center sm:flex-row sm:justify-between sm:text-left">
               <p className="text-sm text-muted">{t("hub.createPrompt")}</p>
               <div className="flex shrink-0 flex-wrap justify-center gap-2">
@@ -112,25 +119,28 @@ export function RankedHubLayout({
             </div>
           )}
 
-          <RankedRoomsFilters
-            filters={filters}
-            onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
-            onClear={() => setFilters(DEFAULT_RANKED_FILTERS)}
-            roomCount={displayRoomCount}
-            playerCount={roomStats.players}
-            activeFilterCount={activeFilterCount}
-          />
+          {!inActiveFlow && (
+            <>
+              <RankedRoomsFilters
+                filters={filters}
+                onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
+                onClear={() => setFilters(DEFAULT_RANKED_FILTERS)}
+                roomCount={displayRoomCount}
+                playerCount={roomStats.players}
+                activeFilterCount={activeFilterCount}
+              />
 
-          <RankedRoomsBrowser
-            filters={filters}
-            onStatusFilterChange={(status) =>
-              setFilters((prev) => ({ ...prev, statusFilter: status }))
-            }
-            onJoinPrivate={onJoinPrivate}
-          />
+              <RankedRoomsBrowser
+                filters={filters}
+                onStatusFilterChange={(status) =>
+                  setFilters((prev) => ({ ...prev, statusFilter: status }))
+                }
+                onJoinPrivate={onJoinPrivate}
+              />
+            </>
+          )}
         </div>
 
-        {/* Sidebar: minha sala + desafios + chat */}
         {party && (
           <aside
             className={cn(
@@ -144,9 +154,19 @@ export function RankedHubLayout({
                 <p className="font-display text-sm font-bold uppercase tracking-wider text-primary">
                   {t("hub.yourRoom")}
                 </p>
-                <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-bold uppercase text-emerald-300">
-                  {t("hub.live")}
-                </span>
+                {isLiveMatch ? (
+                  <span className="rounded-full bg-rose-500/20 px-2.5 py-0.5 text-[10px] font-bold uppercase text-rose-300 motion-safe-pulse">
+                    {t("hub.matchLive")}
+                  </span>
+                ) : party.status === "full" ? (
+                  <span className="rounded-full bg-violet-500/15 px-2.5 py-0.5 text-[10px] font-bold uppercase text-violet-300">
+                    {t("hub.readyBadge")}
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-bold uppercase text-emerald-300">
+                    {t("hub.activeRoom")}
+                  </span>
+                )}
               </div>
               <RankedTeamCompact
                 variant="sidebar"
@@ -155,7 +175,7 @@ export function RankedHubLayout({
               />
             </div>
 
-            <RankedChallengesPanel />
+            {!inActiveFlow && <RankedChallengesPanel />}
 
             <RankedRoomChat className="min-h-[300px] lg:min-h-[280px] lg:max-h-[min(420px,calc(100dvh-28rem))]" />
           </aside>

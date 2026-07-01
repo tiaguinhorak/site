@@ -9,6 +9,7 @@ import { MapThumbnail } from "@/components/ui/map-thumbnail";
 import { ServerConnectActions } from "@/components/ui/server-connect-actions";
 import type { RankedMatchSessionView } from "@/lib/ranked/party-shared";
 import { formatMapLabel } from "@/lib/servers/maps";
+import { RankedFlowStepper } from "@/components/ranked/ranked-flow-stepper";
 import { ModalPortal } from "@/components/ui/modal-portal";
 
 type Props = {
@@ -67,21 +68,26 @@ export function RankedConnectModal({ open, session, onClose, onFinish, finishLoa
         />
 
         <div className="p-6 sm:p-8">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
-              <CheckCircle2 className="h-6 w-6" />
+          <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+              <div>
+                <p id="ranked-connect-title" className="font-display text-xl font-bold text-foreground">
+                  {t("ready")}
+                </p>
+                <p className="mt-1 flex items-center gap-2 text-sm text-muted">
+                  {selectedMap ? (
+                    <MapThumbnail mapId={selectedMap} label={mapLabel} size={28} rounded="md" />
+                  ) : null}
+                  {mapLabel}
+                </p>
+              </div>
             </div>
-            <div>
-              <p id="ranked-connect-title" className="font-display text-xl font-bold text-foreground">
-                {t("ready")}
-              </p>
-              <p className="mt-1 flex items-center gap-2 text-sm text-muted">
-                {selectedMap ? (
-                  <MapThumbnail mapId={selectedMap} label={mapLabel} size={28} rounded="md" />
-                ) : null}
-                {mapLabel}
-              </p>
-            </div>
+            <RankedFlowStepper
+              current={session.status === "live" ? "live" : "starting"}
+            />
           </div>
 
           <div className="mt-6 rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-4">

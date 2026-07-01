@@ -2,6 +2,8 @@ import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { subscribeRealtime } from "@/lib/realtime/bus";
 import { channelKey } from "@/lib/realtime/types";
+import { markOffline, markOnline } from "@/lib/realtime/presence";
+import { broadcastPresence } from "@/lib/realtime/notify";
 import { requireSession } from "@/lib/security/api-guard";
 
 export const dynamic = "force-dynamic";
@@ -43,15 +45,25 @@ export async function GET(request: NextRequest) {
 
       send({ type: "connected", at: Date.now() });
 
+      if (markOnline(userId)) {
+        void broadcastPresence(userId, true);
+      }
+
       const unsubscribe = subscribeRealtime(channelKeys, (event) => send(event));
 
       const heartbeat = setInterval(() => {
         send({ type: "ping", at: Date.now() });
       }, HEARTBEAT_MS);
 
+      let closed = false;
       const close = () => {
+        if (closed) return;
+        closed = true;
         clearInterval(heartbeat);
         unsubscribe();
+        if (markOffline(userId)) {
+          void broadcastPresence(userId, false);
+        }
         try {
           controller.close();
         } catch {

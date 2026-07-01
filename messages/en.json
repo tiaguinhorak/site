@@ -1048,7 +1048,37 @@
     "selectItem": "Select item",
     "noGiftItems": "No items available to gift with coins.",
     "send": "Send",
-    "giftSent": "Gift sent to {nickname}!"
+    "giftSent": "Gift sent to {nickname}!",
+    "menu": {
+      "title": "Friends",
+      "ariaLabel": "Friends and chat",
+      "online": "Online",
+      "offline": "Offline",
+      "onlineCount": "{count} online",
+      "empty": "No friends yet. Add players to chat and play together.",
+      "openChat": "Open chat",
+      "viewAll": "View all friends",
+      "requests": "{count} friend request(s)"
+    },
+    "chat": {
+      "title": "Chat",
+      "placeholder": "Message {nickname}...",
+      "send": "Send",
+      "empty": "Say hi to {nickname}!",
+      "onlineNow": "Online now",
+      "offlineNow": "Offline",
+      "inviteRanked": "Invite to ranked",
+      "loading": "Loading conversation...",
+      "minimize": "Minimize",
+      "closeChat": "Close chat"
+    },
+    "invite": {
+      "sent": "Ranked invite sent to {nickname}!",
+      "incomingTitle": "Ranked invite",
+      "incomingBody": "{nickname} invited you to the room {party}.",
+      "accept": "Join room",
+      "decline": "Not now"
+    }
   },
   "clans": {
     "createTitle": "Create a clan",
@@ -1579,6 +1609,9 @@
     "hub": {
       "yourRoom": "Your ranked room",
       "live": "LIVE",
+      "matchLive": "Match live",
+      "readyBadge": "Ready 5/5",
+      "activeRoom": "Active room",
       "createPrompt": "Create your ranked room to build your 5v5 team and follow everything in the room chat.",
       "createCta": "Create ranked room",
       "joinByCode": "Join with code",
@@ -1614,7 +1647,10 @@
       "disbandConfirmTitle": "Disband team?",
       "disbandConfirmDesc": "All members will be removed.",
       "disbandConfirm": "Disband",
-      "regionLevel": "{region} · Lv {min}–{max}"
+      "regionLevel": "{region} · Lv {min}–{max}",
+      "inviteTitle": "Invite friends",
+      "copyInviteLink": "Copy invite link",
+      "inviteHint": "Share the link — anyone who joins appears on your team automatically."
     },
     "challenges": {
       "title": "Challenges",
@@ -1734,7 +1770,9 @@
     },
     "inviteJoin": {
       "title": "Join a room",
+      "invitedTitle": "You're invited!",
       "description": "Paste the invite code the room leader shared with you.",
+      "invitedDescription": "A friend invited you to their ranked room. Confirm the code below and join the team.",
       "codeLabel": "Invite code",
       "codePlaceholder": "e.g. abc123…",
       "error": "Invalid code or room unavailable.",
@@ -1749,7 +1787,49 @@
       "findMatch": "Find match",
       "leaveQueue": "Leave queue",
       "searching": "Searching… {players} players in queue · {parties} parties",
-      "partialTeamHint": "With an incomplete team you can still queue — more players needed to reach 5."
+      "estimatedWait": "Estimated wait: ~{seconds}s",
+      "partialTeamHint": "With an incomplete team you can still queue — more players needed to reach 5.",
+      "defaultPartyName": "Solo · {nickname}",
+      "defaultPlayer": "Player",
+      "restrictedTitle": "Queue temporarily blocked",
+      "restrictedWait": "Wait {duration} before joining the queue again (for declining matches).",
+      "queueActiveHint": "Keep this tab open — we'll notify you when a match is found."
+    },
+    "flow": {
+      "queueTitle": "In matchmaking queue",
+      "matchTitle": "Ranked match",
+      "queueHint": "{players} players · {parties} parties in queue",
+      "searching": "Searching for opponents…",
+      "estimatedWait": "Estimate: ~{seconds}s",
+      "openAccept": "Confirm match",
+      "connectInline": "Connect to server",
+      "liveRound": "Round {round}",
+      "status": {
+        "accepting": "Confirm you're ready to play",
+        "voting": "Map vote in progress",
+        "starting": "Server is being prepared",
+        "live": "Match in progress"
+      },
+      "steps": {
+        "queue": "Queue",
+        "accepting": "Accept",
+        "voting": "Maps",
+        "starting": "Server",
+        "live": "Live"
+      }
+    },
+    "acceptModal": {
+      "closeModal": "Close modal",
+      "close": "Close",
+      "title": "Match found!",
+      "subtitle": "Confirm within a few seconds — if anyone declines, the match is cancelled.",
+      "confirmed": "{accepted}/{required} confirmed",
+      "teamAlpha": "Team Alpha",
+      "teamBravo": "Team Bravo",
+      "you": "(you)",
+      "ready": "I'm ready",
+      "waitingOthers": "Waiting for other players…",
+      "cancel": "Decline match"
     },
     "experience": {
       "steamTitle": "Steam required for ranked",
@@ -1784,9 +1864,13 @@
       "eyebrow": "Match ended",
       "title": "What now?",
       "description": "Play again with the same group, swap teams, or leave to join another room.",
-      "teamA": "Team A",
-      "teamB": "Team B",
+      "teamA": "Team Alpha",
+      "teamB": "Team Bravo",
       "players": "{count} players",
+      "finalScore": "Final score",
+      "youWon": "Victory!",
+      "youLost": "Defeat",
+      "mapPlayed": "Map: {map}",
       "rematchSame": "Play again (same teams)",
       "rematchSwap": "Play again (swap teams)",
       "leaveRoom": "Leave room and find another team"

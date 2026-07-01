@@ -1048,7 +1048,37 @@
     "selectItem": "Selecione o item",
     "noGiftItems": "Nenhum item disponível para presentear com moedas.",
     "send": "Enviar",
-    "giftSent": "Presente enviado para {nickname}!"
+    "giftSent": "Presente enviado para {nickname}!",
+    "menu": {
+      "title": "Amigos",
+      "ariaLabel": "Amigos e chat",
+      "online": "Online",
+      "offline": "Offline",
+      "onlineCount": "{count} online",
+      "empty": "Sem amigos ainda. Adicione jogadores para conversar e jogar juntos.",
+      "openChat": "Abrir chat",
+      "viewAll": "Ver todos os amigos",
+      "requests": "{count} convite(s) de amizade"
+    },
+    "chat": {
+      "title": "Chat",
+      "placeholder": "Mensagem para {nickname}...",
+      "send": "Enviar",
+      "empty": "Diga olá para {nickname}!",
+      "onlineNow": "Online agora",
+      "offlineNow": "Offline",
+      "inviteRanked": "Convidar para rankeada",
+      "loading": "Carregando conversa...",
+      "minimize": "Minimizar",
+      "closeChat": "Fechar chat"
+    },
+    "invite": {
+      "sent": "Convite de rankeada enviado para {nickname}!",
+      "incomingTitle": "Convite para rankeada",
+      "incomingBody": "{nickname} convidou você para a sala {party}.",
+      "accept": "Entrar na sala",
+      "decline": "Agora não"
+    }
   },
   "clans": {
     "createTitle": "Criar um clã",
@@ -1579,6 +1609,9 @@
     "hub": {
       "yourRoom": "Sua sala rankeada",
       "live": "AO VIVO",
+      "matchLive": "Partida ao vivo",
+      "readyBadge": "Pronto 5/5",
+      "activeRoom": "Sala ativa",
       "createPrompt": "Crie sua sala rankeada para montar seu time 5x5 e acompanhar tudo no chat da sala.",
       "createCta": "Criar sala rankeada",
       "joinByCode": "Entrar com código",
@@ -1614,7 +1647,10 @@
       "disbandConfirmTitle": "Desfazer time?",
       "disbandConfirmDesc": "Todos os membros serão removidos.",
       "disbandConfirm": "Desfazer",
-      "regionLevel": "{region} · Nv {min}–{max}"
+      "regionLevel": "{region} · Nv {min}–{max}",
+      "inviteTitle": "Convidar amigos",
+      "copyInviteLink": "Copiar link de convite",
+      "inviteHint": "Compartilhe o link — quem entrar aparece na sua sala automaticamente."
     },
     "challenges": {
       "title": "Desafios",
@@ -1734,7 +1770,9 @@
     },
     "inviteJoin": {
       "title": "Entrar na sala",
+      "invitedTitle": "Você foi convidado!",
       "description": "Cole o código de convite que o líder da sala compartilhou.",
+      "invitedDescription": "Um amigo te convidou para a sala rankeada. Confirme o código abaixo e entre no time.",
       "codeLabel": "Código de convite",
       "codePlaceholder": "Ex. abc123…",
       "error": "Código inválido ou sala indisponível.",
@@ -1749,7 +1787,49 @@
       "findMatch": "Buscar partida",
       "leaveQueue": "Sair da fila",
       "searching": "Procurando… {players} jogadores na fila · {parties} grupos",
-      "partialTeamHint": "Com time incompleto você também pode entrar na fila — faltam jogadores para completar 5."
+      "estimatedWait": "Tempo estimado: ~{seconds}s",
+      "partialTeamHint": "Com time incompleto você também pode entrar na fila — faltam jogadores para completar 5.",
+      "defaultPartyName": "Solo · {nickname}",
+      "defaultPlayer": "Jogador",
+      "restrictedTitle": "Fila temporariamente bloqueada",
+      "restrictedWait": "Aguarde {duration} antes de entrar na fila novamente (por recusar partidas).",
+      "queueActiveHint": "Mantenha esta aba aberta — avisaremos quando a partida for encontrada."
+    },
+    "flow": {
+      "queueTitle": "Na fila de matchmaking",
+      "matchTitle": "Partida rankeada",
+      "queueHint": "{players} jogadores · {parties} grupos na fila",
+      "searching": "Procurando adversários…",
+      "estimatedWait": "Estimativa: ~{seconds}s",
+      "openAccept": "Confirmar partida",
+      "connectInline": "Conectar ao servidor",
+      "liveRound": "Round {round}",
+      "status": {
+        "accepting": "Confirme que está pronto para jogar",
+        "voting": "Votação de mapas em andamento",
+        "starting": "Servidor sendo preparado",
+        "live": "Partida em andamento"
+      },
+      "steps": {
+        "queue": "Fila",
+        "accepting": "Aceitar",
+        "voting": "Mapas",
+        "starting": "Servidor",
+        "live": "Ao vivo"
+      }
+    },
+    "acceptModal": {
+      "closeModal": "Fechar modal",
+      "close": "Fechar",
+      "title": "Partida encontrada!",
+      "subtitle": "Confirme em até alguns segundos — se alguém recusar, a partida é cancelada.",
+      "confirmed": "{accepted}/{required} confirmaram",
+      "teamAlpha": "Time Alpha",
+      "teamBravo": "Time Bravo",
+      "you": "(você)",
+      "ready": "Estou pronto",
+      "waitingOthers": "Aguardando os outros jogadores…",
+      "cancel": "Recusar partida"
     },
     "experience": {
       "steamTitle": "Steam necessária para rankeada",
@@ -1784,9 +1864,13 @@
       "eyebrow": "Partida encerrada",
       "title": "O que fazer agora?",
       "description": "Jogue de novo com o mesmo grupo, troque os times ou saia para entrar em outra sala.",
-      "teamA": "Time A",
-      "teamB": "Time B",
+      "teamA": "Time Alpha",
+      "teamB": "Time Bravo",
       "players": "{count} jogadores",
+      "finalScore": "Placar final",
+      "youWon": "Vitória!",
+      "youLost": "Derrota",
+      "mapPlayed": "Mapa: {map}",
       "rematchSame": "Jogar novamente (mesmos times)",
       "rematchSwap": "Jogar novamente (trocar times)",
       "leaveRoom": "Sair da sala e buscar outro time"

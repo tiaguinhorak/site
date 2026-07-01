@@ -13,6 +13,7 @@ import {
 import { usePathname } from "next/navigation";
 import { secureApi } from "@/lib/api/client";
 import { RankedConnectModal } from "@/components/ranked/ranked-connect-modal";
+import { RankedAcceptModal } from "@/components/ranked/ranked-accept-modal";
 import { RankedVoteModal } from "@/components/ranked/ranked-vote-modal";
 import { RankedPostMatchModal } from "@/components/ranked/ranked-post-match-modal";
 import { useUser } from "@/lib/hooks/use-user";
@@ -91,10 +92,13 @@ type RankedPartyContextValue = {
   dismissPostMatchModal: () => void;
   voteActionLoading: string | null;
   voteModalVisible: boolean;
+  acceptModalVisible: boolean;
   connectModalVisible: boolean;
   dismissVoteModal: () => void;
+  dismissAcceptModal: () => void;
   dismissConnectModal: () => void;
   reopenVoteModal: () => void;
+  reopenAcceptModal: () => void;
   reopenConnectModal: () => void;
   pausePolling: () => void;
   resumePolling: () => void;
@@ -129,6 +133,7 @@ export function RankedPartyProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [voteActionLoading, setVoteActionLoading] = useState<string | null>(null);
   const [dismissedVoteSessionId, setDismissedVoteSessionId] = useState<string | null>(null);
+  const [dismissedAcceptSessionId, setDismissedAcceptSessionId] = useState<string | null>(null);
   const [dismissedConnectSessionId, setDismissedConnectSessionId] = useState<string | null>(null);
   const [postMatch, setPostMatch] = useState<RankedMatchSessionView | null>(null);
   const [dismissedPostMatchSessionId, setDismissedPostMatchSessionId] = useState<string | null>(null);
@@ -642,11 +647,16 @@ export function RankedPartyProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setDismissedVoteSessionId(null);
+    setDismissedAcceptSessionId(null);
     setDismissedConnectSessionId(null);
   }, [session?.id]);
 
   const dismissVoteModal = useCallback(() => {
     if (session?.id) setDismissedVoteSessionId(session.id);
+  }, [session?.id]);
+
+  const dismissAcceptModal = useCallback(() => {
+    if (session?.id) setDismissedAcceptSessionId(session.id);
   }, [session?.id]);
 
   const dismissConnectModal = useCallback(() => {
@@ -655,6 +665,10 @@ export function RankedPartyProvider({ children }: { children: ReactNode }) {
 
   const reopenVoteModal = useCallback(() => {
     setDismissedVoteSessionId(null);
+  }, []);
+
+  const reopenAcceptModal = useCallback(() => {
+    setDismissedAcceptSessionId(null);
   }, []);
 
   const reopenConnectModal = useCallback(() => {
@@ -737,6 +751,7 @@ export function RankedPartyProvider({ children }: { children: ReactNode }) {
     setVote(null);
     setLaunchMessage(null);
     setDismissedVoteSessionId(sessionId);
+    setDismissedAcceptSessionId(sessionId);
     setDismissedConnectSessionId(sessionId);
     await refreshAll();
     return true;
@@ -837,6 +852,7 @@ export function RankedPartyProvider({ children }: { children: ReactNode }) {
     setLaunchMessage(null);
     setPostMatch(null);
     setDismissedVoteSessionId(null);
+    setDismissedAcceptSessionId(null);
     setDismissedConnectSessionId(null);
     setDismissedPostMatchSessionId(null);
     await refreshAll();
@@ -844,6 +860,8 @@ export function RankedPartyProvider({ children }: { children: ReactNode }) {
   }, [refreshAll]);
 
   const voteModalOpen = Boolean(session && session.status === "voting" && vote);
+
+  const acceptModalOpen = Boolean(session && session.status === "accepting");
 
   const connectModalOpen = Boolean(
     session &&
@@ -855,6 +873,9 @@ export function RankedPartyProvider({ children }: { children: ReactNode }) {
 
   const voteModalVisible =
     voteModalOpen && session != null && dismissedVoteSessionId !== session.id;
+
+  const acceptModalVisible =
+    acceptModalOpen && session != null && dismissedAcceptSessionId !== session.id;
 
   const connectModalVisible =
     connectModalOpen && session != null && dismissedConnectSessionId !== session.id;
@@ -913,10 +934,13 @@ export function RankedPartyProvider({ children }: { children: ReactNode }) {
       dismissPostMatchModal,
       voteActionLoading,
       voteModalVisible,
+      acceptModalVisible,
       connectModalVisible,
       dismissVoteModal,
+      dismissAcceptModal,
       dismissConnectModal,
       reopenVoteModal,
+      reopenAcceptModal,
       reopenConnectModal,
       pausePolling,
       resumePolling,
@@ -965,10 +989,13 @@ export function RankedPartyProvider({ children }: { children: ReactNode }) {
       dismissPostMatchModal,
       voteActionLoading,
       voteModalVisible,
+      acceptModalVisible,
       connectModalVisible,
       dismissVoteModal,
+      dismissAcceptModal,
       dismissConnectModal,
       reopenVoteModal,
+      reopenAcceptModal,
       reopenConnectModal,
       pausePolling,
       resumePolling,
@@ -977,6 +1004,15 @@ export function RankedPartyProvider({ children }: { children: ReactNode }) {
 
   return (
     <RankedPartyContext.Provider value={value}>
+      {session && session.status === "accepting" && (
+        <RankedAcceptModal
+          open={acceptModalVisible}
+          session={session}
+          onAccept={() => void acceptMatch()}
+          onCancel={() => void cancelMatch()}
+          onClose={dismissAcceptModal}
+        />
+      )}
       {session && vote && (
         <RankedVoteModal
           open={voteModalVisible}
@@ -1011,6 +1047,10 @@ export function RankedPartyProvider({ children }: { children: ReactNode }) {
       {children}
     </RankedPartyContext.Provider>
   );
+}
+
+export function useRankedPartyOptional() {
+  return useContext(RankedPartyContext);
 }
 
 export function useRankedParty() {

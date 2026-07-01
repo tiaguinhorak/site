@@ -12,6 +12,7 @@ import type {
 } from "@/lib/ranked/party-shared";
 import { formatMapLabel } from "@/lib/servers/maps";
 import { cn } from "@/lib/utils";
+import { RankedFlowStepper } from "@/components/ranked/ranked-flow-stepper";
 import { ModalPortal } from "@/components/ui/modal-portal";
 
 function mapLabel(map: string | null | undefined): string {
@@ -99,39 +100,42 @@ export function RankedVoteModal({
         />
 
         <div className="p-6 sm:p-8">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-              {vote.isComplete ? <MapPin className="h-6 w-6" /> : <Vote className="h-6 w-6" />}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p
-                id="ranked-vote-title"
-                className="font-display text-xl font-bold text-foreground sm:text-2xl"
-              >
-                {vote.isComplete ? t("mapChosen") : t("title")}
-              </p>
-              <p className="mt-1 text-sm text-muted">
-                {waitingServer
-                  ? t("preparing", { map: mapLabel(session.selectedMap ?? vote.selectedMap) })
-                  : vote.isComplete
-                    ? t("winner", { map: mapLabel(session.selectedMap ?? vote.selectedMap) })
-                    : t("subtitle")}
-              </p>
-            </div>
-
-            {!vote.isComplete && (
-              <div
-                className={cn(
-                  "flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 font-mono text-lg font-bold",
-                  secondsLeft <= 5
-                    ? "bg-rose-500/15 text-rose-300"
-                    : "bg-primary/10 text-foreground",
-                )}
-              >
-                <Timer className="h-4 w-4" />
-                {secondsLeft}s
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                {vote.isComplete ? <MapPin className="h-6 w-6" /> : <Vote className="h-6 w-6" />}
               </div>
-            )}
+              <div className="min-w-0 flex-1">
+                <p
+                  id="ranked-vote-title"
+                  className="font-display text-xl font-bold text-foreground sm:text-2xl"
+                >
+                  {vote.isComplete ? t("mapChosen") : t("title")}
+                </p>
+                <p className="mt-1 text-sm text-muted">
+                  {waitingServer
+                    ? t("preparing", { map: mapLabel(session.selectedMap ?? vote.selectedMap) })
+                    : vote.isComplete
+                      ? t("winner", { map: mapLabel(session.selectedMap ?? vote.selectedMap) })
+                      : t("subtitle")}
+                </p>
+              </div>
+
+              {!vote.isComplete && (
+                <div
+                  className={cn(
+                    "flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 font-mono text-lg font-bold",
+                    secondsLeft <= 5
+                      ? "bg-rose-500/15 text-rose-300"
+                      : "bg-primary/10 text-foreground",
+                  )}
+                >
+                  <Timer className="h-4 w-4" />
+                  {secondsLeft}s
+                </div>
+              )}
+            </div>
+            <RankedFlowStepper current={vote.isComplete ? "starting" : "voting"} />
           </div>
 
           {!vote.isComplete && (

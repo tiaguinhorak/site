@@ -84,16 +84,6 @@ type ApiDiagnostic = {
   error: string | null;
 };
 
-type RankedSimulateResponse = {
-  ok: boolean;
-  message: string;
-  steps: string[];
-  connectAddress?: string | null;
-  connectCommand?: string | null;
-  warning?: string;
-  session?: { id: string; status: string; selectedMap?: string | null };
-};
-
 const DEFAULT_REGISTER = {
   name: "Ranked #2",
   host: "188.220.168.233",
@@ -120,12 +110,6 @@ export function AdminCsgoInfraSection() {
   const [message, setMessage] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [simulateSteps, setSimulateSteps] = useState<string[] | null>(null);
-  const [simulateConnect, setSimulateConnect] = useState<{
-    host: string;
-    port: number;
-    command: string;
-  } | null>(null);
   const [lobby2x2Url, setLobby2x2Url] = useState<string | null>(null);
   const inflightRef = useRef<AbortController | null>(null);
 
@@ -399,49 +383,6 @@ export function AdminCsgoInfraSection() {
       await load(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha na limpeza ranked.");
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function simulateRankedMatch() {
-    setSimulateSteps(null);
-    setSimulateConnect(null);
-    setBusyId("ranked:simulate");
-    setError(null);
-    setMessage(null);
-    setWarning(null);
-
-    try {
-      const api = await secureApi<RankedSimulateResponse>("/api/admin/ranked/simulate", {
-        method: "POST",
-      });
-      if (!api.ok) {
-        setError(api.error);
-        return;
-      }
-
-      const result = api.data;
-      setSimulateSteps(result.steps);
-      if (result.connectCommand && result.connectAddress) {
-        const [host, portStr] = result.connectAddress.split(":");
-        setSimulateConnect({
-          host: host ?? "",
-          port: Number(portStr) || 27015,
-          command: result.connectCommand,
-        });
-      } else {
-        setSimulateConnect(null);
-      }
-      if (result.ok) {
-        setMessage(result.message);
-        if (result.warning) setWarning(result.warning);
-      } else {
-        setError(result.message);
-        if (result.warning) setWarning(result.warning);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha na simulação ranked.");
     } finally {
       setBusyId(null);
     }
@@ -1012,56 +953,6 @@ export function AdminCsgoInfraSection() {
         </div>
       </div>
 
-      <div className="rounded-card glass-strong p-6">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-start gap-2">
-            <Users className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-            <div>
-              <h2 className="font-display text-lg font-bold">Teste ranked (E2E)</h2>
-              <p className="mt-1 text-sm text-muted">
-                Simula lobby 5v5, desafio, aceite 10/10 e votação de mapas sem precisar de 10
-                contas Steam. Você entra na party A — abra{" "}
-                <Link href="/dashboard/ranked" className="text-primary underline-offset-2 hover:underline">
-                  /dashboard/ranked
-                </Link>{" "}
-                para ver a UI ao vivo.
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="primary"
-            size="sm"
-            disabled={busyId != null}
-            confirm={confirmPresets.rankedSimulateMatch}
-            onClick={() => void simulateRankedMatch()}
-          >
-            {busyId === "ranked:simulate" ? (
-              <Loader2 className="h-4 w-4 motion-safe-spin" />
-            ) : (
-              <Play className="h-4 w-4" />
-            )}
-            Simular partida ranked
-          </Button>
-        </div>
-
-        {simulateSteps && simulateSteps.length > 0 && (
-          <ol className="mb-4 list-decimal space-y-1 pl-5 text-sm text-muted">
-            {simulateSteps.map((step, i) => (
-              <li key={i}>{step}</li>
-            ))}
-          </ol>
-        )}
-
-        {simulateConnect && (
-          <div className="rounded-xl border border-border px-4 py-3">
-            <p className="text-xs text-muted">Connect após simulação</p>
-            <p className="font-mono text-sm text-foreground">{simulateConnect.command}</p>
-            <div className="mt-2">
-              <ServerConnectActions host={simulateConnect.host} port={simulateConnect.port} />
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 }

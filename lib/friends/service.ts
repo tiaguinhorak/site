@@ -219,6 +219,18 @@ export async function areFriends(a: string, b: string): Promise<boolean> {
   return edge?.status === "ACCEPTED";
 }
 
+/** Ids of the user's accepted friends. */
+export async function getFriendIds(userId: string): Promise<string[]> {
+  const edges = await prisma.friendship.findMany({
+    where: {
+      status: "ACCEPTED",
+      OR: [{ requesterId: userId }, { addresseeId: userId }],
+    },
+    select: { requesterId: true, addresseeId: true },
+  });
+  return edges.map((e) => (e.requesterId === userId ? e.addresseeId : e.requesterId));
+}
+
 export type SearchedUser = FriendUser & {
   relationship: "none" | "friends" | "incoming" | "outgoing";
 };

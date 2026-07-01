@@ -272,14 +272,6 @@ export const confirmPresets = {
     cancelLabel: "Voltar",
     tone: "danger" as const,
   }),
-  rankedSimulateMatch: {
-    title: "Simular partida ranked?",
-    description:
-      "Cria 9 bots, monta 2 lobbies 5v5 (você na party A), aceita desafio, confirma 10/10, vota mapa e tenta subir o servidor. Cancela partidas antigas na API CS:GO e apaga estado ranked local antes.",
-    confirmLabel: "Simular E2E",
-    cancelLabel: "Cancelar",
-    tone: "warning" as const,
-  },
   rankedCancelMatch: {
     title: "Cancelar partida?",
     description:

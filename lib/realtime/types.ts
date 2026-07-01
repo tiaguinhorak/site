@@ -12,6 +12,23 @@ export type RealtimeChannel =
   | { kind: "ranked_rooms" }
   | { kind: "lobby_rooms" };
 
+export type DirectMessagePayload = {
+  id: string;
+  senderId: string;
+  recipientId: string;
+  body: string;
+  createdAt: string;
+};
+
+export type RankedInvitePayload = {
+  partyId: string;
+  inviteCode: string;
+  fromUserId: string;
+  fromDisplayName: string;
+  fromAvatarUrl: string | null;
+  partyName: string;
+};
+
 export type RealtimeEvent =
   | { type: "connected"; at: number }
   | { type: "ping"; at: number }
@@ -24,7 +41,10 @@ export type RealtimeEvent =
       scoreTeamB: number;
       round: number;
       phase: string;
-    };
+    }
+  | { type: "presence"; at: number; userId: string; online: boolean }
+  | { type: "dm"; at: number; message: DirectMessagePayload }
+  | { type: "ranked_invite"; at: number; invite: RankedInvitePayload };
 
 export function channelKey(channel: RealtimeChannel): string {
   switch (channel.kind) {
