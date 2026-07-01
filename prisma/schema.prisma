@@ -77,6 +77,14 @@ enum PunishmentScope {
   SERVER
 }
 
+enum AnticheatReviewStatus {
+  PENDING
+  UNDER_REVIEW
+  CLEARED
+  CONFIRMED
+  DISMISSED
+}
+
 enum StoreProductKind {
   SKIN
   PACKAGE
@@ -257,7 +265,11 @@ model User {
   discordUsername       String?
   discordLinkedAt       DateTime?
   pixKey                String    @default("")
+  pixKeyType            String    @default("")
   pixKeyHolderName      String    @default("")
+  pixContactEmail       String    @default("")
+  pixContactPhone       String    @default("")
+  pixLgpdConsentedAt    DateTime?
   isAdmin               Boolean   @default(false)
   rankedQueueDodges     Int       @default(0)
   rankedRestrictedUntil DateTime?
@@ -345,6 +357,8 @@ model User {
   friendRequestsReceived  Friendship[]                 @relation("FriendAddressee")
   smurfSignals            SmurfSignal[]
   accountFingerprints     AccountFingerprint[]
+  anticheatReviewCases    AnticheatReviewCase[]        @relation("AnticheatReviewSubject")
+  anticheatReviewsResolved AnticheatReviewCase[]       @relation("AnticheatReviewResolver")
 
   @@index([rank])
   @@index([elo])
@@ -707,6 +721,31 @@ model Punishment {
 
   @@index([userId, active])
   @@index([type, active])
+  @@index([createdAt])
+}
+
+model AnticheatReviewCase {
+  id           String                  @id @default(cuid())
+  userId       String?
+  steamId      String                  @default("")
+  nickname     String                  @default("")
+  matchId      String?
+  demoUrl      String?
+  reason       String
+  evidence     Json?
+  severity     Int                     @default(2)
+  status       AnticheatReviewStatus   @default(PENDING)
+  adminNotes   String                  @default("")
+  resolvedById String?
+  resolvedAt   DateTime?
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+
+  user       User? @relation("AnticheatReviewSubject", fields: [userId], references: [id], onDelete: SetNull)
+  resolvedBy User? @relation("AnticheatReviewResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([steamId])
   @@index([createdAt])
 }
 

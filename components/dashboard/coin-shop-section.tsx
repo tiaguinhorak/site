@@ -143,7 +143,7 @@ export function CoinShopSection() {
                       </span>
                     )}
                     {pack.badge === "best" && (
-                      <span className="mt-2 inline-block rounded bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-400">
+                      <span className="badge-amber mt-2 px-2 py-0.5 text-xs">
                         {tWallet("badgeBest")}
                       </span>
                     )}

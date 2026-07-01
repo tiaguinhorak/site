@@ -3,6 +3,9 @@ import "server-only";
 import type { RankedSeasonPixPayoutStatus } from "@/lib/ranked/pix-prize";
 import type { AdminPixPayoutRow, UserPendingPixPrize } from "@/lib/ranked/pix-prize";
 import { prisma } from "@/lib/prisma";
+import { decryptPixFields } from "@/lib/pix/pix-profile-service";
+import { formatBrazilPhone, formatPixKeyInput } from "@/lib/pix/pix-key-utils";
+import { decryptField } from "@/lib/security/field-encryption";
 import { formatPixAmount } from "@/lib/ranked/pix-prize";
 
 export type { AdminPixPayoutRow, UserPendingPixPrize } from "@/lib/ranked/pix-prize";
@@ -47,7 +50,10 @@ export async function listAdminPixPayouts(params: {
           email: true,
           phone: true,
           pixKey: true,
+          pixKeyType: true,
           pixKeyHolderName: true,
+          pixContactEmail: true,
+          pixContactPhone: true,
           discordUsername: true,
           discordUserId: true,
           steamPersonaName: true,
@@ -59,35 +65,40 @@ export async function listAdminPixPayouts(params: {
     },
   });
 
-  return grants.map((grant) => ({
-    grantId: grant.id,
-    seasonId: grant.seasonId,
-    seasonName: grant.season.name,
-    seasonNumber: grant.season.seasonNumber,
-    position: grant.position,
-    pixAmountCents: grant.pixAmountCents,
-    pixAmountLabel: formatPixAmount(grant.pixAmountCents),
-    label: grant.label,
-    grantedAt: grant.grantedAt.toISOString(),
-    status: grant.pixPayoutStatus ?? "PENDING",
-    payoutNote: grant.pixPayoutNote,
-    contactedAt: grant.pixContactedAt?.toISOString() ?? null,
-    paidAt: grant.pixPaidAt?.toISOString() ?? null,
-    user: {
-      id: grant.user.id,
-      nickname: grant.user.nickname,
-      email: grant.user.email,
-      phone: grant.user.phone,
-      pixKey: grant.user.pixKey,
-      pixKeyHolderName: grant.user.pixKeyHolderName,
-      discordUsername: grant.user.discordUsername,
-      discordUserId: grant.user.discordUserId,
-      steamPersonaName: grant.user.steamPersonaName,
-      steamProfileUrl: grant.user.steamProfileUrl,
-      avatarUrl: grant.user.avatarUrl,
-      steamAvatarUrl: grant.user.steamAvatarUrl,
-    },
-  }));
+  return grants.map((grant) => {
+    const pix = decryptPixFields(grant.user);
+    return {
+      grantId: grant.id,
+      seasonId: grant.seasonId,
+      seasonName: grant.season.name,
+      seasonNumber: grant.season.seasonNumber,
+      position: grant.position,
+      pixAmountCents: grant.pixAmountCents,
+      pixAmountLabel: formatPixAmount(grant.pixAmountCents),
+      label: grant.label,
+      grantedAt: grant.grantedAt.toISOString(),
+      status: grant.pixPayoutStatus ?? "PENDING",
+      payoutNote: grant.pixPayoutNote,
+      contactedAt: grant.pixContactedAt?.toISOString() ?? null,
+      paidAt: grant.pixPaidAt?.toISOString() ?? null,
+      user: {
+        id: grant.user.id,
+        nickname: grant.user.nickname,
+        email: grant.user.email,
+        phone: grant.user.phone,
+        pixKey: formatPixKeyInput(pix.pixKeyType, pix.pixKey),
+        pixKeyHolderName: pix.pixKeyHolderName,
+        pixContactEmail: pix.pixContactEmail,
+        pixContactPhone: formatBrazilPhone(pix.pixContactPhone),
+        discordUsername: grant.user.discordUsername,
+        discordUserId: grant.user.discordUserId,
+        steamPersonaName: grant.user.steamPersonaName,
+        steamProfileUrl: grant.user.steamProfileUrl,
+        avatarUrl: grant.user.avatarUrl,
+        steamAvatarUrl: grant.user.steamAvatarUrl,
+      },
+    };
+  });
 }
 
 export async function updatePixPayoutGrant(
@@ -165,12 +176,13 @@ export async function listUserPixPrizes(userId: string): Promise<UserPendingPixP
     orderBy: { grantedAt: "desc" },
     include: {
       season: { select: { name: true } },
-      user: { select: { pixKey: true } },
+      user: { select: { pixKey: true, pixKeyType: true, pixKeyHolderName: true, pixContactEmail: true, pixContactPhone: true } },
     },
   });
 
   return grants.map((grant) => {
     const status = grant.pixPayoutStatus ?? "PENDING";
+    const hasKey = Boolean(decryptField(grant.user.pixKey).trim());
     return {
       grantId: grant.id,
       seasonName: grant.season.name,
@@ -179,7 +191,7 @@ export async function listUserPixPrizes(userId: string): Promise<UserPendingPixP
       pixAmountLabel: formatPixAmount(grant.pixAmountCents),
       status,
       grantedAt: grant.grantedAt.toISOString(),
-      needsPixKey: !grant.user.pixKey.trim() && status !== "PAID" && status !== "CANCELLED",
+      needsPixKey: !hasKey && status !== "PAID" && status !== "CANCELLED",
     };
   });
 }

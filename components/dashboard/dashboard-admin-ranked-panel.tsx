@@ -14,6 +14,9 @@ type RankedSessionRow = {
   serverPort: number | null;
   playerCount: number;
   createdAt: string;
+  resultSyncedAt?: string | null;
+  scoreTeamA?: number | null;
+  scoreTeamB?: number | null;
 };
 
 export function DashboardAdminRankedPanel() {

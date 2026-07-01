@@ -62,6 +62,8 @@ export type AdminPixPayoutRow = {
     phone: string;
     pixKey: string;
     pixKeyHolderName: string;
+    pixContactEmail?: string;
+    pixContactPhone?: string;
     discordUsername: string | null;
     discordUserId: string | null;
     steamPersonaName: string | null;

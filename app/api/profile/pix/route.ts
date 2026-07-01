@@ -1,21 +1,27 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { z } from "zod";
 import {
   applyApiGuards,
   parseJsonBody,
   requireSession,
 } from "@/lib/security/api-guard";
-import { prisma } from "@/lib/prisma";
 import { RATE_LIMITS } from "@/lib/security/constants";
 import { formatZodErrors, firstZodError } from "@/lib/security/schemas";
-import { sanitizeText } from "@/lib/security/sanitize";
+import { getRequestLocale, apiErrorMessage } from "@/lib/i18n/server";
+import { getNamespace } from "@/lib/i18n/catalog";
 import { syncUserPixGrantStatuses } from "@/lib/ranked/pix-payout-service";
-
-const pixSchema = z.object({
-  pixKey: z.string().trim().min(3).max(140),
-  pixKeyHolderName: z.string().trim().max(80).optional(),
-});
+import {
+  getPixProfileForUser,
+  savePixProfileForUser,
+} from "@/lib/pix/pix-profile-service";
+import { pixErrorMessage } from "@/lib/pix/pix-i18n";
+import { createPixProfileSchema } from "@/lib/pix/pix-schema";
+import {
+  parsePixKeyType,
+  validateBrazilPhone,
+  validatePixKey,
+  type PixKeyType,
+} from "@/lib/pix/pix-key-utils";
 
 export async function GET(request: NextRequest) {
   const guardError = await applyApiGuards(
@@ -29,18 +35,16 @@ export async function GET(request: NextRequest) {
   const { session, error: sessionError } = requireSession(request);
   if (sessionError) return sessionError;
 
-  const user = await prisma.user.findUnique({
-    where: { id: session!.userId },
-    select: { pixKey: true, pixKeyHolderName: true },
-  });
-  if (!user) {
-    return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
+  const locale = await getRequestLocale(request);
+  const profile = await getPixProfileForUser(session!.userId);
+  if (!profile) {
+    return NextResponse.json(
+      { error: apiErrorMessage(locale, "userNotFound") },
+      { status: 404 },
+    );
   }
 
-  return NextResponse.json({
-    pixKey: user.pixKey,
-    pixKeyHolderName: user.pixKeyHolderName,
-  });
+  return NextResponse.json(profile);
 }
 
 export async function PATCH(request: NextRequest) {
@@ -55,10 +59,13 @@ export async function PATCH(request: NextRequest) {
   const { session, error: sessionError } = requireSession(request);
   if (sessionError) return sessionError;
 
+  const locale = await getRequestLocale(request);
+  const pixMessages = getNamespace(locale, "pix");
+
   const { data, error: parseError } = await parseJsonBody(request);
   if (parseError) return parseError;
 
-  const parsed = pixSchema.safeParse(data);
+  const parsed = createPixProfileSchema(pixMessages).safeParse(data);
   if (!parsed.success) {
     return NextResponse.json(
       { error: firstZodError(parsed.error), fieldErrors: formatZodErrors(parsed.error) },
@@ -66,16 +73,27 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
-  const pixKey = sanitizeText(parsed.data.pixKey, 140);
-  const pixKeyHolderName = sanitizeText(parsed.data.pixKeyHolderName ?? "", 80);
+  const pixKeyType = parsePixKeyType(parsed.data.pixKeyType) as PixKeyType;
+  const keyError = validatePixKey(pixKeyType, parsed.data.pixKey);
+  if (keyError) {
+    return NextResponse.json({ error: pixErrorMessage(locale, keyError) }, { status: 400 });
+  }
 
-  const user = await prisma.user.update({
-    where: { id: session!.userId },
-    data: { pixKey, pixKeyHolderName },
-    select: { pixKey: true, pixKeyHolderName: true },
+  const phoneError = validateBrazilPhone(parsed.data.pixContactPhone);
+  if (phoneError) {
+    return NextResponse.json({ error: pixErrorMessage(locale, phoneError) }, { status: 400 });
+  }
+
+  const profile = await savePixProfileForUser(session!.userId, {
+    pixKeyType,
+    pixKey: parsed.data.pixKey,
+    pixKeyHolderName: parsed.data.pixKeyHolderName,
+    pixContactEmail: parsed.data.pixContactEmail,
+    pixContactPhone: parsed.data.pixContactPhone,
+    lgpdConsent: parsed.data.lgpdConsent,
   });
 
-  await syncUserPixGrantStatuses(session!.userId, pixKey);
+  await syncUserPixGrantStatuses(session!.userId, profile.pixKey);
 
-  return NextResponse.json({ ok: true, pixKey: user.pixKey, pixKeyHolderName: user.pixKeyHolderName });
+  return NextResponse.json({ ok: true, ...profile });
 }

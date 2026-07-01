@@ -1,17 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SteamRequiredCard } from "@/components/dashboard/steam-required-card";
 import { RankedHubLayout } from "@/components/dashboard/ranked-hub-layout";
 import { RankedCreateTeamModal } from "@/components/dashboard/ranked-create-team-modal";
 import { RankedJoinPasswordModal } from "@/components/dashboard/ranked-join-password-modal";
+import { RankedJoinInviteModal } from "@/components/dashboard/ranked-join-invite-modal";
 import { useRankedParty } from "@/components/providers/ranked-party-provider";
 import { useUser } from "@/lib/hooks/use-user";
 import type { RankedPartyView } from "@/lib/ranked/party-shared";
 
 export function RankedExperience() {
+  const searchParams = useSearchParams();
   const { user, loading: userLoading } = useUser();
   const { party, loading, eligibility, createTeam, updateTeam, joinRoom } = useRankedParty();
   const t = useTranslations("ranked");
@@ -21,6 +24,17 @@ export function RankedExperience() {
     mode: "create",
   });
   const [passwordModal, setPasswordModal] = useState<RankedPartyView | null>(null);
+  const [inviteModal, setInviteModal] = useState<{ open: boolean; code: string }>({
+    open: false,
+    code: "",
+  });
+
+  useEffect(() => {
+    const joinCode = searchParams.get("join")?.trim();
+    if (joinCode && joinCode.length >= 4) {
+      setInviteModal({ open: true, code: joinCode });
+    }
+  }, [searchParams]);
 
   if (userLoading || loading) {
     return (
@@ -52,6 +66,7 @@ export function RankedExperience() {
           canPlay ? () => setTeamModal({ open: true, mode: "create" }) : undefined
         }
         onJoinPrivate={(room) => setPasswordModal(room)}
+        onJoinByCode={() => setInviteModal({ open: true, code: "" })}
       />
 
       <RankedCreateTeamModal
@@ -72,6 +87,12 @@ export function RankedExperience() {
           if (!passwordModal) return false;
           return joinRoom(passwordModal.id, password);
         }}
+      />
+
+      <RankedJoinInviteModal
+        open={inviteModal.open}
+        initialCode={inviteModal.code}
+        onClose={() => setInviteModal({ open: false, code: "" })}
       />
     </>
   );

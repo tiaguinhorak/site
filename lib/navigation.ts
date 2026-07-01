@@ -222,6 +222,13 @@ export const adminNav = [
     description: "Banimentos, advertências e histórico de moderação.",
   },
   {
+    label: "VAR — AC",
+    href: "/admin/var-ac",
+    icon: "Shield",
+    title: "VAR Anti-cheat",
+    description: "Revisão de suspeitas reportadas pelo anticheat (VAR).",
+  },
+  {
     label: "GIFs de perfil",
     href: "/admin/moderacao-gifs",
     icon: "ImageIcon",
@@ -329,25 +336,25 @@ export const adminNavGroups: AdminNavGroup[] = [
     id: "community",
     label: "Comunidade",
     icon: "Users",
-    items: [adminNav[1], adminNav[2], adminNav[3], adminNav[4]],
+    items: [adminNav[1], adminNav[2], adminNav[3], adminNav[4], adminNav[5]],
   },
   {
     id: "content",
     label: "Conteúdo",
     icon: "Newspaper",
-    items: [adminNav[9], adminNav[10], adminNav[11]],
+    items: [adminNav[10], adminNav[11], adminNav[12]],
   },
   {
     id: "infra",
     label: "Infra",
     icon: "Server",
-    items: [adminNav[5], adminNav[6], adminNav[7], adminNav[8], adminNav[13], adminNav[14]],
+    items: [adminNav[6], adminNav[7], adminNav[8], adminNav[9], adminNav[14], adminNav[15]],
   },
   {
     id: "system",
     label: "Sistema",
     icon: "ScrollText",
-    items: [adminNav[12]],
+    items: [adminNav[13]],
   },
 ];
 

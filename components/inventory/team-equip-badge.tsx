@@ -37,7 +37,7 @@ export function TeamEquipBadge({
         <span
           className={cn(
             pill,
-            "rounded font-bold uppercase tracking-wide text-amber-400 ring-1 ring-amber-400/30 bg-amber-400/10",
+            "badge-amber rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wide",
           )}
         >
           TR

@@ -1038,6 +1038,7 @@
     "steamHint": "Load your Steam friends who already play here.",
     "steamUnavailable": "Link your Steam and make your friends list public.",
     "steamNoneOnPlatform": "No Steam friends are on the platform yet.",
+    "inviteRanked": "Invite to ranked",
     "close": "Close",
     "giftTo": "Gift {nickname}",
     "giftCoins": "Coins",
@@ -1580,6 +1581,7 @@
       "live": "LIVE",
       "createPrompt": "Create your ranked room to build your 5v5 team and follow everything in the room chat.",
       "createCta": "Create ranked room",
+      "joinByCode": "Join with code",
       "challengeReady": "{count, plural, one {# team 5/5 ready to challenge now} other {# teams 5/5 ready to challenge now}}"
     },
     "chat": {
@@ -1730,6 +1732,25 @@
       "cancel": "Cancel",
       "enter": "Join"
     },
+    "inviteJoin": {
+      "title": "Join a room",
+      "description": "Paste the invite code the room leader shared with you.",
+      "codeLabel": "Invite code",
+      "codePlaceholder": "e.g. abc123…",
+      "error": "Invalid code or room unavailable.",
+      "cancel": "Cancel",
+      "join": "Join room",
+      "linkCopied": "Invite link copied for {nickname}!",
+      "alreadyInTeam": "This player is already on your team."
+    },
+    "solo": {
+      "title": "Solo ranked",
+      "description": "Join the queue alone — matchmaking groups 10 players (solos and stacks) into a 5v5.",
+      "findMatch": "Find match",
+      "leaveQueue": "Leave queue",
+      "searching": "Searching… {players} players in queue · {parties} parties",
+      "partialTeamHint": "With an incomplete team you can still queue — more players needed to reach 5."
+    },
     "experience": {
       "steamTitle": "Steam required for ranked",
       "steamDesc": "Link your Steam account to build your 5v5 team and challenge other teams."
@@ -1769,6 +1790,70 @@
       "rematchSame": "Play again (same teams)",
       "rematchSwap": "Play again (swap teams)",
       "leaveRoom": "Leave room and find another team"
+    }
+  },
+  "pix": {
+    "description": "Pix payment is handled by our team after the season ends.",
+    "viaPix": "{amount} via Pix",
+    "profile": {
+      "title": "Pix key for prizes",
+      "privacyNotice": "Your Pix data is <strong>private</strong> and stored encrypted. It does not appear on your public profile — only the finance team accesses it for prize payouts, in compliance with data protection laws.",
+      "keyTypeLabel": "Key type",
+      "keyTypes": {
+        "CPF": "CPF",
+        "CNPJ": "CNPJ",
+        "PHONE": "Mobile",
+        "EMAIL": "Email",
+        "RANDOM": "Random key"
+      },
+      "fields": {
+        "pixKey": "Pix key",
+        "holderName": "Account holder name",
+        "contactEmail": "Contact email",
+        "contactPhone": "Contact phone"
+      },
+      "placeholders": {
+        "email": "you@email.com",
+        "phone": "(11) 99999-9999",
+        "cpf": "000.000.000-00",
+        "cnpj": "00.000.000/0000-00",
+        "random": "UUID or random key",
+        "holderName": "As registered with your bank"
+      },
+      "lgpdConsent": "I authorize the use of this data exclusively for Pix prize payouts. I understand it will not be publicly visible and I may request deletion under applicable privacy laws.",
+      "save": "Save Pix details"
+    },
+    "toast": {
+      "saved": "Pix details saved securely.",
+      "holderRequired": "Enter the Pix key account holder name.",
+      "contactRequired": "Contact email and phone are required.",
+      "lgpdRequired": "Confirm the privacy notice to save."
+    },
+    "errors": {
+      "invalidEmail": "Enter a valid email for the Pix key.",
+      "invalidPhone": "Enter a valid mobile number with area code (e.g. (11) 99999-9999).",
+      "invalidCpf": "CPF must have 11 digits.",
+      "invalidCnpj": "CNPJ must have 14 digits.",
+      "invalidRandom": "Random key must be between 8 and 140 characters.",
+      "keyRequired": "Enter your Pix key.",
+      "holderMin": "Account holder name must be at least 2 characters.",
+      "contactEmailInvalid": "Enter a valid contact email.",
+      "contactPhoneRequired": "Contact phone is required.",
+      "lgpdRequired": "Confirm privacy consent to save."
+    },
+    "payoutStatus": {
+      "PENDING": "Awaiting Pix key",
+      "READY": "Ready to pay",
+      "CONTACTED": "Contacted",
+      "PAID": "Paid",
+      "CANCELLED": "Cancelled"
+    },
+    "prizeAlert": {
+      "title": "Season Pix prize",
+      "needsKey": "You won a Pix prize! Add your key in profile so we can pay you.",
+      "processing": "Your prize is being processed. Our team will contact you if needed.",
+      "positionAmount": "{season} · {position} place · {amount}",
+      "registerLink": "Add Pix key in profile →"
     }
   },
   "validation": {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, Flag, XCircle } from "lucide-react";
+import { Loader2, Flag, RotateCcw, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { secureApi } from "@/lib/api/client";
 import { confirmPresets } from "@/lib/confirm-presets";
@@ -18,6 +18,9 @@ type RankedSessionRow = {
   serverPort: number | null;
   playerCount: number;
   createdAt: string;
+  resultSyncedAt?: string | null;
+  scoreTeamA?: number | null;
+  scoreTeamB?: number | null;
 };
 
 type Props = {
@@ -71,14 +74,37 @@ export function AdminRankedSessionsPanel({
     router.refresh();
   }
 
+  async function voidSession(session: RankedSessionRow) {
+    onBusyChange(`ranked:void:${session.id}`);
+    const result = await secureApi<{ ok: boolean; message: string }>(
+      `/api/admin/ranked/sessions/${session.id}/void`,
+      { method: "POST" },
+    );
+    onBusyChange(null);
+    if (!result.ok) {
+      onError(result.error);
+      return;
+    }
+    onMessage(result.data.message);
+    onRefresh();
+    router.refresh();
+  }
+
+  const activeSessions = sessions.filter((s) =>
+    ["accepting", "voting", "starting", "live"].includes(s.status),
+  );
+  const finishedSessions = sessions.filter(
+    (s) => s.status === "finished" && s.resultSyncedAt,
+  );
+
   return (
     <div className="rounded-card glass-strong p-6">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-lg font-bold">Sessões ranked (site)</h2>
           <p className="mt-1 text-sm text-muted">
-            Partidas criadas pelo fluxo ranked/lobby no site. Use aqui para cancelar testes que não
-            aparecem na API CS:GO.
+            Partidas criadas pelo fluxo ranked/lobby no site. Cancele testes ativos ou anule
+            partidas finalizadas (estorna ELO e pontos).
           </p>
         </div>
         <Link
@@ -90,10 +116,11 @@ export function AdminRankedSessionsPanel({
       </div>
 
       <ul className="space-y-3">
-        {sessions.length === 0 ? (
-          <li className="text-sm text-muted">Nenhuma sessão ranked ativa no site.</li>
+        {activeSessions.length === 0 && finishedSessions.length === 0 ? (
+          <li className="text-sm text-muted">Nenhuma sessão ranked recente no site.</li>
         ) : (
-          sessions.map((session) => (
+          <>
+            {activeSessions.map((session) => (
             <li
               key={session.id}
               className="rounded-xl border border-border px-4 py-3"
@@ -165,7 +192,63 @@ export function AdminRankedSessionsPanel({
                 </div>
               </div>
             </li>
-          ))
+            ))}
+
+            {finishedSessions.length > 0 && (
+              <>
+                <li className="pt-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+                    Finalizadas (anular + estornar)
+                  </p>
+                </li>
+                {finishedSessions.map((session) => (
+                  <li
+                    key={session.id}
+                    className="rounded-xl border border-border px-4 py-3"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-mono text-xs text-muted">{session.id}</p>
+                        <p className="text-sm font-semibold text-foreground">
+                          {session.status}
+                          {session.selectedMap ? ` · ${formatMapLabel(session.selectedMap)}` : ""}
+                          {session.scoreTeamA != null && session.scoreTeamB != null
+                            ? ` · ${session.scoreTeamA}:${session.scoreTeamB}`
+                            : ""}
+                        </p>
+                        <p className="mt-1 text-xs text-muted">
+                          {session.matchSource} · {session.playerCount} jogadores ·{" "}
+                          {new Date(session.createdAt).toLocaleString("pt-BR")}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={busyId != null}
+                        confirm={{
+                          title: "Anular partida e estornar pontos?",
+                          description:
+                            "Cancela o resultado, remove stats da partida e reverte ELO/pontos competitivos dos jogadores.",
+                          confirmLabel: "Anular e estornar",
+                          cancelLabel: "Voltar",
+                          tone: "danger" as const,
+                        }}
+                        onClick={() => void voidSession(session)}
+                      >
+                        {busyId === `ranked:void:${session.id}` ? (
+                          <Loader2 className="h-4 w-4 motion-safe-spin" />
+                        ) : (
+                          <RotateCcw className="h-4 w-4" />
+                        )}
+                        Anular
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </>
+            )}
+          </>
         )}
       </ul>
     </div>

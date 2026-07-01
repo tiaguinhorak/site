@@ -70,7 +70,7 @@ function GameClientBadge({ gameClient }: { gameClient: CatalogItem["gameClient"]
   }
   if (gameClient === "cs2") {
     return (
-      <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+      <span className="badge-amber px-2 py-0.5 text-[10px] uppercase tracking-wide">
         CS2
       </span>
     );

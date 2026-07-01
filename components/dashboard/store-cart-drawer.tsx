@@ -236,8 +236,8 @@ export function StoreCartDrawer() {
               ) : (
                 <div className="space-y-6">
                   {pendingCheckouts.length > 0 && (
-                    <section className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
-                      <h3 className="flex items-center gap-2 text-sm font-bold text-amber-300">
+                    <section className="alert-warning p-4">
+                      <h3 className="flex items-center gap-2 text-sm font-bold text-warning">
                         <AlertTriangle className="h-4 w-4" />
                         {t("pendingOrdersTitle")}
                       </h3>
@@ -333,7 +333,7 @@ export function StoreCartDrawer() {
                                   {formatLineTotal(line)}
                                 </p>
                                 {!line.item.canPurchase && (
-                                  <p className="mt-1 text-[11px] text-amber-400">
+                                  <p className="mt-1 text-[11px] text-warning">
                                     {t("itemUnavailable")}
                                   </p>
                                 )}

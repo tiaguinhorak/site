@@ -92,7 +92,7 @@ export function ProfileSteamSection({
                     "mt-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider",
                     steamLinked
                       ? "bg-emerald-500/15 text-emerald-400"
-                      : "bg-amber-500/15 text-amber-400",
+                      : "badge-amber text-[10px] uppercase tracking-wide",
                   )}
                 >
                   {steamLinked ? (

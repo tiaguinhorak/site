@@ -173,7 +173,7 @@ export function AdminUsersSection() {
                     <td className="px-4 py-3">
                       <span className={cn(
                         "rounded-full px-2 py-0.5 text-xs font-semibold uppercase",
-                        user.plan === "ELITE" ? "bg-amber-500/15 text-amber-400" :
+                        user.plan === "ELITE" ? "badge-amber text-[10px] uppercase tracking-wide" :
                         user.plan === "PREMIUM" ? "bg-primary/15 text-primary" : "bg-muted/20 text-muted",
                       )}>
                         {user.plan}

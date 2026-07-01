@@ -8,6 +8,7 @@ import {
   Gift,
   Loader2,
   Search,
+  Swords,
   UserPlus,
   Users,
   X,
@@ -25,6 +26,10 @@ import { toast } from "@/lib/toast";
 import { dispatchInventoryRefresh } from "@/lib/inventory/inventory-refresh-events";
 import { cn } from "@/lib/utils";
 import { ModalPortal } from "@/components/ui/modal-portal";
+import {
+  useRankedParty,
+  RANKED_TEAM_SIZE,
+} from "@/components/providers/ranked-party-provider";
 
 type FriendUser = {
   id: string;
@@ -74,6 +79,8 @@ function Avatar({ user, size = 40 }: { user: FriendUser; size?: number }) {
 
 export function FriendsSection() {
   const t = useTranslations("friends");
+  const tInvite = useTranslations("ranked.inviteJoin");
+  const { party } = useRankedParty();
   const { refresh } = useUser();
   const [tab, setTab] = useState<Tab>("friends");
   const [friends, setFriends] = useState<FriendEntry[]>([]);
@@ -120,6 +127,23 @@ export function FriendsSection() {
     setGiftOpen(true);
   }
 
+  const canInviteToRanked =
+    Boolean(party?.isLeader) &&
+    party!.memberCount < RANKED_TEAM_SIZE &&
+    Boolean(party!.inviteCode);
+
+  async function inviteFriendToRanked(friend: FriendEntry) {
+    if (!party?.inviteCode) return;
+    const memberIds = new Set(party.members.map((m) => m.id));
+    if (memberIds.has(friend.id)) {
+      toast.error(tInvite("alreadyInTeam"));
+      return;
+    }
+    const link = `${window.location.origin}/dashboard/ranked?join=${party.inviteCode}`;
+    await navigator.clipboard.writeText(link);
+    toast.success(tInvite("linkCopied", { nickname: friend.displayName }));
+  }
+
   const tabs: { id: Tab; label: string; count?: number }[] = [
     { id: "friends", label: t("tabFriends"), count: friends.length },
     { id: "requests", label: t("tabRequests"), count: incoming.length },
@@ -156,7 +180,14 @@ export function FriendsSection() {
           <Loader2 className="h-8 w-8 motion-safe-spin text-primary" />
         </div>
       ) : tab === "friends" ? (
-        <FriendsList friends={friends} busy={busy} onGift={openGift} onAction={action} t={t} />
+        <FriendsList
+          friends={friends}
+          busy={busy}
+          onGift={openGift}
+          onAction={action}
+          onInviteRanked={canInviteToRanked ? inviteFriendToRanked : undefined}
+          t={t}
+        />
       ) : tab === "requests" ? (
         <RequestsView
           incoming={incoming}
@@ -191,12 +222,14 @@ function FriendsList({
   busy,
   onGift,
   onAction,
+  onInviteRanked,
   t,
 }: {
   friends: FriendEntry[];
   busy: boolean;
   onGift: (user: FriendUser) => void;
   onAction: (path: string, body: Record<string, unknown>, msg?: string) => Promise<boolean>;
+  onInviteRanked?: (friend: FriendEntry) => void;
   t: ReturnType<typeof useTranslations<"friends">>;
 }) {
   if (friends.length === 0) {
@@ -223,6 +256,12 @@ function FriendsList({
               {friend.elo}
             </p>
           </div>
+          {onInviteRanked && (
+            <Button type="button" size="sm" variant="outline" onClick={() => onInviteRanked(friend)}>
+              <Swords className="h-4 w-4" />
+              {t("inviteRanked")}
+            </Button>
+          )}
           <Button type="button" size="sm" variant="primary" onClick={() => onGift(friend)}>
             <Gift className="h-4 w-4" />
             {t("gift")}
@@ -496,7 +535,7 @@ function AddFriends({
         {steamUsers === null ? (
           <p className="mt-3 text-sm text-muted">{t("steamHint")}</p>
         ) : !steamAvailable ? (
-          <p className="mt-3 text-sm text-amber-300">{t("steamUnavailable")}</p>
+          <p className="mt-3 text-sm text-warning">{t("steamUnavailable")}</p>
         ) : steamUsers.length === 0 ? (
           <p className="mt-3 text-sm text-muted">{t("steamNoneOnPlatform")}</p>
         ) : (

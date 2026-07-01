@@ -296,7 +296,7 @@ function StoreItemCard({
                 {coinPriceLabel && (
                   <span
                     className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full bg-amber-400/15 px-2.5 py-1 font-semibold text-amber-300",
+                      "badge-amber gap-1.5 px-2.5 py-1",
                       shopMode === "coins"
                         ? featured
                           ? "text-xl sm:text-2xl"

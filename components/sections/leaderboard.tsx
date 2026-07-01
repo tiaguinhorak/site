@@ -113,7 +113,7 @@ export function Leaderboard({
               aria-hidden
             />
             <div className="relative">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-amber-400">
+              <span className="badge-amber gap-1.5 px-3 py-1 text-xs uppercase tracking-wider">
                 <Crown className="h-3.5 w-3.5" />
                 {t("topSeason")}
               </span>

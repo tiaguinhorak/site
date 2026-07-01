@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { Coins, Medal, X, ZoomIn } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { RemoteImage } from "@/components/ui/remote-image";
 import { PixIcon } from "@/components/ui/pix-icon";
-import { PIX_PRIZE_DESCRIPTION } from "@/lib/ranked/pix-prize";
 import { skinPreviewImageUrl } from "@/lib/inventory/skin-images";
 import type { PublicSeasonPrizeDisplay } from "@/lib/ranked/season-prize-display";
 import { cn } from "@/lib/utils";
@@ -146,6 +146,7 @@ function SkinPrizeCard({
 }
 
 function CompactPrizeRow({ prize }: { prize: PublicSeasonPrizeDisplay }) {
+  const tPix = useTranslations("pix");
   const isPix = prize.rewardType === "PIX";
   const featured = prize.highlight;
 
@@ -155,47 +156,44 @@ function CompactPrizeRow({ prize }: { prize: PublicSeasonPrizeDisplay }) {
         "flex items-center gap-3 rounded-lg border px-3 py-2.5",
         featured
           ? isPix
-            ? "border-[color-mix(in_srgb,#32BCAD_45%,transparent)] bg-[color-mix(in_srgb,#32BCAD_12%,transparent)] shadow-[0_0_24px_color-mix(in_srgb,#32BCAD_18%,transparent)]"
+            ? "border-[color-mix(in_srgb,#32BCAD_50%,transparent)] bg-[color-mix(in_srgb,#32BCAD_8%,transparent)] shadow-[0_0_24px_color-mix(in_srgb,#32BCAD_18%,transparent)]"
             : "border-[color-mix(in_srgb,var(--primary)_40%,transparent)] bg-[color-mix(in_srgb,var(--primary)_10%,transparent)] shadow-[0_0_20px_color-mix(in_srgb,var(--primary)_12%,transparent)]"
           : "border-border/60",
       )}
     >
-      <div
-        className={cn(
-          "flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg",
-          isPix
-            ? "bg-[color-mix(in_srgb,#32BCAD_18%,transparent)]"
-            : "bg-[color-mix(in_srgb,var(--primary)_8%,transparent)]",
-        )}
-      >
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center">
         {prize.rewardType === "COINS" ? (
-          <Coins className="h-5 w-5 text-amber-400" />
+          <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-[color-mix(in_srgb,var(--primary)_8%,transparent)]">
+            <Coins className="h-5 w-5 text-amber-400" />
+          </span>
         ) : isPix ? (
-          <PixIcon size={22} />
+          <PixIcon size={24} />
         ) : prize.imageUrl ? (
           <RemoteImage
             src={prize.imageUrl}
             alt={prize.displayName}
             width={40}
             height={40}
-            className="h-10 w-10 object-contain"
+            className="h-10 w-10 rounded-lg object-contain"
           />
         ) : (
-          <Medal className="h-5 w-5 text-primary" />
+          <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-[color-mix(in_srgb,var(--primary)_8%,transparent)]">
+            <Medal className="h-5 w-5 text-primary" />
+          </span>
         )}
       </div>
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <p className="truncate text-sm font-semibold text-foreground">{prize.displayName}</p>
           {featured ? (
-            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
+            <span className="rounded-full border border-primary/35 bg-primary/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-foreground">
               Destaque
             </span>
           ) : null}
         </div>
         {isPix ? (
           <p className="truncate text-xs text-muted">
-            {prize.description ?? PIX_PRIZE_DESCRIPTION}
+            {prize.description ?? tPix("description")}
           </p>
         ) : prize.label && prize.label !== prize.displayName ? (
           <p className="truncate text-xs text-muted">{prize.label}</p>

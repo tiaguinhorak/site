@@ -124,7 +124,8 @@ export function RankedTeamCompact({
   );
 
   async function handleCopyInvite() {
-    await navigator.clipboard.writeText(team!.inviteCode);
+    const link = `${window.location.origin}/dashboard/ranked?join=${team!.inviteCode}`;
+    await navigator.clipboard.writeText(link);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 2000);
   }

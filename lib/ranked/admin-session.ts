@@ -2,6 +2,7 @@ import "server-only";
 
 import { afterCsgoMatchMutation } from "@/lib/csgo-api/invalidate-caches";
 import { abandonRankedSessionInternal } from "@/lib/ranked/reconcile-stale-sessions";
+import { voidFinishedRankedSession } from "@/lib/ranked/match-result-reversal";
 import { notifyRankedRooms, notifySessionParticipants } from "@/lib/realtime/notify";
 
 export async function adminAbandonRankedSession(
@@ -27,4 +28,10 @@ export async function adminAbandonRankedSession(
         ? "Partida ranked encerrada e times liberados."
         : "Partida ranked cancelada e times liberados.",
   };
+}
+
+export async function adminVoidFinishedRankedSession(
+  sessionId: string,
+): Promise<{ ok: boolean; message: string }> {
+  return voidFinishedRankedSession(sessionId);
 }

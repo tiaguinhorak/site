@@ -28,6 +28,7 @@ import {
   resolvePixPayoutStatusForUser,
   syncUserPixGrantStatuses,
 } from "@/lib/ranked/pix-payout-service";
+import { decryptField } from "@/lib/security/field-encryption";
 
 let rankedSeasonTableReady: boolean | null = null;
 
@@ -722,7 +723,9 @@ async function grantSinglePrize(
       where: { id: userId },
       select: { pixKey: true },
     });
-    const pixPayoutStatus = resolvePixPayoutStatusForUser(user?.pixKey ?? "");
+    const pixPayoutStatus = resolvePixPayoutStatusForUser(
+      user?.pixKey ? decryptField(user.pixKey) : "",
+    );
 
     await prisma.rankedSeasonPrizeGrant.create({
       data: {

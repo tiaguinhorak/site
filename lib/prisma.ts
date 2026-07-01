@@ -32,10 +32,12 @@ function getPoolConfig(connectionString: string): pg.PoolConfig {
     connectionString: sanitized,
     ssl: isLocal ? undefined : { rejectUnauthorized: false },
     max: Number(process.env.DATABASE_POOL_MAX ?? 10),
-    idleTimeoutMillis: 25_000,
-    connectionTimeoutMillis: 12_000,
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: Number(process.env.DATABASE_CONNECTION_TIMEOUT_MS ?? 20_000),
     keepAlive: true,
     keepAliveInitialDelayMillis: 10_000,
+    maxUses: 5_000,
+    allowExitOnIdle: false,
   };
 }
 
@@ -56,6 +58,9 @@ function getOrCreatePool(connectionString: string): pg.Pool {
   const pool = new pg.Pool(getPoolConfig(connectionString));
   pool.on("error", (error) => {
     console.error("[prisma:pool]", error.message);
+  });
+  pool.on("connect", (client) => {
+    void client.query("SET statement_timeout = 30000").catch(() => undefined);
   });
 
   globalForPrisma.prismaPool = pool;

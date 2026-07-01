@@ -1,8 +1,10 @@
-import { Wifi, Gauge, Server, MapPin } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+"use client";
 
-export async function InfrastructurePanel({ serverCount }: { serverCount: string }) {
-  const t = await getTranslations("infraPanel");
+import { Wifi, Gauge, Server, MapPin } from "lucide-react";
+import { useTranslations } from "next-intl";
+
+export function InfrastructurePanel({ serverCount }: { serverCount: string }) {
+  const t = useTranslations("infraPanel");
   const infra = [
     {
       icon: MapPin,

@@ -182,7 +182,7 @@ export function LobbyRoomDetail({ roomId }: { roomId: string }) {
               <span className="text-2xl">{room.regionFlag}</span>
               <h1 className="font-display text-2xl font-bold">{room.name}</h1>
               {room.visibility === "private" && (
-                <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-xs font-semibold text-amber-300">
+                <span className="badge-amber px-2 py-0.5 text-xs">
                   {t("private")}
                 </span>
               )}

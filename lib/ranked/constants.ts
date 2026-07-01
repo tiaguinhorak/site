@@ -26,10 +26,12 @@ export const RANKED_CHALLENGE_TTL_MS = 60_000;
 export const RANKED_ACCEPT_TTL_MS = 90_000;
 export const RANKED_VOTE_SECONDS = 30;
 
+/** MR12 — 12 rounds por half (24 no total). */
 export const RANKED_MATCH_CONFIG = {
   gameType: 0,
   gameMode: 1,
   tickrate: 128,
-  maxRounds: 30,
+  maxRounds: 24,
   overtimeRounds: 6,
+  knifeRound: true,
 } as const;

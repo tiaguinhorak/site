@@ -371,9 +371,9 @@ export function ProfileSection() {
           </div>
 
           {!profile.anticheatInstalled && (
-            <div className="mt-6 flex flex-col items-start justify-between gap-3 rounded-xl glass border border-amber-400/30 p-4 sm:flex-row sm:items-center">
+            <div className="alert-warning mt-6 flex flex-col items-start justify-between gap-3 p-4 sm:flex-row sm:items-center">
               <div className="flex items-center gap-3">
-                <ShieldAlert className="h-5 w-5 shrink-0 text-amber-700 dark:text-amber-400" />
+                <ShieldAlert className="h-5 w-5 shrink-0 text-warning" />
                 <p className="text-sm text-foreground">
                   {t("anticheatNotDetected")}
                 </p>
@@ -439,7 +439,7 @@ export function ProfileSection() {
               />
               <ProfilePixSection />
               {hasUnsavedChanges && (
-                <p className="text-sm text-amber-800 dark:text-amber-400/90">{tForm("unsavedHint")}</p>
+                <p className="text-sm text-warning">{tForm("unsavedHint")}</p>
               )}
               <div className="flex justify-end border-t border-border pt-6">
                 <Button

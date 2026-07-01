@@ -1,5 +1,7 @@
+"use client";
+
 import { Award, Crosshair, Sparkles, Star, Swords, Trophy, type LucideIcon } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
 import type { PublicMedal } from "@/lib/achievements/service";
 import { cn } from "@/lib/utils";
 
@@ -20,14 +22,14 @@ const TIER_STYLES: Record<PublicMedal["tier"], string> = {
   DIAMOND: "from-fuchsia-500/40 to-violet-400/20 text-fuchsia-200",
 };
 
-export async function PublicProfileMedals({
+export function PublicProfileMedals({
   medals,
   level,
 }: {
   medals: PublicMedal[];
   level: number;
 }) {
-  const t = await getTranslations("publicProfile");
+  const t = useTranslations("publicProfile");
 
   return (
     <section className="rounded-card glass-strong p-5 sm:p-6">

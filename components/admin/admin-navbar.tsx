@@ -12,6 +12,7 @@ import {
   X,
   ArrowLeft,
   Shield,
+  ShieldAlert,
   Gavel,
   Bell,
   Server,

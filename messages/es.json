@@ -1038,6 +1038,7 @@
     "steamHint": "Carga tus amigos de Steam que ya juegan aquí.",
     "steamUnavailable": "Vincula tu Steam y haz pública tu lista de amigos.",
     "steamNoneOnPlatform": "Ningún amigo de Steam está en la plataforma todavía.",
+    "inviteRanked": "Invitar a ranked",
     "close": "Cerrar",
     "giftTo": "Regalar a {nickname}",
     "giftCoins": "Monedas",
@@ -1580,6 +1581,7 @@
       "live": "EN VIVO",
       "createPrompt": "Crea tu sala clasificatoria para armar tu equipo 5v5 y seguir todo en el chat de la sala.",
       "createCta": "Crear sala clasificatoria",
+      "joinByCode": "Entrar con código",
       "challengeReady": "{count, plural, one {# equipo 5/5 listo para desafiar ahora} other {# equipos 5/5 listos para desafiar ahora}}"
     },
     "chat": {
@@ -1730,6 +1732,25 @@
       "cancel": "Cancelar",
       "enter": "Entrar"
     },
+    "inviteJoin": {
+      "title": "Entrar a la sala",
+      "description": "Pega el código de invitación que compartió el líder de la sala.",
+      "codeLabel": "Código de invitación",
+      "codePlaceholder": "Ej. abc123…",
+      "error": "Código inválido o sala no disponible.",
+      "cancel": "Cancelar",
+      "join": "Entrar a la sala",
+      "linkCopied": "¡Enlace de invitación copiado para {nickname}!",
+      "alreadyInTeam": "Este jugador ya está en tu equipo."
+    },
+    "solo": {
+      "title": "Clasificatoria solo",
+      "description": "Entra en la cola solo — el matchmaking agrupa 10 jugadores (solos y stacks) en un 5v5.",
+      "findMatch": "Buscar partida",
+      "leaveQueue": "Salir de la cola",
+      "searching": "Buscando… {players} jugadores en cola · {parties} grupos",
+      "partialTeamHint": "Con equipo incompleto también puedes entrar en cola — faltan jugadores para completar 5."
+    },
     "experience": {
       "steamTitle": "Steam requerida para clasificatoria",
       "steamDesc": "Vincula tu cuenta de Steam para armar tu equipo 5v5 y desafiar a otros equipos."
@@ -1769,6 +1790,70 @@
       "rematchSame": "Jugar de nuevo (mismos equipos)",
       "rematchSwap": "Jugar de nuevo (cambiar equipos)",
       "leaveRoom": "Salir de la sala y buscar otro equipo"
+    }
+  },
+  "pix": {
+    "description": "El pago en Pix lo realiza nuestro equipo tras el cierre de la temporada.",
+    "viaPix": "{amount} vía Pix",
+    "profile": {
+      "title": "Clave Pix para premios",
+      "privacyNotice": "Tus datos Pix son <strong>privados</strong> y se almacenan cifrados. No aparecen en tu perfil público — solo el equipo financiero accede para pagar premios, conforme a la ley de protección de datos.",
+      "keyTypeLabel": "Tipo de clave",
+      "keyTypes": {
+        "CPF": "CPF",
+        "CNPJ": "CNPJ",
+        "PHONE": "Celular",
+        "EMAIL": "Correo",
+        "RANDOM": "Clave aleatoria"
+      },
+      "fields": {
+        "pixKey": "Clave Pix",
+        "holderName": "Nombre del titular",
+        "contactEmail": "Correo de contacto",
+        "contactPhone": "Teléfono de contacto"
+      },
+      "placeholders": {
+        "email": "tu@email.com",
+        "phone": "(11) 99999-9999",
+        "cpf": "000.000.000-00",
+        "cnpj": "00.000.000/0000-00",
+        "random": "UUID o clave aleatoria",
+        "holderName": "Como figura en el banco"
+      },
+      "lgpdConsent": "Autorizo el uso de estos datos exclusivamente para pagos de premios Pix. Entiendo que no serán visibles públicamente y puedo solicitar su eliminación conforme a la ley.",
+      "save": "Guardar datos Pix"
+    },
+    "toast": {
+      "saved": "Datos Pix guardados de forma segura.",
+      "holderRequired": "Indica el nombre del titular de la clave Pix.",
+      "contactRequired": "El correo y teléfono de contacto son obligatorios.",
+      "lgpdRequired": "Confirma el aviso de privacidad para guardar."
+    },
+    "errors": {
+      "invalidEmail": "Indica un correo válido para la clave Pix.",
+      "invalidPhone": "Indica un celular válido con DDD (ej.: (11) 99999-9999).",
+      "invalidCpf": "El CPF debe tener 11 dígitos.",
+      "invalidCnpj": "El CNPJ debe tener 14 dígitos.",
+      "invalidRandom": "La clave aleatoria debe tener entre 8 y 140 caracteres.",
+      "keyRequired": "Indica tu clave Pix.",
+      "holderMin": "El nombre del titular debe tener al menos 2 caracteres.",
+      "contactEmailInvalid": "Indica un correo de contacto válido.",
+      "contactPhoneRequired": "El teléfono de contacto es obligatorio.",
+      "lgpdRequired": "Confirma el consentimiento de privacidad para guardar."
+    },
+    "payoutStatus": {
+      "PENDING": "Esperando clave Pix",
+      "READY": "Listo para pagar",
+      "CONTACTED": "Contactado",
+      "PAID": "Pagado",
+      "CANCELLED": "Cancelado"
+    },
+    "prizeAlert": {
+      "title": "Premio Pix de la temporada",
+      "needsKey": "¡Ganaste un premio en Pix! Registra tu clave en el perfil para recibir el pago.",
+      "processing": "Tu premio está en proceso. Nuestro equipo te contactará si es necesario.",
+      "positionAmount": "{season} · {position}º lugar · {amount}",
+      "registerLink": "Registrar clave Pix en el perfil →"
     }
   },
   "validation": {

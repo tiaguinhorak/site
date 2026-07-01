@@ -79,7 +79,7 @@ const STATUS_LABEL: Record<SeasonRow["status"], string> = {
 const STATUS_CLASS: Record<SeasonRow["status"], string> = {
   DRAFT: "bg-muted/20 text-muted",
   ACTIVE: "bg-emerald-500/15 text-emerald-400",
-  ENDED: "bg-amber-500/15 text-amber-400",
+  ENDED: "badge-amber text-[10px] uppercase tracking-wide",
   ARCHIVED: "bg-foreground/10 text-muted",
 };
 
@@ -476,7 +476,7 @@ export function AdminRankedSeasonsSection() {
           </div>
         </section>
       ) : (
-        <section className="rounded-card glass border border-amber-500/25 p-4 text-sm text-amber-200/90">
+        <section className="alert-warning p-4 text-sm">
           Nenhuma temporada ativa. Crie uma nova ou ative um rascunho.
         </section>
       )}

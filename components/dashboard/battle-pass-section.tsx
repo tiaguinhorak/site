@@ -71,7 +71,7 @@ function RewardCell({
         !reward.claimable && !reward.claimed && "opacity-70",
       )}
     >
-      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-400/15 text-amber-300">
+      <span className="badge-amber h-9 w-9 justify-center rounded-lg p-0">
         {reward.locked ? <Lock className="h-4 w-4 text-muted" /> : <Coins className="h-4 w-4" />}
       </span>
       <span className="text-xs font-medium text-foreground">{reward.label}</span>
@@ -169,7 +169,7 @@ export function BattlePassSection() {
             </p>
           </div>
           {data.premium ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/15 px-3 py-1.5 text-sm font-semibold text-amber-300">
+            <span className="badge-amber gap-1.5 px-3 py-1.5 text-sm">
               <Crown className="h-4 w-4" />
               {t("premiumActive")}
             </span>

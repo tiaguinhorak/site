@@ -404,7 +404,7 @@ export function AdminNotificationsSection() {
                     className={cn(
                       "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase",
                       n.type === "PROMO"
-                        ? "bg-amber-500/15 text-amber-400"
+                        ? "badge-amber text-[10px] uppercase tracking-wide"
                         : "bg-primary/15 text-primary",
                     )}
                   >

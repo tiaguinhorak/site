@@ -149,7 +149,7 @@ export function AdminPunishmentsSection() {
                           p.type === "BAN"
                             ? "bg-rose-500/15 text-rose-400"
                             : p.type === "WARNING"
-                              ? "bg-amber-500/15 text-amber-400"
+                              ? "badge-amber text-[10px] uppercase tracking-wide"
                               : "bg-primary/15 text-primary",
                         )}
                       >

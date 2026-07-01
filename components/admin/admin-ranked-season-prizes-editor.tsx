@@ -346,8 +346,8 @@ function PrizePreviewThumb({
         <Coins className={cn("text-amber-400", size === "sm" ? "h-4 w-4" : "h-5 w-5")} />
       </div>
     ) : prize.rewardType === "PIX" ? (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-0.5 bg-[color-mix(in_srgb,#32BCAD_14%,transparent)]">
-        <PixIcon size={size === "sm" ? 16 : 20} />
+      <div className="flex h-full w-full flex-col items-center justify-center gap-0.5 p-1">
+        <PixIcon size={size === "sm" ? 20 : 24} />
         <span className="text-[8px] font-bold uppercase tracking-wide text-[#32BCAD]">Pix</span>
       </div>
     ) : prize.rewardType === "CATALOG_SKIN" && imageUrl ? (

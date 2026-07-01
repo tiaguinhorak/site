@@ -11,6 +11,7 @@ import { RATE_LIMITS } from "@/lib/security/constants";
 import { formatZodErrors, firstZodError } from "@/lib/security/schemas";
 import { logAdminAction } from "@/lib/admin/audit";
 import { DEFAULT_SERVER_GAME_CONFIG } from "@/lib/csgo/server-game-config";
+import { withPrismaRetry } from "@/lib/prisma-retry";
 
 const KNOWN_POOLS = ["ranked", "warmup", "deathmatch", "public"] as const;
 
@@ -31,9 +32,11 @@ export async function GET(request: NextRequest) {
   const { error } = await requireAdmin(request);
   if (error) return error;
 
-  const rows = await prisma.serverGameConfig.findMany({
-    orderBy: { pool: "asc" },
-  });
+  const rows = await withPrismaRetry(() =>
+    prisma.serverGameConfig.findMany({
+      orderBy: { pool: "asc" },
+    }),
+  );
   const byPool = new Map(rows.map((r) => [r.pool, r]));
 
   const configs = KNOWN_POOLS.map((pool) => {
@@ -75,11 +78,13 @@ export async function PUT(request: NextRequest) {
   }
 
   const { pool, ...values } = parsed.data;
-  const config = await prisma.serverGameConfig.upsert({
-    where: { pool },
-    create: { pool, ...values },
-    update: values,
-  });
+  const config = await withPrismaRetry(() =>
+    prisma.serverGameConfig.upsert({
+      where: { pool },
+      create: { pool, ...values },
+      update: values,
+    }),
+  );
 
   await logAdminAction({
     adminId: admin!.id,

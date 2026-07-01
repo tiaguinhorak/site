@@ -40,7 +40,7 @@ export function RankingPageContent({
 
   if (loadError) {
     return (
-      <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+      <p className="alert-warning px-4 py-3 text-sm">
         Não foi possível carregar o ranking. Tente recarregar a página.
       </p>
     );

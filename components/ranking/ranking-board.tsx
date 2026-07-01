@@ -48,7 +48,7 @@ function formatPaginationSummary(
 const planStyles = {
   free: "bg-muted/20 text-muted",
   premium: "bg-primary/15 text-primary",
-  elite: "bg-amber-500/15 text-amber-400",
+  elite: "badge-amber text-[10px] uppercase tracking-wide",
 };
 
 type RankingBoardProps = {
@@ -271,7 +271,7 @@ export function RankingBoard({
       )}
 
       {loadError && (
-        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+        <p className="alert-warning px-4 py-3 text-sm">
           {t.loadError}
         </p>
       )}
@@ -497,7 +497,7 @@ function PodiumCard({
       <span
         className={cn(
           "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
-          place === 0 ? "bg-amber-400/15 text-amber-400" : "bg-muted/15 text-muted",
+          place === 0 ? "badge-amber text-xs" : "bg-muted/15 text-muted",
         )}
       >
         <Icon className="h-3 w-3" />

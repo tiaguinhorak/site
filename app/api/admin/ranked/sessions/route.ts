@@ -8,8 +8,18 @@ export async function GET(request: NextRequest) {
   if (error) return error;
 
   const sessions = await prisma.rankedMatchSession.findMany({
-    where: { status: { in: ["accepting", "voting", "starting", "live"] } },
+    where: {
+      OR: [
+        { status: { in: ["accepting", "voting", "starting", "live"] } },
+        {
+          status: "finished",
+          resultSyncedAt: { not: null },
+          matchFinishedAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+        },
+      ],
+    },
     orderBy: { createdAt: "desc" },
+    take: 50,
     select: {
       id: true,
       status: true,
@@ -19,6 +29,9 @@ export async function GET(request: NextRequest) {
       serverHost: true,
       serverPort: true,
       createdAt: true,
+      resultSyncedAt: true,
+      scoreTeamA: true,
+      scoreTeamB: true,
       partyA: { select: { members: { select: { userId: true } } } },
       partyB: { select: { members: { select: { userId: true } } } },
     },
@@ -35,6 +48,9 @@ export async function GET(request: NextRequest) {
       serverPort: session.serverPort ?? null,
       playerCount: session.partyA.members.length + session.partyB.members.length,
       createdAt: session.createdAt.toISOString(),
+      resultSyncedAt: session.resultSyncedAt?.toISOString() ?? null,
+      scoreTeamA: session.scoreTeamA,
+      scoreTeamB: session.scoreTeamB,
     })),
   });
 }

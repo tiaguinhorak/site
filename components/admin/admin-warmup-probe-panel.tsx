@@ -216,7 +216,7 @@ export function AdminWarmupProbePanel() {
               "rounded-xl border px-4 py-3 text-sm",
               result.ok
                 ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-                : "border-amber-500/30 bg-amber-500/10 text-amber-100",
+                : "alert-warning",
             )}
           >
             <p className="font-semibold">

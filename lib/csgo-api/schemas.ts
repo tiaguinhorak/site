@@ -24,8 +24,9 @@ export const matchConfigSchema = z.object({
   gameType: z.number().int().default(0),
   gameMode: z.number().int().default(1),
   tickrate: z.number().int().min(64).max(128).default(128),
-  maxRounds: z.number().int().min(1).max(30).default(30),
+  maxRounds: z.number().int().min(1).max(30).default(24),
   overtimeRounds: z.number().int().min(1).max(10).default(6),
+  knifeRound: z.boolean().optional(),
 });
 
 export const createMatchSchema = z.object({

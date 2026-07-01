@@ -506,7 +506,7 @@ function ClanDashboard({
                     <Unlock className="h-3 w-3" /> {t("joinModeOpen")}
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-0.5 text-amber-400">
+                  <span className="badge-amber px-2 py-0.5">
                     <Lock className="h-3 w-3" /> {t("joinModeClosed")}
                   </span>
                 )}

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Trophy } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { RankedMatchFlow } from "@/components/dashboard/ranked-match-flow";
+import { RankedSoloPanel } from "@/components/dashboard/ranked-solo-panel";
 import { RankedRoomsBrowser } from "@/components/dashboard/ranked-rooms-browser";
 import { RankedTeamCompact } from "@/components/dashboard/ranked-team-compact";
 import { RankedChallengesPanel } from "@/components/dashboard/ranked-challenges-panel";
@@ -22,6 +23,7 @@ type Props = {
   onEditTeam: () => void;
   onCreateTeam?: () => void;
   onJoinPrivate: (room: RankedPartyView) => void;
+  onJoinByCode?: () => void;
 };
 
 function countActiveFilters(f: RankedRoomsFilterState): number {
@@ -39,6 +41,7 @@ export function RankedHubLayout({
   onEditTeam,
   onCreateTeam,
   onJoinPrivate,
+  onJoinByCode,
 }: Props) {
   const { rooms, roomStats, error } = useRankedParty();
   const t = useTranslations("ranked");
@@ -65,6 +68,8 @@ export function RankedHubLayout({
 
       <RankedMatchFlow />
 
+      <RankedSoloPanel />
+
       <div
         className={cn(
           party
@@ -81,16 +86,29 @@ export function RankedHubLayout({
             </h2>
           </div>
 
-          {!party && onCreateTeam && (
+          {!party && (onCreateTeam || onJoinByCode) && (
             <div className="flex flex-col items-center gap-3 rounded-card border border-dashed border-primary/30 glass p-6 text-center sm:flex-row sm:justify-between sm:text-left">
               <p className="text-sm text-muted">{t("hub.createPrompt")}</p>
-              <button
-                type="button"
-                onClick={onCreateTeam}
-                className="shrink-0 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
-              >
-                {t("hub.createCta")}
-              </button>
+              <div className="flex shrink-0 flex-wrap justify-center gap-2">
+                {onJoinByCode && (
+                  <button
+                    type="button"
+                    onClick={onJoinByCode}
+                    className="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground hover:border-primary/40"
+                  >
+                    {t("hub.joinByCode")}
+                  </button>
+                )}
+                {onCreateTeam && (
+                  <button
+                    type="button"
+                    onClick={onCreateTeam}
+                    className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
+                  >
+                    {t("hub.createCta")}
+                  </button>
+                )}
+              </div>
             </div>
           )}
 

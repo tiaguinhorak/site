@@ -38,10 +38,10 @@ export function GameServerPushBanner() {
 
   return (
     <div
-      className="mb-4 flex gap-3 rounded-card border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100"
+      className="alert-warning mb-4 flex gap-3 p-4 text-sm"
       role="status"
     >
-      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
       <div>
         <p className="font-semibold">{t("gameServerPushBannerTitle")}</p>
         {status.target && (

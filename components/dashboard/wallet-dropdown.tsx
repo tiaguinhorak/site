@@ -167,7 +167,7 @@ export function WalletDropdown() {
                             </span>
                           )}
                           {pack.badge === "best" && (
-                            <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-400">
+                            <span className="badge-amber px-1.5 py-0.5 text-[10px]">
                               {t("badgeBest")}
                             </span>
                           )}

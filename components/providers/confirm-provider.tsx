@@ -52,7 +52,7 @@ const toneConfig: Record<
   },
   warning: {
     icon: AlertTriangle,
-    iconClass: "bg-amber-500/15 text-amber-400",
+    iconClass: "badge-amber",
     confirmVariant: "primary",
   },
   default: {

@@ -715,7 +715,7 @@ export function AdminCsgoInfraSection() {
           </p>
         )}
         {warning && (
-          <p className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-100 whitespace-pre-wrap">
+          <p className="alert-warning mb-4 px-3 py-2 text-sm whitespace-pre-wrap">
             {warning}
           </p>
         )}
@@ -726,7 +726,7 @@ export function AdminCsgoInfraSection() {
         )}
 
         {servers.length === 0 && (
-          <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          <div className="alert-warning mb-4 px-4 py-3 text-sm">
             <p className="font-semibold">Servidor CS:GO não registrado na API</p>
             <p className="mt-1 text-amber-200/90">
               A ranked trava em &quot;Partida em andamento&quot; sem connect até existir um servidor na

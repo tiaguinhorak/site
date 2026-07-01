@@ -18,7 +18,7 @@ type AdminPixPayoutsSectionProps = {
 };
 
 const STATUS_CLASS: Record<AdminPixPayoutRow["status"], string> = {
-  PENDING: "bg-amber-500/15 text-amber-300",
+  PENDING: "badge-amber text-[10px] uppercase tracking-wide",
   READY: "bg-emerald-500/15 text-emerald-300",
   CONTACTED: "bg-sky-500/15 text-sky-300",
   PAID: "bg-foreground/10 text-muted",
@@ -180,12 +180,18 @@ function PayoutRow({
           <div className="flex items-start gap-2">
             <PixIcon size={18} />
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#32BCAD]">Chave Pix</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-pix">Chave Pix</p>
               {payout.user.pixKey ? (
                 <>
                   <p className="mt-1 break-all font-mono text-sm text-foreground">{payout.user.pixKey}</p>
                   {payout.user.pixKeyHolderName ? (
                     <p className="mt-1 text-xs text-muted">Titular: {payout.user.pixKeyHolderName}</p>
+                  ) : null}
+                  {payout.user.pixContactEmail ? (
+                    <p className="mt-1 text-xs text-muted">Contato: {payout.user.pixContactEmail}</p>
+                  ) : null}
+                  {payout.user.pixContactPhone ? (
+                    <p className="mt-1 text-xs text-muted">Tel.: {payout.user.pixContactPhone}</p>
                   ) : null}
                   <Button
                     type="button"
@@ -199,7 +205,7 @@ function PayoutRow({
                   </Button>
                 </>
               ) : (
-                <p className="mt-1 text-sm text-amber-200/90">
+                <p className="mt-1 text-sm text-warning">
                   Jogador ainda não cadastrou a chave Pix no perfil. Entre em contato para solicitar.
                 </p>
               )}
@@ -299,7 +305,7 @@ export function AdminPixPayoutsSection({ seasons }: AdminPixPayoutsSectionProps)
             Veja quem ganhou prêmio em Pix, entre em contato com os jogadores e marque quando o pagamento for feito.
           </p>
           {pendingCount > 0 ? (
-            <p className="mt-2 text-sm font-medium text-amber-300">
+            <p className="mt-2 text-sm font-medium text-warning">
               {pendingCount} pagamento(s) pendente(s)
             </p>
           ) : null}

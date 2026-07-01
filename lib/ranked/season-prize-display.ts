@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { pixPrizeLabel, PIX_PRIZE_DESCRIPTION } from "@/lib/ranked/pix-prize";
+import { pixPrizeLabel } from "@/lib/ranked/pix-prize";
 import type { RankedSeasonPrize, RankedSeasonRewardType } from "@/lib/generated/prisma/client";
 
 export type PublicSeasonPrizeDisplay = {
@@ -175,7 +175,7 @@ export async function resolvePublicSeasonPrizes(
         imageUrl: null,
         amountCoins: 0,
         pixAmountCents: prize.pixAmountCents,
-        description: PIX_PRIZE_DESCRIPTION,
+        description: null,
         highlight: prize.highlight,
       };
     }

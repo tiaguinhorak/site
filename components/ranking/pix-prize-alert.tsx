@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { PixIcon } from "@/components/ui/pix-icon";
 import { secureApi } from "@/lib/api/client";
 import type { UserPendingPixPrize } from "@/lib/ranked/pix-prize";
-import { PIX_PAYOUT_STATUS_LABEL } from "@/lib/ranked/pix-prize";
 
 export function PixPrizeAlert() {
+  const t = useTranslations("pix.prizeAlert");
+  const tStatus = useTranslations("pix.payoutStatus");
   const [prizes, setPrizes] = useState<UserPendingPixPrize[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -35,15 +37,11 @@ export function PixPrizeAlert() {
         <PixIcon size={22} />
         <div className="min-w-0 flex-1 space-y-3">
           <div>
-            <p className="font-display text-base font-bold text-foreground">Prêmio Pix da temporada</p>
+            <p className="font-display text-base font-bold text-foreground">{t("title")}</p>
             {needsKey ? (
-              <p className="mt-1 text-sm text-amber-200/90">
-                Você ganhou prêmio em Pix! Cadastre sua chave no perfil para recebermos o pagamento.
-              </p>
+              <p className="mt-1 text-sm text-warning">{t("needsKey")}</p>
             ) : (
-              <p className="mt-1 text-sm text-muted">
-                Seu prêmio está em processamento. Nossa equipe entrará em contato se necessário.
-              </p>
+              <p className="mt-1 text-sm text-muted">{t("processing")}</p>
             )}
           </div>
 
@@ -54,9 +52,13 @@ export function PixPrizeAlert() {
                 className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/50 bg-black/15 px-3 py-2"
               >
                 <span>
-                  {prize.seasonName} · {prize.position}º lugar · {prize.pixAmountLabel}
+                  {t("positionAmount", {
+                    season: prize.seasonName,
+                    position: prize.position,
+                    amount: prize.pixAmountLabel,
+                  })}
                 </span>
-                <span className="text-xs text-muted">{PIX_PAYOUT_STATUS_LABEL[prize.status]}</span>
+                <span className="text-xs text-muted">{tStatus(prize.status)}</span>
               </li>
             ))}
           </ul>
@@ -64,9 +66,9 @@ export function PixPrizeAlert() {
           {needsKey ? (
             <Link
               href="/dashboard/perfil?tab=general"
-              className="inline-flex text-sm font-semibold text-[#32BCAD] hover:underline"
+              className="inline-flex text-sm font-semibold text-pix hover:underline"
             >
-              Cadastrar chave Pix no perfil →
+              {t("registerLink")}
             </Link>
           ) : null}
         </div>
