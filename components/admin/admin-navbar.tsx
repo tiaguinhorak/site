@@ -187,7 +187,7 @@ export function AdminNavbar() {
       <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-4">
         <nav
           className={cn(
-            "relative z-[52] mx-auto flex w-full max-w-[1400px] items-center gap-2 rounded-2xl px-3 py-2.5 sm:gap-3 sm:px-4",
+            "relative z-[52] mx-auto flex w-full max-w-[1920px] items-center gap-2 rounded-2xl px-3 py-2.5 sm:gap-3 sm:px-4",
             "glass-strong glow-ring",
           )}
         >
@@ -277,7 +277,7 @@ export function AdminNavbar() {
                 initial={{ opacity: 0, y: -12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
-                className="glass-menu relative z-[51] mx-auto mt-3 max-h-[min(85vh,calc(100dvh-5.5rem))] max-w-[1400px] overflow-y-auto rounded-2xl p-3 md:hidden"
+                className="glass-menu relative z-[51] mx-auto mt-3 max-h-[min(85vh,calc(100dvh-5.5rem))] max-w-[1920px] overflow-y-auto rounded-2xl p-3 md:hidden"
               >
                 <Link
                   href={adminOverview.href}
@@ -344,7 +344,7 @@ export function AdminNavbar() {
         </AnimatePresence>
       </header>
 
-      <div className="mx-auto max-w-[1400px] px-4 pt-[5.75rem] sm:px-6 sm:pt-[6.25rem]">
+      <div className="layout-container pt-[5.75rem] sm:pt-[6.25rem]">
         <div className="mb-6">
           <p className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-primary">
             Painel administrativo

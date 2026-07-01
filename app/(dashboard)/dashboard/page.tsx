@@ -5,7 +5,7 @@ import { LiveServersSection } from "@/components/dashboard/live-servers-section"
 
 export default function DashboardPage() {
   return (
-    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-10 sm:space-y-12">
+    <div className="layout-container space-y-10 sm:space-y-12">
       <DashboardWelcome />
       <DashboardAdminRankedPanel />
       <LiveServersSection />

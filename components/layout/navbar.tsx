@@ -55,7 +55,7 @@ export function Navbar({ variant = "default" }: NavbarProps) {
     <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-4">
       <nav
         className={cn(
-          "relative z-[52] mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-2xl px-3 py-2.5 transition-all duration-500 sm:px-5",
+          "relative z-[52] mx-auto flex w-full max-w-[1920px] items-center justify-between gap-3 rounded-2xl px-3 py-2.5 transition-all duration-500 sm:px-5",
           "glass-strong glow-ring",
         )}
       >
@@ -183,7 +183,7 @@ export function Navbar({ variant = "default" }: NavbarProps) {
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.25 }}
               className={cn(
-                "glass-menu relative z-[51] mx-auto mt-3 max-w-6xl overflow-hidden rounded-2xl p-3",
+                "glass-menu relative z-[51] mx-auto mt-3 w-full max-w-[1920px] overflow-hidden rounded-2xl p-3",
                 mobileMenuHidden,
               )}
             >

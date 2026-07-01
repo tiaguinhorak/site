@@ -21,10 +21,14 @@ export type StickerPickerItem = {
 
 export function StickerCatalogPicker({
   onSelect,
+  onBatchAdd,
+  batchMode = false,
   excludeDefIndexes = [],
   className,
 }: {
-  onSelect: (item: StickerPickerItem) => void;
+  onSelect?: (item: StickerPickerItem) => void;
+  onBatchAdd?: (items: StickerPickerItem[]) => void;
+  batchMode?: boolean;
   excludeDefIndexes?: number[];
   className?: string;
 }) {
@@ -34,6 +38,7 @@ export function StickerCatalogPicker({
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [previewTarget, setPreviewTarget] = useState<StoreRewardPreviewTarget | null>(null);
 
   const excludedKey = excludeDefIndexes.join(",");
@@ -77,7 +82,24 @@ export function StickerCatalogPicker({
 
   useEffect(() => {
     setPage(1);
+    setSelectedIds(new Set());
   }, [search, enabledOnly]);
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function confirmBatch() {
+    if (!onBatchAdd || selectedIds.size === 0) return;
+    const picked = items.filter((item) => selectedIds.has(item.id));
+    onBatchAdd(picked);
+    setSelectedIds(new Set());
+  }
 
   function openPreview(item: StickerPickerItem) {
     setPreviewTarget({
@@ -126,8 +148,20 @@ export function StickerCatalogPicker({
             {items.map((item) => (
               <li
                 key={item.id}
-                className="flex items-center gap-3 rounded-lg border border-border/60 p-2"
+                className={cn(
+                  "flex items-center gap-3 rounded-lg border border-border/60 p-2",
+                  batchMode && selectedIds.has(item.id) && "border-primary/50 bg-primary/5",
+                )}
               >
+                {batchMode ? (
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(item.id)}
+                    onChange={() => toggleSelected(item.id)}
+                    className="h-4 w-4 shrink-0 accent-primary"
+                    aria-label={`Selecionar ${item.name}`}
+                  />
+                ) : null}
                 <button
                   type="button"
                   className="group relative flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-black/30"
@@ -143,13 +177,21 @@ export function StickerCatalogPicker({
                   <p className="truncate text-sm font-medium">{item.name}</p>
                   <p className="truncate text-[11px] text-muted">#{item.defIndex}</p>
                 </div>
-                <Button type="button" size="sm" variant="outline" onClick={() => onSelect(item)}>
+                {!batchMode ? (
+                <Button type="button" size="sm" variant="outline" onClick={() => onSelect?.(item)}>
                   <Plus className="h-3.5 w-3.5" />
                   Adicionar
                 </Button>
+                ) : null}
               </li>
             ))}
           </ul>
+          {batchMode && selectedIds.size > 0 ? (
+            <Button type="button" size="sm" variant="primary" className="w-full" onClick={confirmBatch}>
+              Adicionar {selectedIds.size} sticker{selectedIds.size === 1 ? "" : "s"} selecionado
+              {selectedIds.size === 1 ? "" : "s"}
+            </Button>
+          ) : null}
           {totalPages > 1 && (
             <div className="flex items-center justify-between text-xs text-muted">
               <Button

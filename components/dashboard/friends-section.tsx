@@ -24,6 +24,7 @@ import { secureApi } from "@/lib/api/client";
 import { toast } from "@/lib/toast";
 import { dispatchInventoryRefresh } from "@/lib/inventory/inventory-refresh-events";
 import { cn } from "@/lib/utils";
+import { ModalPortal } from "@/components/ui/modal-portal";
 
 type FriendUser = {
   id: string;
@@ -463,7 +464,7 @@ function AddFriends({
     <div className="space-y-6">
       <div>
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4  text-muted" />
           <Input
             label={t("searchLabel")}
             value={query}
@@ -569,7 +570,8 @@ function GiftModal({
   }
 
   return (
-    <>
+    <ModalPortal>
+      <>
       <motion.button
         type="button"
         aria-label={t("close")}
@@ -661,6 +663,7 @@ function GiftModal({
           </Button>
         </div>
       </motion.div>
-    </>
+      </>
+    </ModalPortal>
   );
 }

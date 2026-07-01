@@ -9,6 +9,7 @@ import { MapThumbnail } from "@/components/ui/map-thumbnail";
 import { ServerConnectActions } from "@/components/ui/server-connect-actions";
 import type { RankedMatchSessionView } from "@/lib/ranked/party-shared";
 import { formatMapLabel } from "@/lib/servers/maps";
+import { ModalPortal } from "@/components/ui/modal-portal";
 
 type Props = {
   open: boolean;
@@ -35,7 +36,8 @@ export function RankedConnectModal({ open, session, onClose, onFinish, finishLoa
   const mapLabel = selectedMap ? formatMapLabel(selectedMap) : t("mapDefined");
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
       <button
         type="button"
         className="scrim-dim absolute inset-0 cursor-default"
@@ -116,5 +118,6 @@ export function RankedConnectModal({ open, session, onClose, onFinish, finishLoa
         </div>
       </motion.div>
     </div>
+    </ModalPortal>
   );
 }

@@ -31,7 +31,7 @@ export function Features({
       )}
     >
       {!embedded && <AmbientGlow />}
-      <div className={cn(embedded ? "" : "relative mx-auto max-w-6xl px-4 sm:px-6")}>
+      <div className={cn(embedded ? "" : "layout-container relative")}>
         {!embedded && (
           <SectionHeading
             eyebrow={t("plataformaEyebrow")}

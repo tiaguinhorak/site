@@ -115,7 +115,7 @@ export function AnticheatPage() {
         />
       </div>
 
-      <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
+      <div className="layout-container relative">
         <motion.div
           variants={container}
           initial="hidden"

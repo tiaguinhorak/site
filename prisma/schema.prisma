@@ -111,6 +111,7 @@ enum CoinTransactionKind {
   EARN_MISSION
   EARN_ACHIEVEMENT
   EARN_BATTLEPASS
+  EARN_SEASON_PRIZE
   PURCHASE
   GIFT_SENT
   GIFT_RECEIVED
@@ -159,6 +160,29 @@ enum BattlePassTrack {
 enum BattlePassRewardType {
   COINS
   SKIN
+  AGENT
+  STICKER
+}
+
+enum RankedSeasonStatus {
+  DRAFT
+  ACTIVE
+  ENDED
+  ARCHIVED
+}
+
+enum RankedSeasonPixPayoutStatus {
+  PENDING
+  READY
+  CONTACTED
+  PAID
+  CANCELLED
+}
+
+enum RankedSeasonRewardType {
+  COINS
+  PIX
+  CATALOG_SKIN
   AGENT
   STICKER
 }
@@ -232,6 +256,8 @@ model User {
   discordUserId         String?   @unique
   discordUsername       String?
   discordLinkedAt       DateTime?
+  pixKey                String    @default("")
+  pixKeyHolderName      String    @default("")
   isAdmin               Boolean   @default(false)
   rankedQueueDodges     Int       @default(0)
   rankedRestrictedUntil DateTime?
@@ -308,6 +334,9 @@ model User {
   userAchievements        UserAchievement[]
   battlePasses            UserBattlePass[]
   battlePassClaims        UserBattlePassClaim[]
+  rankedSeasonStandings   RankedSeasonStanding[]
+  rankedSeasonPrizeGrants RankedSeasonPrizeGrant[]
+  rankedSeasonPlacements  UserRankedSeasonPlacement[]
   clanMembership          ClanMember?
   clansOwned              Clan[]                       @relation("ClanOwner")
   clanJoinRequests        ClanJoinRequest[]
@@ -524,6 +553,136 @@ model UserBattlePassClaim {
   reward BattlePassReward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
 
   @@unique([userId, rewardId])
+  @@index([userId])
+}
+
+model RankedSeason {
+  id           String             @id @default(cuid())
+  code         String             @unique
+  name         String
+  seasonNumber Int
+  description  String             @default("")
+  startsAt     DateTime
+  endsAt       DateTime?
+  resetAt      DateTime?
+  status       RankedSeasonStatus @default(DRAFT)
+  active       Boolean            @default(false)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  prizes        RankedSeasonPrize[]
+  standings     RankedSeasonStanding[]
+  prizeGrants   RankedSeasonPrizeGrant[]
+  matchSessions RankedMatchSession[]
+  placements    UserRankedSeasonPlacement[] @relation("SeasonPlacements")
+  seededFrom    UserRankedSeasonPlacement[] @relation("PreviousSeasonPlacements")
+
+  @@index([active])
+  @@index([status])
+  @@index([seasonNumber])
+  @@index([startsAt])
+}
+
+model RankedSeasonPrize {
+  id              String                 @id @default(cuid())
+  seasonId        String
+  position        Int
+  sortOrder       Int                    @default(0)
+  rewardType      RankedSeasonRewardType
+  amountCoins     Int                    @default(0)
+  pixAmountCents  Int                    @default(0)
+  catalogSkinId   String?
+  agentDefIndex   Int?
+  stickerDefIndex Int?
+  label           String                 @default("")
+  enabled         Boolean                @default(true)
+  highlight       Boolean                @default(false)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  season      RankedSeason     @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  catalogSkin CsgoSkinCatalog? @relation(fields: [catalogSkinId], references: [id], onDelete: SetNull)
+
+  @@index([seasonId])
+  @@index([seasonId, position])
+}
+
+model RankedSeasonStanding {
+  id                String   @id @default(cuid())
+  seasonId          String
+  userId            String
+  position          Int
+  nickname          String
+  avatarUrl         String?
+  elo               Int
+  competitivePoints Int
+  rankedWins        Int
+  rankedLosses      Int
+  rankedKills       Int
+  rankedDeaths      Int
+  kd                Float    @default(0)
+  createdAt         DateTime @default(now())
+
+  season RankedSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([seasonId, userId])
+  @@index([seasonId, position])
+  @@index([userId])
+}
+
+model UserRankedSeasonPlacement {
+  id                       String   @id @default(cuid())
+  userId                   String
+  seasonId                 String
+  previousSeasonId         String?
+  previousPosition         Int?
+  previousElo              Int?
+  previousKd               Float?
+  previousPoints           Int?
+  previousWins             Int?
+  previousKills            Int?
+  totalPreviousParticipants Int     @default(0)
+  placementApplied         Boolean  @default(false)
+  seededElo                Int?
+  seededPoints             Int?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  season           RankedSeason  @relation("SeasonPlacements", fields: [seasonId], references: [id], onDelete: Cascade)
+  previousSeason   RankedSeason? @relation("PreviousSeasonPlacements", fields: [previousSeasonId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, seasonId])
+  @@index([seasonId])
+  @@index([userId])
+}
+
+model RankedSeasonPrizeGrant {
+  id               String                 @id @default(cuid())
+  seasonId         String
+  userId           String
+  position         Int
+  prizeId          String
+  rewardType       RankedSeasonRewardType
+  amountCoins      Int                    @default(0)
+  pixAmountCents   Int                    @default(0)
+  catalogSkinId    String?
+  agentDefIndex    Int?
+  stickerDefIndex  Int?
+  label            String                 @default("")
+  grantedAt        DateTime               @default(now())
+  grantedByAdminId String?
+  pixPayoutStatus  RankedSeasonPixPayoutStatus?
+  pixPayoutNote    String                 @default("")
+  pixContactedAt   DateTime?
+  pixPaidAt        DateTime?
+
+  season RankedSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([seasonId, userId, prizeId])
+  @@index([seasonId])
   @@index([userId])
 }
 
@@ -757,6 +916,7 @@ model RankedMatchSession {
   id              String    @id @default(cuid())
   challengeId     String?   @unique
   lobbyRoomId     String?   @unique
+  seasonId        String?
   matchSource     String    @default("challenge")
   teamSize        Int       @default(5)
   partyAId        String
@@ -782,6 +942,7 @@ model RankedMatchSession {
 
   challenge   RankedChallenge?        @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   lobbyRoom   LobbyRoom?              @relation(fields: [lobbyRoomId], references: [id], onDelete: SetNull)
+  season      RankedSeason?           @relation(fields: [seasonId], references: [id], onDelete: SetNull)
   partyA      RankedParty             @relation("MatchPartyA", fields: [partyAId], references: [id], onDelete: Cascade)
   partyB      RankedParty             @relation("MatchPartyB", fields: [partyBId], references: [id], onDelete: Cascade)
   acceptances RankedMatchAcceptance[]
@@ -796,6 +957,7 @@ model RankedMatchSession {
   @@index([status])
   @@index([lobbyRoomId])
   @@index([csgoServerId])
+  @@index([seasonId])
 }
 
 model RankedMatchAcceptance {
@@ -1392,9 +1554,10 @@ model CsgoSkinCatalog {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  playerSkins    CsgoPlayerSkin[]
-  inventoryItems InventoryItem[]
-  storeRewards   StoreItemReward[]
+  playerSkins         CsgoPlayerSkin[]
+  inventoryItems      InventoryItem[]
+  storeRewards        StoreItemReward[]
+  rankedSeasonPrizes  RankedSeasonPrize[]
 
   @@unique([weaponId, paintkit])
   @@index([weaponId])

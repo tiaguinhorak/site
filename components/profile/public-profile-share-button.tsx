@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { Check, Link2 } from "lucide-react";
+import { copyTextToClipboard } from "@/lib/clipboard/copy-text";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
@@ -29,18 +30,15 @@ export function PublicProfileShareButton({
         ? `${window.location.origin}/player/${encodeURIComponent(nickname)}`
         : `/player/${encodeURIComponent(nickname)}`;
 
-    try {
-      if (typeof navigator !== "undefined" && navigator.share) {
-        await navigator.share({ title: nickname, url });
-        return;
-      }
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      toast.success(labels.shareCopied);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
+    const copiedOk = await copyTextToClipboard(url);
+    if (!copiedOk) {
       toast.error(labels.shareFailed);
+      return;
     }
+
+    setCopied(true);
+    toast.success(labels.shareCopied);
+    window.setTimeout(() => setCopied(false), 2000);
   }, [labels.shareCopied, labels.shareFailed, nickname]);
 
   return (

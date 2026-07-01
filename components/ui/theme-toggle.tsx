@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useTheme } from "@/lib/theme";
+import { useContext, useEffect, useState } from "react";
+import { ThemeContext } from "@/lib/theme";
 import { Moon, Sun } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
 export function ThemeToggle({ className }: { className?: string }) {
-  const { resolvedTheme, setTheme } = useTheme();
+  const theme = useContext(ThemeContext);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
+  if (!theme) return null;
+
+  const { resolvedTheme, setTheme } = theme;
   const isDark = resolvedTheme === "dark";
 
   return (

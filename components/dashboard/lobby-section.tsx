@@ -8,6 +8,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { ModalPortal } from "@/components/ui/modal-portal";
 import { Input } from "@/components/ui/input";
 import { LobbyRoomCard } from "@/components/dashboard/lobby-room-card";
 import { SteamRequiredCard } from "@/components/dashboard/steam-required-card";
@@ -210,6 +211,7 @@ export function LobbySection() {
   return (
     <section className="space-y-6">
       {joinRoomId && (
+        <ModalPortal>
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
           <button
             type="button"
@@ -243,6 +245,7 @@ export function LobbySection() {
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       <div className="rounded-card glass-strong p-5 sm:p-6">

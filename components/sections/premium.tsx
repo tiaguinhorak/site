@@ -39,7 +39,7 @@ export function Premium({
       {!embedded && <AmbientGlow />}
       <div
         className={cn(
-          embedded ? "w-full min-w-0" : "relative mx-auto max-w-6xl px-4 sm:px-6",
+          embedded ? "w-full min-w-0" : "layout-container relative",
         )}
       >
         {!embedded && (

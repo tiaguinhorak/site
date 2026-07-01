@@ -28,7 +28,7 @@ export function GameModes({
       id={embedded ? undefined : "modos"}
       className={cn(embedded ? "" : "relative scroll-mt-24 py-24")}
     >
-      <div className={cn(embedded ? "" : "mx-auto max-w-6xl px-4 sm:px-6")}>
+      <div className={cn(embedded ? "" : "layout-container")}>
         {!embedded && (
           <SectionHeading
             eyebrow={t("modosEyebrow")}

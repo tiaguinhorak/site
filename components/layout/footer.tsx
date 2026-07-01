@@ -51,7 +51,7 @@ export async function Footer() {
         style={{ background: "var(--glow-1)" }}
         aria-hidden
       />
-      <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6">
+      <div className="layout-container relative py-16">
         <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div className="max-w-sm">
             <Logo />

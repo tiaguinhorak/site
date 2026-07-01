@@ -15,6 +15,7 @@ import {
 import { logAdminAction } from "@/lib/admin/audit";
 import { adminPunishmentCreateSchema } from "@/lib/admin/schemas";
 import { listActivePunishmentsForUser } from "@/lib/admin/punishments";
+import { syncGameBanForPunishment, syncGameUnbanForUser } from "@/lib/admin/punishment-server-sync";
 
 export async function GET(
   request: NextRequest,
@@ -111,5 +112,14 @@ export async function POST(
     metadata: { userId: target.id, type: parsed.data.type, reason: parsed.data.reason },
   });
 
-  return NextResponse.json({ ok: true, punishment });
+  let serverSync: { attempted: boolean; ok: boolean; error?: string } | null = null;
+  if (parsed.data.type === "BAN") {
+    serverSync = await syncGameBanForPunishment({
+      userId: target.id,
+      reason: parsed.data.reason,
+      expiresAt,
+    });
+  }
+
+  return NextResponse.json({ ok: true, punishment, serverSync });
 }

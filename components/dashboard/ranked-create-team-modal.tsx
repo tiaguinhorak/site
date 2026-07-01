@@ -13,6 +13,7 @@ import {
   type RankedPartyView,
   type RankedTeamConfigInput,
 } from "@/lib/ranked/party-shared";
+import { ModalPortal } from "@/components/ui/modal-portal";
 import {
   RANKED_MAP_LABELS,
   RANKED_MAP_POOL,
@@ -123,6 +124,7 @@ export function RankedCreateTeamModal({ open, mode, team, onClose, onSubmit }: P
   return (
     <AnimatePresence>
       {open && (
+        <ModalPortal>
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -312,6 +314,7 @@ export function RankedCreateTeamModal({ open, mode, team, onClose, onSubmit }: P
             </div>
           </motion.div>
         </motion.div>
+        </ModalPortal>
       )}
     </AnimatePresence>
   );

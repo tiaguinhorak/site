@@ -57,7 +57,7 @@ export function Servers({
       id={embedded ? undefined : "servidores"}
       className={cn(embedded ? "" : "relative scroll-mt-24 py-24")}
     >
-      <div className={cn(embedded ? "" : "mx-auto max-w-6xl px-4 sm:px-6")}>
+      <div className={cn(embedded ? "" : "layout-container")}>
         {!embedded && (
           <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end">
             <SectionHeading

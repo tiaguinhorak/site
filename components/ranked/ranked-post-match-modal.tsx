@@ -4,6 +4,7 @@ import { Loader2, RefreshCw, Shuffle, LogOut, Swords } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import type { RankedMatchSessionView } from "@/lib/ranked/party-shared";
+import { ModalPortal } from "@/components/ui/modal-portal";
 
 type Props = {
   open: boolean;
@@ -28,7 +29,8 @@ export function RankedPostMatchModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[125] flex items-center justify-center p-4">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[125] flex items-center justify-center p-4">
       <button
         type="button"
         className="scrim-dim absolute inset-0 cursor-default"
@@ -103,5 +105,6 @@ export function RankedPostMatchModal({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

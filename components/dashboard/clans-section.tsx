@@ -28,7 +28,7 @@ import { Input } from "@/components/ui/input";
 import { EloRankBadgeI18n } from "@/components/ranked/elo-rank-badge-i18n";
 import { getCountryFlag } from "@/lib/profile";
 import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
-import { secureApi } from "@/lib/api/client";
+import { secureApi, secureFormApi } from "@/lib/api/client";
 import { useUser } from "@/lib/hooks/use-user";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -445,14 +445,11 @@ function ClanDashboard({
   async function uploadAvatar(file: File) {
     const form = new FormData();
     form.append("file", file);
-    const res = await fetch(`/api/clans/${clan.id}/avatar`, {
+    const result = await secureFormApi<{ ok: true }>(`/api/clans/${clan.id}/avatar`, form, {
       method: "POST",
-      credentials: "same-origin",
-      body: form,
     });
-    if (!res.ok) {
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      toast.error(data.error ?? t("avatarError"));
+    if (!result.ok) {
+      toast.error(result.error ?? t("avatarError"));
       return;
     }
     toast.success(t("avatarUpdated"));

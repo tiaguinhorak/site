@@ -15,7 +15,7 @@ export function CallToAction() {
 
   return (
     <section className="relative py-24">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+      <div className="layout-container">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}

@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { DashboardPageShell } from "@/components/dashboard/dashboard-page-shell";
-import { StoreSection } from "@/components/dashboard/store-section";
+import { StoreSectionClient } from "@/components/dashboard/store-section-client";
 
 export default async function LojaPage() {
   const t = await getTranslations("pageHeaders");
@@ -9,7 +9,7 @@ export default async function LojaPage() {
       title={t("storeTitle")}
       description={t("storeDesc")}
     >
-      <StoreSection />
+      <StoreSectionClient />
     </DashboardPageShell>
   );
 }

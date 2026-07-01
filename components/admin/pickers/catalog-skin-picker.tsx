@@ -35,13 +35,17 @@ function skinDisplayName(item: { weaponName: string; paintkitName: string }): st
 
 export function CatalogSkinPicker({
   onSelect,
+  onBatchAdd,
   excludeIds = [],
   singleSelect = false,
+  batchMode = false,
   className,
 }: {
-  onSelect: (item: CatalogSkinPickerItem) => void;
+  onSelect?: (item: CatalogSkinPickerItem) => void;
+  onBatchAdd?: (items: CatalogSkinPickerItem[]) => void;
   excludeIds?: string[];
   singleSelect?: boolean;
+  batchMode?: boolean;
   className?: string;
 }) {
   const [search, setSearch] = useState("");
@@ -53,6 +57,7 @@ export function CatalogSkinPicker({
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const { previewSkin, openPreview, closePreview, isPreviewOpen } = useSkinPreview();
 
   const excludedKey = excludeIds.join(",");
@@ -99,7 +104,24 @@ export function CatalogSkinPicker({
 
   useEffect(() => {
     setPage(1);
+    setSelectedIds(new Set());
   }, [search, category, weaponFilter, enabledOnly]);
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function confirmBatch() {
+    if (!onBatchAdd || selectedIds.size === 0) return;
+    const picked = items.filter((item) => selectedIds.has(item.id));
+    onBatchAdd(picked);
+    setSelectedIds(new Set());
+  }
 
   return (
     <div className={cn("space-y-3 rounded-xl border border-border p-3", className)}>
@@ -172,8 +194,20 @@ export function CatalogSkinPicker({
               return (
                 <li
                   key={item.id}
-                  className="flex items-center gap-3 rounded-lg border border-border/60 p-2"
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg border border-border/60 p-2",
+                    batchMode && selectedIds.has(item.id) && "border-primary/50 bg-primary/5",
+                  )}
                 >
+                  {batchMode ? (
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(item.id)}
+                      onChange={() => toggleSelected(item.id)}
+                      className="h-4 w-4 shrink-0 accent-primary"
+                      aria-label={`Selecionar ${name}`}
+                    />
+                  ) : null}
                   <InventoryItemArt
                     imageUrl={image}
                     accent={accent}
@@ -186,12 +220,13 @@ export function CatalogSkinPicker({
                       {item.category} · {item.weaponId}
                     </p>
                   </div>
+                  {!batchMode ? (
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
                     onClick={() => {
-                      onSelect(item);
+                      onSelect?.(item);
                       if (singleSelect) {
                         setSearch("");
                         setItems([]);
@@ -201,10 +236,17 @@ export function CatalogSkinPicker({
                     <Plus className="h-3.5 w-3.5" />
                     {singleSelect ? "Usar" : "Adicionar"}
                   </Button>
+                  ) : null}
                 </li>
               );
             })}
           </ul>
+          {batchMode && selectedIds.size > 0 ? (
+            <Button type="button" size="sm" variant="primary" className="w-full" onClick={confirmBatch}>
+              Adicionar {selectedIds.size} skin{selectedIds.size === 1 ? "" : "s"} selecionada
+              {selectedIds.size === 1 ? "" : "s"}
+            </Button>
+          ) : null}
           {totalPages > 1 && (
             <div className="flex items-center justify-between text-xs text-muted">
               <Button

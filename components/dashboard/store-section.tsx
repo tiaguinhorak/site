@@ -11,6 +11,7 @@ import { useConfirmPresets } from "@/lib/use-confirm-presets";
 import { secureApi } from "@/lib/api/client";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import { ModalPortal } from "@/components/ui/modal-portal";
 import { StoreRewardsPreview } from "@/components/dashboard/store-rewards-preview";
 import { dispatchStoreCartOpen, dispatchStoreCartUpdated, useStoreCart } from "@/lib/hooks/use-store-cart";
 import { dispatchInventoryRefresh } from "@/lib/inventory/inventory-refresh-events";
@@ -93,7 +94,8 @@ function PurchaseResultModal({
   const t = useTranslations("store");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -149,6 +151,7 @@ function PurchaseResultModal({
         </div>
       </motion.div>
     </div>
+    </ModalPortal>
   );
 }
 

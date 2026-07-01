@@ -15,6 +15,7 @@ import {
 import { toast } from "@/lib/toast";
 import { dispatchInventoryRefresh } from "@/lib/inventory/inventory-refresh-events";
 import { cn } from "@/lib/utils";
+import { ModalPortal } from "@/components/ui/modal-portal";
 
 type CartLine = {
   storeItemId: string;
@@ -189,6 +190,7 @@ export function StoreCartDrawer() {
   return (
     <AnimatePresence>
       {open && (
+        <ModalPortal>
         <>
           <motion.button
             type="button"
@@ -419,6 +421,7 @@ export function StoreCartDrawer() {
             )}
           </motion.aside>
         </>
+        </ModalPortal>
       )}
     </AnimatePresence>
   );

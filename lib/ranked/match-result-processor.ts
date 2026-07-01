@@ -13,6 +13,7 @@ import { applyMissionProgress } from "@/lib/missions/service";
 import { evaluateAchievements } from "@/lib/achievements/service";
 import { addBattlePassXp } from "@/lib/battlepass/service";
 import { mergeCountMap, mergeWeaponKills } from "@/lib/profile/player-advanced-stats";
+import { applySeasonPlacementIfNeeded } from "@/lib/ranked/season-placement";
 
 const WIN_POINTS = 100;
 const LOSS_POINTS = -15;
@@ -117,6 +118,7 @@ export async function processMatchResultFromGame(input: MatchResultInput): Promi
       resultSyncedAt: true,
       csgoMatchId: true,
       selectedMap: true,
+      seasonId: true,
     },
   });
 
@@ -238,14 +240,6 @@ export async function processMatchResultFromGame(input: MatchResultInput): Promi
 
       if (!user) continue;
 
-      const competitiveDelta = computeCompetitiveDelta(
-        won,
-        player.kills,
-        player.deaths,
-        player.score,
-      );
-      const eloDelta = won ? ELO_WIN : -ELO_LOSS;
-
       const current = await tx.user.findUnique({
         where: { id: user.id },
         select: {
@@ -283,7 +277,25 @@ export async function processMatchResultFromGame(input: MatchResultInput): Promi
         rankedWins + rankedLosses > 0
           ? Math.round((rankedWins / (rankedWins + rankedLosses)) * 100)
           : 0;
-      const elo = Math.max(0, current.elo + eloDelta);
+
+      const isFirstRankedMatch = current.rankedWins + current.rankedLosses === 0;
+      let elo = Math.max(0, current.elo + (won ? ELO_WIN : -ELO_LOSS));
+      let competitivePointsUpdate: { increment: number } | { set: number } = {
+        increment: computeCompetitiveDelta(won, player.kills, player.deaths, player.score),
+      };
+
+      if (isFirstRankedMatch) {
+        const placementSeed = await applySeasonPlacementIfNeeded(
+          tx,
+          user.id,
+          session.seasonId,
+          { won, kills: player.kills, deaths: player.deaths },
+        );
+        if (placementSeed) {
+          elo = placementSeed.elo;
+          competitivePointsUpdate = { set: placementSeed.competitivePoints };
+        }
+      }
 
       await tx.user.update({
         where: { id: user.id },
@@ -307,7 +319,7 @@ export async function processMatchResultFromGame(input: MatchResultInput): Promi
           kd,
           winRate,
           elo,
-          competitivePoints: { increment: competitiveDelta },
+          competitivePoints: competitivePointsUpdate,
         },
       });
 

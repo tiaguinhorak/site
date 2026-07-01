@@ -28,7 +28,7 @@ export function HomeHighlights() {
   const tc = useTranslations("marketingCards");
   return (
     <section className="relative py-20 sm:py-24">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+      <div className="layout-container">
         <div className="max-w-2xl">
           <h2 className="font-display text-3xl font-bold text-foreground sm:text-4xl">
             {t("title1")}{" "}

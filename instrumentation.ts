@@ -1,8 +1,3 @@
 export async function register() {
-  if (process.env.NEXT_RUNTIME === "nodejs") {
-    const { startSteamProfileBackgroundSync } = await import(
-      "./lib/steam/sync-profiles-background"
-    );
-    startSteamProfileBackgroundSync();
-  }
+  // Steam profile data is refreshed on Steam login/link only (see auth/steam/callback).
 }

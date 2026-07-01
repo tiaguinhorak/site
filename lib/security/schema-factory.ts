@@ -83,7 +83,7 @@ export function createValidationSchemas(v: ValidationMessages) {
     .refine((val) => val.length === 0, v.honeypot);
 
   const loginSchema = z.object({
-    email: emailSchema,
+    nickname: nicknameSchema,
     password: z
       .string()
       .min(1, v.password.required)

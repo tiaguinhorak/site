@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
     const limit = Number(searchParams.get("limit") ?? String(LEADERBOARD_PAGE_SIZE));
     const query = searchParams.get("q") ?? undefined;
     const sort = parseSort(searchParams.get("sort"));
+    const seasonId = searchParams.get("seasonId") ?? undefined;
 
     const sessionUser = await getSessionUser(request);
 
@@ -31,6 +32,7 @@ export async function GET(request: NextRequest) {
       query,
       sort,
       userId: sessionUser?.id,
+      seasonId,
     });
 
     return NextResponse.json(data);

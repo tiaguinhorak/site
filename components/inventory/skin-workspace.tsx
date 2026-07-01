@@ -32,6 +32,7 @@ import {
   writeSkinPickerCache,
 } from "@/lib/inventory/skin-picker-cache";
 import { cn } from "@/lib/utils";
+import { ModalPortal } from "@/components/ui/modal-portal";
 import {
   chipInactiveHoverClass,
   surfaceSubtleClass,
@@ -432,11 +433,8 @@ export function SkinWorkspace({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", onKey);
     };
   }, [open, onClose]);
@@ -525,7 +523,8 @@ export function SkinWorkspace({
   const busy = savingAll || actionLoading || stickerState.saving;
 
   return (
-    <div className="fixed inset-0 z-140 flex flex-col">
+    <ModalPortal>
+      <div className="fixed inset-0 z-140 flex flex-col">
       <button
         type="button"
         className="scrim-dim absolute inset-0"
@@ -1044,5 +1043,6 @@ export function SkinWorkspace({
         </div>
       </motion.div>
     </div>
+    </ModalPortal>
   );
 }

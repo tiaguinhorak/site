@@ -31,12 +31,41 @@ function getPoolConfig(connectionString: string): pg.PoolConfig {
   return {
     connectionString: sanitized,
     ssl: isLocal ? undefined : { rejectUnauthorized: false },
+    max: Number(process.env.DATABASE_POOL_MAX ?? 10),
+    idleTimeoutMillis: 25_000,
+    connectionTimeoutMillis: 12_000,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10_000,
   };
+}
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+  prismaPool: pg.Pool | undefined;
+  prismaClientMtimeMs: number | undefined;
+  prismaPoolKey: string | undefined;
+};
+
+function getOrCreatePool(connectionString: string): pg.Pool {
+  const poolKey = sanitizeDatabaseUrl(connectionString);
+
+  if (globalForPrisma.prismaPool && globalForPrisma.prismaPoolKey === poolKey) {
+    return globalForPrisma.prismaPool;
+  }
+
+  const pool = new pg.Pool(getPoolConfig(connectionString));
+  pool.on("error", (error) => {
+    console.error("[prisma:pool]", error.message);
+  });
+
+  globalForPrisma.prismaPool = pool;
+  globalForPrisma.prismaPoolKey = poolKey;
+  return pool;
 }
 
 function createPrismaClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL;
-  const pool = new pg.Pool(getPoolConfig(connectionString));
+  const pool = getOrCreatePool(connectionString);
   const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter });
 }
@@ -49,11 +78,6 @@ function generatedClientMtimeMs(): number {
   }
 }
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-  prismaClientMtimeMs: number | undefined;
-};
-
 function resolvePrismaClient(): PrismaClient {
   const clientMtime = generatedClientMtimeMs();
   const existing = globalForPrisma.prisma;
@@ -64,10 +88,6 @@ function resolvePrismaClient(): PrismaClient {
     "userAchievement" in existing
   ) {
     return existing;
-  }
-
-  if (existing) {
-    void existing.$disconnect().catch(() => {});
   }
 
   const client = createPrismaClient();

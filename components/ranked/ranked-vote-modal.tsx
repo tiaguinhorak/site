@@ -12,6 +12,7 @@ import type {
 } from "@/lib/ranked/party-shared";
 import { formatMapLabel } from "@/lib/servers/maps";
 import { cn } from "@/lib/utils";
+import { ModalPortal } from "@/components/ui/modal-portal";
 
 function mapLabel(map: string | null | undefined): string {
   if (!map) return "—";
@@ -67,7 +68,8 @@ export function RankedVoteModal({
   const maxVotes = Math.max(1, ...vote.options.map((o) => o.votes));
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
       <button
         type="button"
         className="scrim-dim absolute inset-0 cursor-default"
@@ -225,5 +227,6 @@ export function RankedVoteModal({
         </div>
       </motion.div>
     </div>
+    </ModalPortal>
   );
 }

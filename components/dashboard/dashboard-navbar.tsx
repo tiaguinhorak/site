@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import {
   LayoutDashboard,
@@ -80,6 +81,24 @@ const OVERVIEW: NavLinkItem = {
   i18nKey: "overview",
 };
 
+const RANKED_LINK: NavLinkItem = {
+  href: "/dashboard/ranked",
+  icon: "Trophy",
+  i18nKey: "ranked",
+};
+
+const FRIENDS_LINK: NavLinkItem = {
+  href: "/dashboard/amigos",
+  icon: "UserPlus",
+  i18nKey: "friends",
+};
+
+const NEWS_LINK: NavLinkItem = {
+  href: "/dashboard/noticias",
+  icon: "Newspaper",
+  i18nKey: "news",
+};
+
 const PLAY_GROUP: NavGroup = {
   id: "play",
   i18nKey: "play",
@@ -87,18 +106,7 @@ const PLAY_GROUP: NavGroup = {
   items: [
     { href: "/dashboard/lobby", icon: "Users", i18nKey: "lobby" },
     { href: "/dashboard/warmup", icon: "Zap", i18nKey: "warmup" },
-    { href: "/dashboard/ranked", icon: "Trophy", i18nKey: "ranked" },
-  ],
-};
-
-const COMMERCE_GROUP: NavGroup = {
-  id: "commerce",
-  i18nKey: "commerce",
-  icon: "ShoppingBag",
-  items: [
-    { href: "/dashboard/loja", icon: "ShoppingBag", i18nKey: "store" },
-    { href: "/dashboard/loja-moedas", icon: "Coins", i18nKey: "coinShop" },
-    { href: "/dashboard/inventario", icon: "Package", i18nKey: "inventory" },
+    { href: "/dashboard/partidas", icon: "History", i18nKey: "matches" },
   ],
 };
 
@@ -107,12 +115,23 @@ const PROGRESS_GROUP: NavGroup = {
   i18nKey: "progress",
   icon: "Target",
   items: [
+    { href: "/dashboard/ranking", icon: "Medal", i18nKey: "ranking" },
     { href: "/dashboard/passe", icon: "Crown", i18nKey: "battlePass" },
     { href: "/dashboard/missoes", icon: "Target", i18nKey: "missions" },
     { href: "/dashboard/conquistas", icon: "Award", i18nKey: "achievements" },
     { href: "/dashboard/clas", icon: "Swords", i18nKey: "clans" },
-    { href: "/dashboard/ranking", icon: "Medal", i18nKey: "ranking" },
-    { href: "/dashboard/partidas", icon: "History", i18nKey: "matches" },
+  ],
+};
+
+const SHOP_GROUP: NavGroup = {
+  id: "commerce",
+  i18nKey: "commerce",
+  icon: "ShoppingBag",
+  items: [
+    { href: "/dashboard/loja", icon: "ShoppingBag", i18nKey: "store" },
+    { href: "/dashboard/loja-moedas", icon: "Coins", i18nKey: "coinShop" },
+    { href: "/dashboard/inventario", icon: "Package", i18nKey: "inventory" },
+    { href: "/dashboard/premium", icon: "Crown", i18nKey: "premium" },
   ],
 };
 
@@ -121,16 +140,10 @@ const MORE_GROUP: NavGroup = {
   i18nKey: "more",
   icon: "MoreHorizontal",
   items: [
-    { href: "/dashboard/amigos", icon: "UserPlus", i18nKey: "friends" },
     { href: "/dashboard/anticheat", icon: "ShieldCheck", i18nKey: "anticheat" },
     { href: "/dashboard/suporte", icon: "Headphones", i18nKey: "support" },
   ],
 };
-
-const STANDALONE_NAV: NavLinkItem[] = [
-  { href: "/dashboard/noticias", icon: "Newspaper", i18nKey: "news" },
-  { href: "/dashboard/premium", icon: "Crown", i18nKey: "premium" },
-];
 
 const ADMIN_LINK: NavLinkItem = {
   href: "/admin",
@@ -192,83 +205,127 @@ function NavDropdown({
   onToggle: () => void;
   onClose: () => void;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
   const Icon = iconMap[group.icon] ?? MoreHorizontal;
   const active = groupIsActive(pathname, group);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const updatePosition = () => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    setMenuStyle({
+      position: "fixed",
+      top: rect.bottom + 6,
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - 220)),
+      minWidth: "12.5rem",
+    });
+  };
+
+  useLayoutEffect(() => {
     if (!isOpen) return;
-    function onClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    function onClickOutside(e: MouseEvent) {
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
+      onClose();
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
     }
-    window.addEventListener("mousedown", onClick);
+    window.addEventListener("click", onClickOutside);
     window.addEventListener("keydown", onKey);
     return () => {
-      window.removeEventListener("mousedown", onClick);
+      window.removeEventListener("click", onClickOutside);
       window.removeEventListener("keydown", onKey);
     };
   }, [isOpen, onClose]);
 
   return (
-    <div ref={ref} className="relative shrink-0">
+    <>
       <button
+        ref={triggerRef}
         type="button"
         aria-expanded={isOpen}
         aria-haspopup="menu"
         onClick={onToggle}
         className={cn(
-          "flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors whitespace-nowrap",
+          "flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors whitespace-nowrap",
           active || isOpen
             ? "text-foreground bg-[color-mix(in_srgb,var(--primary)_16%,transparent)]"
             : "text-muted hover:text-foreground hover:bg-[color-mix(in_srgb,var(--primary)_10%,transparent)]",
         )}
       >
         <Icon className="h-4 w-4 shrink-0 text-primary" />
-        <span className="hidden xl:inline">{tNav(group.i18nKey)}</span>
+        <span className="hidden lg:inline">{tNav(group.i18nKey)}</span>
         <ChevronDown
           className={cn("h-3.5 w-3.5 shrink-0 transition-transform", isOpen && "rotate-180")}
         />
       </button>
 
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            role="menu"
-            initial={{ opacity: 0, y: 6, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 6, scale: 0.97 }}
-            transition={{ duration: 0.15 }}
-            className="glass-nav-dropdown absolute left-0 top-[calc(100%+6px)] z-[80] min-w-[12.5rem] overflow-hidden rounded-xl p-1 shadow-2xl"
-          >
-            {group.items.map((item) => {
-              const ItemIcon = iconMap[item.icon] ?? LayoutDashboard;
-              const itemActive = isActive(pathname, item.href);
-              return (
-                <Link
-                  key={item.href}
-                  role="menuitem"
-                  href={item.href}
-                  prefetch={false}
-                  onClick={onClose}
-                  className={cn(
-                    "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                    itemActive
-                      ? "text-foreground bg-[color-mix(in_srgb,var(--primary)_16%,transparent)]"
-                      : "text-muted hover:bg-[color-mix(in_srgb,var(--primary)_10%,transparent)] hover:text-foreground",
-                  )}
-                >
-                  <ItemIcon className="h-4 w-4 shrink-0 text-primary" />
-                  {tNav(item.i18nKey)}
-                </Link>
-              );
-            })}
-          </motion.div>
+      {mounted &&
+        isOpen &&
+        createPortal(
+          <>
+            <button
+              type="button"
+              className="scrim-dismiss fixed inset-0 z-[79]"
+              aria-label={tNav("closeMenu")}
+              onClick={onClose}
+            />
+            <motion.div
+              ref={menuRef}
+              role="menu"
+              initial={{ opacity: 0, y: 6, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 6, scale: 0.97 }}
+              transition={{ duration: 0.15 }}
+              style={menuStyle}
+              className="glass-nav-dropdown z-[80] overflow-hidden rounded-xl p-1 shadow-2xl"
+            >
+              {group.items.map((item) => {
+                const ItemIcon = iconMap[item.icon] ?? LayoutDashboard;
+                const itemActive = isActive(pathname, item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    role="menuitem"
+                    href={item.href}
+                    prefetch={false}
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                      itemActive
+                        ? "text-foreground bg-[color-mix(in_srgb,var(--primary)_16%,transparent)]"
+                        : "text-muted hover:bg-[color-mix(in_srgb,var(--primary)_10%,transparent)] hover:text-foreground",
+                    )}
+                  >
+                    <ItemIcon className="h-4 w-4 shrink-0 text-primary" />
+                    {tNav(item.i18nKey)}
+                  </Link>
+                );
+              })}
+            </motion.div>
+          </>,
+          document.body,
         )}
-      </AnimatePresence>
-    </div>
+    </>
   );
 }
 
@@ -341,7 +398,7 @@ export function DashboardNavbar() {
     ? { ...MORE_GROUP, items: [...MORE_GROUP.items, ADMIN_LINK] }
     : MORE_GROUP;
 
-  const dropdownGroups = [PLAY_GROUP, COMMERCE_GROUP, PROGRESS_GROUP, moreGroup];
+  const navGroups = [PLAY_GROUP, PROGRESS_GROUP, SHOP_GROUP, moreGroup];
 
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
@@ -363,28 +420,19 @@ export function DashboardNavbar() {
       <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-4">
         <nav
           className={cn(
-            "relative z-[52] mx-auto flex w-full max-w-[1400px] items-center gap-2 rounded-2xl px-3 py-2.5 sm:gap-3 sm:px-4",
+            "relative z-[52] mx-auto flex w-full max-w-[1920px] items-center gap-2 rounded-2xl px-3 py-2.5 sm:gap-3 sm:px-4",
             "glass-strong glow-ring",
           )}
         >
           <Logo className="shrink-0" />
 
           <div className="hidden min-w-0 flex-1 items-center justify-center gap-0.5 md:flex">
-            <Link
-              href={OVERVIEW.href}
-              prefetch={false}
-              className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors whitespace-nowrap",
-                overviewActive
-                  ? "text-foreground bg-[color-mix(in_srgb,var(--primary)_16%,transparent)]"
-                  : "text-muted hover:text-foreground hover:bg-[color-mix(in_srgb,var(--primary)_10%,transparent)]",
-              )}
-            >
-              <OverviewIcon className="h-4 w-4 shrink-0 text-primary" />
-              <span className="hidden lg:inline">{tNav(OVERVIEW.i18nKey)}</span>
-            </Link>
+            <NavDirectLink item={OVERVIEW} pathname={pathname} tNav={tNav} />
+            <NavDirectLink item={RANKED_LINK} pathname={pathname} tNav={tNav} />
+            <NavDirectLink item={FRIENDS_LINK} pathname={pathname} tNav={tNav} />
+            <NavDirectLink item={NEWS_LINK} pathname={pathname} tNav={tNav} />
 
-            {dropdownGroups.slice(0, 3).map((group) => (
+            {navGroups.map((group) => (
               <NavDropdown
                 key={group.id}
                 group={group}
@@ -397,21 +445,6 @@ export function DashboardNavbar() {
                 onClose={() => setOpenDropdown(null)}
               />
             ))}
-
-            {STANDALONE_NAV.map((item) => (
-              <NavDirectLink key={item.href} item={item} pathname={pathname} tNav={tNav} />
-            ))}
-
-            <NavDropdown
-              group={moreGroup}
-              pathname={pathname}
-              tNav={tNav}
-              isOpen={openDropdown === moreGroup.id}
-              onToggle={() =>
-                setOpenDropdown((prev) => (prev === moreGroup.id ? null : moreGroup.id))
-              }
-              onClose={() => setOpenDropdown(null)}
-            />
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
@@ -450,7 +483,7 @@ export function DashboardNavbar() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
                 transition={{ duration: 0.25 }}
-                className="glass-nav-dropdown relative z-[51] mx-auto mt-3 max-h-[min(85vh,calc(100dvh-5.5rem))] max-w-[1400px] overflow-y-auto rounded-2xl p-3 md:hidden"
+                className="glass-nav-dropdown relative z-[51] mx-auto mt-3 max-h-[min(85vh,calc(100dvh-5.5rem))] max-w-[1920px] overflow-y-auto rounded-2xl p-3 md:hidden"
               >
                 <Link
                   href={OVERVIEW.href}
@@ -468,49 +501,61 @@ export function DashboardNavbar() {
                 </Link>
 
                 <div className="mt-1 space-y-0.5">
-                  {dropdownGroups.slice(0, 3).map((group) => (
+                  <Link
+                    href={RANKED_LINK.href}
+                    prefetch={false}
+                    onClick={() => setMobileOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium transition-colors",
+                      isActive(pathname, RANKED_LINK.href)
+                        ? "bg-[color-mix(in_srgb,var(--primary)_16%,transparent)] text-foreground"
+                        : "text-muted hover:bg-[color-mix(in_srgb,var(--primary)_10%,transparent)] hover:text-foreground",
+                    )}
+                  >
+                    <Trophy className="h-4.5 w-4.5 shrink-0 text-primary" />
+                    {tNav(RANKED_LINK.i18nKey)}
+                  </Link>
+                  <Link
+                    href={FRIENDS_LINK.href}
+                    prefetch={false}
+                    onClick={() => setMobileOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium transition-colors",
+                      isActive(pathname, FRIENDS_LINK.href)
+                        ? "bg-[color-mix(in_srgb,var(--primary)_16%,transparent)] text-foreground"
+                        : "text-muted hover:bg-[color-mix(in_srgb,var(--primary)_10%,transparent)] hover:text-foreground",
+                    )}
+                  >
+                    <UserPlus className="h-4.5 w-4.5 shrink-0 text-primary" />
+                    {tNav(FRIENDS_LINK.i18nKey)}
+                  </Link>
+                  <Link
+                    href={NEWS_LINK.href}
+                    prefetch={false}
+                    onClick={() => setMobileOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium transition-colors",
+                      isActive(pathname, NEWS_LINK.href)
+                        ? "bg-[color-mix(in_srgb,var(--primary)_16%,transparent)] text-foreground"
+                        : "text-muted hover:bg-[color-mix(in_srgb,var(--primary)_10%,transparent)] hover:text-foreground",
+                    )}
+                  >
+                    <Newspaper className="h-4.5 w-4.5 shrink-0 text-primary" />
+                    {tNav(NEWS_LINK.i18nKey)}
+                  </Link>
+                </div>
+
+                <div className="mt-1 space-y-0.5">
+                  {navGroups.map((group) => (
                     <MobileNavSection
                       key={group.id}
                       group={group}
                       pathname={pathname}
                       tNav={tNav}
                       onNavigate={() => setMobileOpen(false)}
-                      defaultOpen={group.id === "play"}
+                      defaultOpen={groupIsActive(pathname, group)}
                     />
                   ))}
-                </div>
-
-                <div className="mt-1 space-y-0.5">
-                  {STANDALONE_NAV.map((item) => {
-                    const ItemIcon = iconMap[item.icon] ?? LayoutDashboard;
-                    const itemActive = isActive(pathname, item.href);
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        prefetch={false}
-                        onClick={() => setMobileOpen(false)}
-                        className={cn(
-                          "flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium transition-colors",
-                          itemActive
-                            ? "bg-[color-mix(in_srgb,var(--primary)_16%,transparent)] text-foreground"
-                            : "text-muted hover:bg-[color-mix(in_srgb,var(--primary)_10%,transparent)] hover:text-foreground",
-                        )}
-                      >
-                        <ItemIcon className="h-4.5 w-4.5 shrink-0 text-primary" />
-                        {tNav(item.i18nKey)}
-                      </Link>
-                    );
-                  })}
-                </div>
-
-                <div className="mt-1 space-y-0.5">
-                  <MobileNavSection
-                    group={moreGroup}
-                    pathname={pathname}
-                    tNav={tNav}
-                    onNavigate={() => setMobileOpen(false)}
-                  />
                 </div>
               </motion.div>
             </>

@@ -8,6 +8,7 @@ import { RemoteImage } from "@/components/ui/remote-image";
 import { TeamScopePicker } from "@/components/inventory/team-scope-picker";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
 import { cn } from "@/lib/utils";
+import { ModalPortal } from "@/components/ui/modal-portal";
 import {
   chipInactiveHoverClass,
   surfaceInputClass,
@@ -302,7 +303,8 @@ export function AgentWorkspace({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <button
         type="button"
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -553,5 +555,6 @@ export function AgentWorkspace({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

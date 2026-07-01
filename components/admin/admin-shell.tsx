@@ -19,7 +19,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
       <AdminNavbar />
 
-      <main className="relative mx-auto max-w-[1400px] px-4 pb-10 pt-24 sm:px-6 sm:pt-28 lg:px-8">
+      <main className="layout-container relative pb-10 pt-24 sm:pt-28">
         <RouteKey>{children}</RouteKey>
       </main>
     </div>

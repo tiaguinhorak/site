@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
-import { Premium } from "@/components/sections/premium";
 import { PremiumFaq } from "@/components/marketing/premium-faq";
+import { PremiumMarketingClient } from "@/components/marketing/premium-marketing-client";
 import { CallToAction } from "@/components/sections/cta";
-import { getSubscriptionPlans } from "@/lib/queries";
-import { localizeSubscriptionPlans } from "@/lib/marketing/localize-content";
-import { getRequestLocale } from "@/lib/i18n/server";
 
 export const metadata: Metadata = {
   title: "Premium — clutchclube",
@@ -15,8 +12,6 @@ export const metadata: Metadata = {
 
 export default async function PremiumPage() {
   const t = await getTranslations("marketing");
-  const locale = await getRequestLocale();
-  const plans = await localizeSubscriptionPlans(await getSubscriptionPlans(), locale);
 
   return (
     <>
@@ -31,7 +26,7 @@ export default async function PremiumPage() {
         description={t("premiumDesc")}
         withGlow
       >
-        <Premium embedded plans={plans} />
+        <PremiumMarketingClient />
         <PremiumFaq />
       </MarketingPageShell>
       <CallToAction />

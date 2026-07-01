@@ -9,6 +9,7 @@ import { markPartiesInMatch } from "@/lib/ranked/party-lifecycle";
 import { RANKED_VOTE_SECONDS } from "@/lib/ranked/constants";
 import { notifyRankedVoteStarted } from "@/lib/ranked/notifications";
 import { partyInclude } from "@/lib/ranked/party-service";
+import { resolveRankedMatchSeasonId } from "@/lib/ranked/season-match";
 import { serializeSession } from "@/lib/ranked/match-session-service";
 
 export const LOBBY_2X2_TEAM_SIZE = 2;
@@ -177,6 +178,8 @@ export async function startLobbyRoomMatch(
     challenge: true,
   };
 
+  const seasonId = await resolveRankedMatchSeasonId();
+
   const session = await prisma.$transaction(async (tx) => {
     const realMemberIds = room.members.map((m) => m.userId);
     await tx.lobbyMember.deleteMany({ where: { lobbyRoomId, userId: { in: realMemberIds } } });
@@ -195,6 +198,7 @@ export async function startLobbyRoomMatch(
         lobbyRoomId,
         matchSource: "lobby",
         teamSize: LOBBY_2X2_TEAM_SIZE,
+        seasonId,
         status: "voting",
         voteEndsAt: new Date(Date.now() + RANKED_VOTE_SECONDS * 1000),
       },

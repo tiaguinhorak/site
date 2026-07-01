@@ -26,6 +26,8 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+export { ThemeContext };
+
 function readStoredTheme(defaultTheme: ThemeSetting): ThemeSetting {
   if (typeof window === "undefined") return defaultTheme;
   try {
@@ -87,12 +89,12 @@ export function ThemeProvider({
   enableSystem = true,
   disableTransitionOnChange = false,
 }: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<ThemeSetting>(() =>
-    readStoredTheme(defaultTheme),
-  );
+  // Keep first paint identical on server and client — read localStorage only after mount.
+  const [theme, setThemeState] = useState<ThemeSetting>(defaultTheme);
   const [systemTheme, setSystemTheme] = useState<ResolvedTheme>(() =>
-    getSystemTheme(),
+    defaultTheme === "light" ? "light" : "dark",
   );
+  const [mounted, setMounted] = useState(false);
 
   const resolvedTheme = useMemo(
     () => resolveTheme(theme, enableSystem),
@@ -109,8 +111,15 @@ export function ThemeProvider({
   }, []);
 
   useIsomorphicLayoutEffect(() => {
+    setMounted(true);
+    setThemeState(readStoredTheme(defaultTheme));
+    setSystemTheme(getSystemTheme());
+  }, [defaultTheme]);
+
+  useIsomorphicLayoutEffect(() => {
+    if (!mounted) return;
     applyTheme(resolvedTheme, disableTransitionOnChange);
-  }, [resolvedTheme, disableTransitionOnChange]);
+  }, [mounted, resolvedTheme, disableTransitionOnChange]);
 
   useEffect(() => {
     if (!enableSystem) return;

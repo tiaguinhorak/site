@@ -10,6 +10,7 @@ import { SkinRarityBadge } from "@/components/skins/skin-rarity-badge";
 import { SkinRarityLine } from "@/components/skins/skin-rarity-line";
 import { skinPreviewImageUrl } from "@/lib/inventory/skin-images";
 import { cn } from "@/lib/utils";
+import { ModalPortal } from "@/components/ui/modal-portal";
 
 export type SkinPreviewData = {
   id?: string;
@@ -32,6 +33,8 @@ type SkinPreviewModalProps = {
   onEquip?: () => void;
   onUnequip?: () => void;
   actionLoading?: boolean;
+  /** Above stacked modals (e.g. admin prize editor at z-140). */
+  elevated?: boolean;
 };
 
 export function SkinPreviewModal({
@@ -41,6 +44,7 @@ export function SkinPreviewModal({
   onEquip,
   onUnequip,
   actionLoading,
+  elevated = false,
 }: SkinPreviewModalProps) {
   const t = useTranslations("inventory");
 
@@ -57,9 +61,12 @@ export function SkinPreviewModal({
 
   const showEquip = skin.equipped ? onUnequip : onEquip;
   const canAct = skin.owned && showEquip;
+  const overlayZ = elevated ? "z-[160]" : "z-[120]";
+  const panelZ = elevated ? "z-[161]" : "z-[121]";
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+    <ModalPortal>
+      <div className={cn("fixed inset-0 flex items-center justify-center p-4", overlayZ)}>
       <button
         type="button"
         className="scrim-dim absolute inset-0 cursor-default"
@@ -73,7 +80,7 @@ export function SkinPreviewModal({
         aria-labelledby="skin-preview-title"
         initial={{ opacity: 0, scale: 0.96, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="relative z-[121] w-full max-w-lg overflow-hidden rounded-2xl glass-modal shadow-2xl"
+        className={cn("relative w-full max-w-lg overflow-hidden rounded-2xl glass-modal shadow-2xl", panelZ)}
       >
         <button
           type="button"
@@ -152,5 +159,6 @@ export function SkinPreviewModal({
         </div>
       </motion.div>
     </div>
+    </ModalPortal>
   );
 }

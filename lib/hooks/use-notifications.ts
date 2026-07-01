@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { secureApi } from "@/lib/api/client";
+import {
+  fetchNotificationsDeduped,
+  invalidateNotificationsCache,
+} from "@/lib/notifications/client-cache";
 
 export type NotificationItem = {
   id: string;
@@ -58,43 +62,37 @@ export function useNotifications(options?: {
   });
   const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (force = false) => {
     if (!enabled) {
       setNotifications([]);
       setLoading(false);
       return;
     }
 
-    try {
-      const res = await fetch(`/api/notifications${buildQueryString(query)}`, {
-        credentials: "same-origin",
-      });
-      if (res.status === 401) {
-        setNotifications([]);
-        return;
-      }
-      if (!res.ok) return;
+    const payload = await fetchNotificationsDeduped(
+      buildQueryString(query),
+      force ? 0 : 12_000,
+    );
+    if (!payload) return;
 
-      const data = await res.json();
-      setNotifications(data.notifications ?? []);
-      setMeta({
-        total: data.total ?? 0,
-        unreadTotal: data.unreadTotal ?? 0,
-        page: data.page ?? 1,
-        limit: data.limit ?? 15,
-        hasMore: data.hasMore ?? false,
-      });
-    } catch {
-      /* network / aborted — ignore poll errors */
-    } finally {
-      setLoading(false);
-    }
+    setNotifications(payload.notifications);
+    setMeta(payload.meta);
+    setLoading(false);
   }, [enabled, query?.page, query?.limit, query?.type, query?.read]);
 
   useEffect(() => {
+    if (!enabled) return;
     setLoading(true);
-    refresh();
-  }, [refresh]);
+    void fetchNotificationsDeduped(buildQueryString(query)).then((payload) => {
+      if (!payload) {
+        setLoading(false);
+        return;
+      }
+      setNotifications(payload.notifications);
+      setMeta(payload.meta);
+      setLoading(false);
+    });
+  }, [enabled, query?.page, query?.limit, query?.type, query?.read]);
 
   useEffect(() => {
     if (!enabled || !options?.pollMs) return;
@@ -104,7 +102,7 @@ export function useNotifications(options?: {
 
   useEffect(() => {
     if (!enabled) return;
-    const onRefresh = () => void refresh();
+    const onRefresh = () => void refresh(true);
     window.addEventListener("clutch:notifications-refresh", onRefresh);
     return () => window.removeEventListener("clutch:notifications-refresh", onRefresh);
   }, [enabled, refresh]);
@@ -115,6 +113,7 @@ export function useNotifications(options?: {
       json: { read: true },
     });
     if (result.ok) {
+      invalidateNotificationsCache();
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
       );
@@ -128,6 +127,7 @@ export function useNotifications(options?: {
       json: { markAllRead: true },
     });
     if (result.ok) {
+      invalidateNotificationsCache();
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     }
     return result.ok;

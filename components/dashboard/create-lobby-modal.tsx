@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MapPicker } from "@/components/admin/pickers/map-picker";
 import { secureApi } from "@/lib/api/client";
+import { ModalPortal } from "@/components/ui/modal-portal";
 import {
   DEFAULT_LOBBY_SETTINGS,
   LOBBY_REGION_OPTIONS,
@@ -112,6 +113,7 @@ export function CreateLobbyModal({ open, onClose, onCreated }: Props) {
   return (
     <AnimatePresence>
       {open && (
+        <ModalPortal>
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -399,6 +401,7 @@ export function CreateLobbyModal({ open, onClose, onCreated }: Props) {
             </div>
           </motion.div>
         </motion.div>
+        </ModalPortal>
       )}
     </AnimatePresence>
   );

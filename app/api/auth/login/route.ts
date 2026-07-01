@@ -4,6 +4,7 @@ import {
   applyApiGuards,
   parseJsonBody,
 } from "@/lib/security/api-guard";
+import { sanitizeNickname } from "@/lib/security/sanitize";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/prisma";
 import { RATE_LIMITS } from "@/lib/security/constants";
@@ -37,8 +38,8 @@ export async function POST(request: NextRequest) {
     return zodErrorResponse(request, parsed.error);
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email: parsed.data.email },
+  const user = await prisma.user.findFirst({
+    where: { nickname: sanitizeNickname(parsed.data.nickname) },
   });
 
   if (!user?.passwordHash) {

@@ -8,8 +8,7 @@ export function NavigationProgress() {
       color="var(--primary)"
       height={3}
       showSpinner={false}
-      crawl
-      crawlSpeed={200}
+      crawl={false}
       speed={200}
       easing="ease"
       shadow="0 0 12px var(--primary),0 0 6px var(--primary)"

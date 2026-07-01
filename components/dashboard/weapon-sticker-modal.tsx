@@ -5,6 +5,7 @@ import { Sticker, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
 import { WeaponStickerEditor } from "@/components/inventory/weapon-sticker-editor";
+import { ModalPortal } from "@/components/ui/modal-portal";
 
 type WeaponStickerModalProps = {
   open: boolean;
@@ -28,7 +29,8 @@ export function WeaponStickerModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <ModalPortal>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
         className="absolute inset-0 scrim-dim"
@@ -75,6 +77,7 @@ export function WeaponStickerModal({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 

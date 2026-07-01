@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
-import { Features } from "@/components/sections/features";
+import { PlataformaMarketingClient } from "@/components/marketing/plataforma-marketing-client";
 import { CallToAction } from "@/components/sections/cta";
-import { getMarketingFeatures, getSiteStats } from "@/lib/queries";
-import { localizeMarketingFeatures, localizeSiteStats } from "@/lib/marketing/localize-content";
-import { getRequestLocale } from "@/lib/i18n/server";
 
 export const metadata: Metadata = {
   title: "Plataforma — clutchclube",
@@ -15,9 +12,6 @@ export const metadata: Metadata = {
 
 export default async function PlataformaPage() {
   const t = await getTranslations("marketing");
-  const locale = await getRequestLocale();
-  const features = await localizeMarketingFeatures(await getMarketingFeatures(), locale);
-  const stats = await localizeSiteStats(await getSiteStats(), locale);
 
   return (
     <>
@@ -31,27 +25,7 @@ export default async function PlataformaPage() {
         }
         description={t("plataformaDesc")}
       >
-        <div className="mb-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {stats.map((s) => (
-            <div key={s.label} className="rounded-card glass px-4 py-5 text-center">
-              <p className="font-display text-2xl font-bold text-gradient sm:text-3xl">
-                {s.value}
-              </p>
-              <p className="mt-1 text-xs uppercase tracking-wider text-muted">
-                {s.label}
-              </p>
-            </div>
-          ))}
-        </div>
-        <Features
-          embedded
-          features={features.map((f) => ({
-            index: f.index,
-            title: f.title,
-            description: f.description,
-            iconKey: f.iconKey,
-          }))}
-        />
+        <PlataformaMarketingClient />
       </MarketingPageShell>
       <CallToAction />
     </>

@@ -25,6 +25,7 @@ import { ProfileCustomizationHero } from "@/components/profile/profile-customiza
 import { ProfileDisplayName } from "@/components/profile/profile-display-name";
 import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
 import { PlanBadge } from "@/components/profile/plan-badge";
+import { ProfilePixSection } from "@/components/dashboard/profile-pix-section";
 import { ProfileBasicForm } from "@/components/dashboard/profile-basic-form";
 import { ProfileSecuritySection } from "@/components/dashboard/profile-security-section";
 import { ProfileSteamSection } from "@/components/dashboard/profile-steam-section";
@@ -436,6 +437,7 @@ export function ProfileSection() {
                 onChange={(updates) => setDraft((prev) => (prev ? { ...prev, ...updates } : prev))}
                 hideSave
               />
+              <ProfilePixSection />
               {hasUnsavedChanges && (
                 <p className="text-sm text-amber-800 dark:text-amber-400/90">{tForm("unsavedHint")}</p>
               )}

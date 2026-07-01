@@ -6,11 +6,12 @@ import { LEADERBOARD_PARTICIPANT_WHERE } from "@/lib/leaderboard/sync-ranks-core
 import type {
   LeaderboardPageResult,
   LeaderboardPlayer,
+  LeaderboardSeasonMeta,
   LeaderboardSort,
   RankedMatchHistoryEntry,
 } from "@/lib/leaderboard/types";
-import { LEADERBOARD_PAGE_SIZE } from "@/lib/leaderboard/types";
-import { syncStaleSteamProfilesBackground } from "@/lib/steam/sync-profiles-background";
+import { ARCHIVED_SEASON_SORTS, LEADERBOARD_PAGE_SIZE, LEADERBOARD_SORT_VALUES } from "@/lib/leaderboard/types";
+import { getActiveRankedSeasonId } from "@/lib/ranked/season-service";
 import { resolveSteamDisplayName, STEAM_DISPLAY_NAME_SELECT } from "@/lib/steam/display-name";
 
 export type { LeaderboardPageResult, LeaderboardPlayer, LeaderboardSort };
@@ -170,8 +171,22 @@ export async function fetchLeaderboardPage(options: {
   query?: string;
   sort?: LeaderboardSort;
   userId?: string | null;
+  seasonId?: string | null;
+  activeSeasonId?: string | null;
+  seasonMeta?: LeaderboardSeasonMeta | null;
 }): Promise<LeaderboardPageResult> {
-  syncStaleSteamProfilesBackground();
+  const activeSeasonId =
+    options.activeSeasonId !== undefined
+      ? options.activeSeasonId
+      : await getActiveRankedSeasonId();
+  const requestedSeasonId = options.seasonId ?? activeSeasonId ?? null;
+
+  if (requestedSeasonId && requestedSeasonId !== activeSeasonId) {
+    return fetchArchivedSeasonLeaderboardPage({
+      ...options,
+      seasonId: requestedSeasonId,
+    });
+  }
 
   const page = Math.max(1, options.page ?? 1);
   const limit = Math.min(50, Math.max(10, options.limit ?? LEADERBOARD_PAGE_SIZE));
@@ -211,6 +226,23 @@ export async function fetchLeaderboardPage(options: {
     }
   }
 
+  let season: LeaderboardSeasonMeta | null = options.seasonMeta ?? null;
+  if (!season && activeSeasonId) {
+    const activeSeason = await prisma.rankedSeason.findUnique({
+      where: { id: activeSeasonId },
+      select: { id: true, name: true, seasonNumber: true, active: true, status: true },
+    });
+    if (activeSeason) {
+      season = {
+        id: activeSeason.id,
+        name: activeSeason.name,
+        seasonNumber: activeSeason.seasonNumber,
+        active: activeSeason.active,
+        archived: activeSeason.status === "ARCHIVED",
+      };
+    }
+  }
+
   return {
     players,
     total,
@@ -218,6 +250,173 @@ export async function fetchLeaderboardPage(options: {
     limit,
     sort,
     you,
+    season,
+    availableSorts: LEADERBOARD_SORT_VALUES,
+    readonly: false,
+  };
+}
+
+function orderByForStandingSort(
+  sort: LeaderboardSort,
+): Prisma.RankedSeasonStandingOrderByWithRelationInput[] {
+  switch (sort) {
+    case "elo":
+      return [{ elo: "desc" }, { position: "asc" }];
+    case "kd":
+      return [{ kd: "desc" }, { position: "asc" }];
+    case "wins":
+      return [{ rankedWins: "desc" }, { position: "asc" }];
+    case "kills":
+      return [{ rankedKills: "desc" }, { position: "asc" }];
+    case "winRate":
+      return [{ rankedWins: "desc" }, { rankedLosses: "asc" }, { position: "asc" }];
+    default:
+      return [{ position: "asc" }];
+  }
+}
+
+function standingWinRate(wins: number, losses: number): number {
+  const total = wins + losses;
+  return total > 0 ? Math.round((wins / total) * 100) : 0;
+}
+
+function serializeStandingPlayer(
+  standing: {
+    position: number;
+    nickname: string;
+    avatarUrl: string | null;
+    elo: number;
+    kd: number;
+    competitivePoints: number;
+    rankedWins: number;
+    rankedLosses: number;
+    rankedKills: number;
+    rankedDeaths: number;
+  },
+  user: LeaderboardUserRow,
+  displayRank: number,
+): LeaderboardPlayer {
+  return {
+    rank: displayRank,
+    nickname: standing.nickname || user.nickname,
+    displayName: resolveSteamDisplayName(user),
+    country: user.country,
+    avatarUrl: standing.avatarUrl ?? resolveUserAvatarUrl(user),
+    plan: planToClient(user.plan),
+    elo: standing.elo,
+    kd: standing.kd,
+    points: standing.competitivePoints,
+    wins: standing.rankedWins,
+    losses: standing.rankedLosses,
+    winRate: standingWinRate(standing.rankedWins, standing.rankedLosses),
+    matches: standing.rankedWins + standing.rankedLosses,
+    kills: standing.rankedKills,
+    deaths: standing.rankedDeaths,
+    assists: user.rankedAssists,
+    mvps: user.rankedMvps,
+    headshots: user.rankedHeadshots,
+    clutches: user.rankedClutches,
+    utilityDamage: user.rankedUtilityDamage,
+    awpKills: user.rankedAwpKills,
+    level: user.level,
+    customization: serializeProfileCustomization(user),
+  };
+}
+
+async function fetchArchivedSeasonLeaderboardPage(options: {
+  page?: number;
+  limit?: number;
+  query?: string;
+  sort?: LeaderboardSort;
+  userId?: string | null;
+  seasonId: string;
+}): Promise<LeaderboardPageResult> {
+  const page = Math.max(1, options.page ?? 1);
+  const limit = Math.min(50, Math.max(10, options.limit ?? LEADERBOARD_PAGE_SIZE));
+  const sort = ARCHIVED_SEASON_SORTS.includes(options.sort ?? "points")
+    ? (options.sort ?? "points")
+    : "points";
+  const skip = (page - 1) * limit;
+
+  const season = await prisma.rankedSeason.findUnique({
+    where: { id: options.seasonId },
+    select: { id: true, name: true, seasonNumber: true, active: true, status: true },
+  });
+
+  if (!season) {
+    return {
+      players: [],
+      total: 0,
+      page,
+      limit,
+      sort,
+      you: null,
+      season: null,
+      availableSorts: ARCHIVED_SEASON_SORTS,
+      readonly: true,
+    };
+  }
+
+  const trimmedQuery = options.query?.trim();
+  const where: Prisma.RankedSeasonStandingWhereInput = {
+    seasonId: options.seasonId,
+    ...(trimmedQuery
+      ? { nickname: { contains: trimmedQuery, mode: "insensitive" } }
+      : {}),
+  };
+
+  const total = await prisma.rankedSeasonStanding.count({ where });
+
+  const rows =
+    total === 0
+      ? []
+      : await prisma.rankedSeasonStanding.findMany({
+          where,
+          orderBy: orderByForStandingSort(sort),
+          skip,
+          take: limit,
+          include: {
+            user: { select: USER_SELECT },
+          },
+        });
+
+  const players = rows.map((row, index) =>
+    serializeStandingPlayer(
+      row,
+      row.user,
+      sort === "points" ? row.position : skip + index + 1,
+    ),
+  );
+
+  let you: LeaderboardPlayer | null = null;
+  if (options.userId) {
+    const selfStanding = await prisma.rankedSeasonStanding.findUnique({
+      where: {
+        seasonId_userId: { seasonId: options.seasonId, userId: options.userId },
+      },
+      include: { user: { select: USER_SELECT } },
+    });
+    if (selfStanding) {
+      you = serializeStandingPlayer(selfStanding, selfStanding.user, selfStanding.position);
+    }
+  }
+
+  return {
+    players,
+    total,
+    page,
+    limit,
+    sort,
+    you,
+    season: {
+      id: season.id,
+      name: season.name,
+      seasonNumber: season.seasonNumber,
+      active: season.active,
+      archived: season.status === "ARCHIVED",
+    },
+    availableSorts: ARCHIVED_SEASON_SORTS,
+    readonly: true,
   };
 }
 

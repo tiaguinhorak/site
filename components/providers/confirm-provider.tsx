@@ -21,6 +21,7 @@ import {
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ModalPortal } from "@/components/ui/modal-portal";
 
 export type ConfirmTone = "danger" | "warning" | "default";
 export type ConfirmIcon = "delete" | "edit" | "logout" | "info";
@@ -109,6 +110,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
 
       <AnimatePresence>
         {open && options && (
+          <ModalPortal>
           <div className="fixed inset-0 z-[100] flex items-end justify-center p-4 sm:items-center sm:p-6">
             <motion.button
               type="button"
@@ -186,6 +188,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
               </div>
             </motion.div>
           </div>
+          </ModalPortal>
         )}
       </AnimatePresence>
     </ConfirmContext.Provider>

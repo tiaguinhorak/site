@@ -7,6 +7,7 @@ import type { EquipSide } from "@/lib/inventory/loadout-team";
 import { weaponSupportsBothTeams } from "@/lib/inventory/loadout-team";
 import { cn } from "@/lib/utils";
 import { chipInactiveHoverClass, teamPillClass } from "@/lib/ui/theme-surfaces";
+import { ModalPortal } from "@/components/ui/modal-portal";
 
 type EquipSideDialogProps = {
   open: boolean;
@@ -32,7 +33,8 @@ export function EquipSideDialog({
   const canBoth = weaponSupportsBothTeams(weaponId);
 
   return (
-    <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
       <button
         type="button"
         className="absolute inset-0 scrim-dim"
@@ -93,5 +95,6 @@ export function EquipSideDialog({
         </Button>
       </div>
     </div>
+    </ModalPortal>
   );
 }

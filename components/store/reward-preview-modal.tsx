@@ -8,6 +8,7 @@ import {
   SkinPreviewModal,
   type SkinPreviewData,
 } from "@/components/skins/skin-preview-modal";
+import { ModalPortal } from "@/components/ui/modal-portal";
 
 export type StoreRewardPreviewTarget =
   | { type: "skin"; data: SkinPreviewData }
@@ -73,8 +74,9 @@ export function StoreRewardPreviewModal({
   if (!open || !target) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
+    <ModalPortal>
+      <div
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
       onClick={onClose}
       role="presentation"
     >
@@ -129,5 +131,6 @@ export function StoreRewardPreviewModal({
         ) : null}
       </div>
     </div>
+    </ModalPortal>
   );
 }

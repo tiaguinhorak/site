@@ -21,7 +21,7 @@ export function MarketingPageShell({
     <div className="relative overflow-hidden pb-24 pt-32 sm:pt-40">
       {withGlow && <AmbientGlow />}
       <div className="bg-grid absolute inset-0 [mask-image:radial-gradient(ellipse_at_top,black_20%,transparent_75%)] opacity-50" aria-hidden />
-      <div className="relative mx-auto w-full min-w-0 max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="layout-container relative">
         <PageHeader eyebrow={eyebrow} title={title} description={description} size="lg" />
         <div className="mt-10 min-w-0 sm:mt-12">{children}</div>
       </div>

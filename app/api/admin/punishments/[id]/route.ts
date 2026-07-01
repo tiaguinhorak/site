@@ -9,6 +9,7 @@ import { requireAdmin } from "@/lib/auth/admin";
 import { prisma } from "@/lib/prisma";
 import { RATE_LIMITS } from "@/lib/security/constants";
 import { logAdminAction } from "@/lib/admin/audit";
+import { syncGameUnbanForUser } from "@/lib/admin/punishment-server-sync";
 
 export async function PATCH(
   request: NextRequest,
@@ -60,5 +61,10 @@ export async function PATCH(
     metadata: { userId: punishment.userId, type: punishment.type },
   });
 
-  return NextResponse.json({ ok: true, punishment: updated });
+  let serverSync: { attempted: boolean; ok: boolean; error?: string } | null = null;
+  if (punishment.type === "BAN") {
+    serverSync = await syncGameUnbanForUser(punishment.userId);
+  }
+
+  return NextResponse.json({ ok: true, punishment: updated, serverSync });
 }

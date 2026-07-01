@@ -47,7 +47,7 @@ export function NotificationsDropdown({
   async function toggleOpen() {
     if (!open && authenticated) {
       await requestBrowserNotificationPermission();
-      refresh();
+      refresh(true);
     }
     setOpen((value) => !value);
   }

@@ -87,7 +87,7 @@ export async function grantCatalogSkinReward(
 export async function grantAgentReward(
   userId: string,
   agentDefIndex: number,
-  options?: { fromStorePurchase?: boolean },
+  options?: { fromStorePurchase?: boolean; grantSource?: string },
 ): Promise<GrantedStoreReward> {
   if (agentDefIndex <= 0) {
     throw new CsgoApiError("Agente inválido.", 400);
@@ -112,6 +112,19 @@ export async function grantAgentReward(
     // Steam não vinculada ou plano — compra registrada; equipar depois no inventário.
   }
 
+  await prisma.userEconomyGrant.upsert({
+    where: {
+      userId_kind_defIndex: { userId, kind: "AGENT", defIndex: agentDefIndex },
+    },
+    create: {
+      userId,
+      kind: "AGENT",
+      defIndex: agentDefIndex,
+      source: options?.grantSource ?? "store",
+    },
+    update: {},
+  });
+
   return {
     kind: "AGENT",
     agentDefIndex,
@@ -123,9 +136,9 @@ export async function grantAgentReward(
 export async function grantStickerReward(
   userId: string,
   stickerDefIndex: number,
-  options?: { fromStorePurchase?: boolean },
+  options?: { fromStorePurchase?: boolean; grantSource?: string },
 ): Promise<GrantedStoreReward> {
-  void userId;
+  void options?.fromStorePurchase;
   if (stickerDefIndex <= 0) {
     throw new CsgoApiError("Sticker inválido.", 400);
   }
@@ -141,6 +154,19 @@ export async function grantStickerReward(
   const name = catalog?.name ?? apiMeta?.name ?? `Sticker ${stickerDefIndex}`;
   const imageUrl = catalog?.imageUrl ?? apiMeta?.imageUrl ?? null;
 
+  await prisma.userEconomyGrant.upsert({
+    where: {
+      userId_kind_defIndex: { userId, kind: "STICKER", defIndex: stickerDefIndex },
+    },
+    create: {
+      userId,
+      kind: "STICKER",
+      defIndex: stickerDefIndex,
+      source: options?.grantSource ?? "store",
+    },
+    update: {},
+  });
+
   return {
     kind: "STICKER",
     stickerDefIndex,
@@ -152,9 +178,10 @@ export async function grantStickerReward(
 export async function grantStoreRewardRow(
   userId: string,
   reward: StoreItemReward,
-  options?: { notifySkin?: boolean },
+  options?: { notifySkin?: boolean; grantSource?: string },
 ): Promise<GrantedStoreReward> {
   const fromStorePurchase = true;
+  const grantSource = options?.grantSource ?? "store";
   switch (reward.kind) {
     case "CATALOG_SKIN": {
       if (!reward.catalogSkinId) {
@@ -169,13 +196,13 @@ export async function grantStoreRewardRow(
       if (!reward.agentDefIndex) {
         throw new CsgoApiError("Recompensa de agente inválida.", 500);
       }
-      return grantAgentReward(userId, reward.agentDefIndex, { fromStorePurchase });
+      return grantAgentReward(userId, reward.agentDefIndex, { fromStorePurchase, grantSource });
     }
     case "STICKER": {
       if (!reward.stickerDefIndex) {
         throw new CsgoApiError("Recompensa de sticker inválida.", 500);
       }
-      return grantStickerReward(userId, reward.stickerDefIndex, { fromStorePurchase });
+      return grantStickerReward(userId, reward.stickerDefIndex, { fromStorePurchase, grantSource });
     }
     default: {
       const _exhaustive: never = reward.kind;

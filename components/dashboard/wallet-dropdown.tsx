@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ChevronDown,
@@ -29,22 +28,11 @@ type CoinPackView = {
   badge?: "popular" | "best";
 };
 
-type StoreCoinItem = {
-  id: string;
-  name: string;
-  coinPrice: number;
-  canBuyWithCoins: boolean;
-};
-
-type WalletTab = "buy" | "spend";
-
 export function WalletDropdown() {
   const t = useTranslations("wallet");
   const { user, patchUser, authenticated } = useUser();
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<WalletTab>("buy");
   const [packs, setPacks] = useState<CoinPackView[]>([]);
-  const [storeItems, setStoreItems] = useState<StoreCoinItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyPackId, setBusyPackId] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
@@ -52,17 +40,10 @@ export function WalletDropdown() {
   const loadCatalog = useCallback(async () => {
     setLoading(true);
     try {
-      const [packRes, storeRes] = await Promise.all([
-        fetch("/api/economy/coin-packs", { credentials: "same-origin" }),
-        fetch("/api/store?coinShop=1", { credentials: "same-origin" }),
-      ]);
+      const packRes = await fetch("/api/economy/coin-packs", { credentials: "same-origin" });
       if (packRes.ok) {
         const data = (await packRes.json()) as { packs: CoinPackView[] };
         setPacks(data.packs ?? []);
-      }
-      if (storeRes.ok) {
-        const data = (await storeRes.json()) as { items: StoreCoinItem[] };
-        setStoreItems((data.items ?? []).filter((item) => item.canBuyWithCoins).slice(0, 6));
       }
     } finally {
       setLoading(false);
@@ -82,10 +63,10 @@ export function WalletDropdown() {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
     }
-    window.addEventListener("mousedown", onClick);
+    window.addEventListener("click", onClick);
     window.addEventListener("keydown", onKey);
     return () => {
-      window.removeEventListener("mousedown", onClick);
+      window.removeEventListener("click", onClick);
       window.removeEventListener("keydown", onKey);
     };
   }, [open]);
@@ -158,22 +139,10 @@ export function WalletDropdown() {
               </p>
             </div>
 
-            <div className="flex border-b border-border p-1">
-              {(["buy", "spend"] as const).map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setTab(id)}
-                  className={cn(
-                    "flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-colors",
-                    tab === id
-                      ? "bg-[color-mix(in_srgb,var(--primary)_16%,transparent)] text-primary"
-                      : "text-muted hover:text-foreground",
-                  )}
-                >
-                  {id === "buy" ? t("tabBuy") : t("tabSpend")}
-                </button>
-              ))}
+            <div className="border-b border-border px-4 py-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                {t("tabBuy")}
+              </p>
             </div>
 
             <div className="max-h-[min(60vh,24rem)] overflow-y-auto p-3">
@@ -181,7 +150,7 @@ export function WalletDropdown() {
                 <div className="flex justify-center py-8">
                   <Loader2 className="h-6 w-6 motion-safe-spin text-primary" />
                 </div>
-              ) : tab === "buy" ? (
+              ) : (
                 <ul className="space-y-2">
                   {packs.map((pack) => (
                     <li
@@ -222,22 +191,6 @@ export function WalletDropdown() {
                           pack.price
                         )}
                       </Button>
-                    </li>
-                  ))}
-                </ul>
-              ) : storeItems.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted">{t("noCoinItems")}</p>
-              ) : (
-                <ul className="space-y-2">
-                  {storeItems.map((item) => (
-                    <li
-                      key={item.id}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-2.5"
-                    >
-                      <p className="truncate text-sm font-semibold text-foreground">{item.name}</p>
-                      <span className="shrink-0 font-mono text-xs text-amber-400">
-                        {item.coinPrice.toLocaleString("pt-BR")} 🪙
-                      </span>
                     </li>
                   ))}
                 </ul>

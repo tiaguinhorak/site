@@ -8,11 +8,11 @@ import {
   notifyRankedRooms,
   notifySessionParticipants,
 } from "@/lib/realtime/notify";
-import { RankedPartyError } from "@/lib/errors/domain";
+import { RankedPartyError, RankedQueueError } from "@/lib/errors/domain";
 import { planPriorityWeight } from "@/lib/plan-priority";
 import { assertCanEnterRankedQueue, PlayStateError } from "@/lib/play-state";
 
-import { RankedQueueError } from "@/lib/errors/domain";
+import { resolveRankedMatchSeasonId } from "@/lib/ranked/season-match";
 
 export { RankedQueueError } from "@/lib/errors/domain";
 
@@ -171,6 +171,7 @@ export async function createMatchSessionFromQueue(partyAId: string, partyBId: st
   }
 
   const allUserIds = [...partyA.members, ...partyB.members].map((member) => member.userId);
+  const seasonId = await resolveRankedMatchSeasonId();
 
   const session = await prisma.$transaction(async (tx) => {
     const created = await tx.rankedMatchSession.create({
@@ -178,6 +179,7 @@ export async function createMatchSessionFromQueue(partyAId: string, partyBId: st
         matchSource: "queue",
         partyAId,
         partyBId,
+        seasonId,
         status: "accepting",
       },
     });

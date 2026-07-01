@@ -32,7 +32,7 @@ export function AuthShell({
   return (
     <section
       className={cn(
-        "relative min-h-dvh overflow-x-hidden px-4 pb-10 pt-24 sm:px-6 sm:pb-12 sm:pt-28",
+        "relative min-h-dvh overflow-x-hidden px-4 pb-10 pt-24 sm:px-6 sm:pb-12 sm:pt-28 lg:px-10",
         compact && "pb-8",
       )}
     >

@@ -22,12 +22,16 @@ export type AgentPickerItem = {
 
 export function AgentCatalogPicker({
   onSelect,
+  onBatchAdd,
   singleSelect = true,
+  batchMode = false,
   excludeDefIndexes = [],
   className,
 }: {
-  onSelect: (item: AgentPickerItem) => void;
+  onSelect?: (item: AgentPickerItem) => void;
+  onBatchAdd?: (items: AgentPickerItem[]) => void;
   singleSelect?: boolean;
+  batchMode?: boolean;
   excludeDefIndexes?: number[];
   className?: string;
 }) {
@@ -38,6 +42,7 @@ export function AgentCatalogPicker({
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [previewTarget, setPreviewTarget] = useState<StoreRewardPreviewTarget | null>(null);
 
   const excludedKey = excludeDefIndexes.join(",");
@@ -79,7 +84,24 @@ export function AgentCatalogPicker({
 
   useEffect(() => {
     setPage(1);
+    setSelectedIds(new Set());
   }, [search, team, enabledOnly]);
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function confirmBatch() {
+    if (!onBatchAdd || selectedIds.size === 0) return;
+    const picked = items.filter((item) => selectedIds.has(item.id));
+    onBatchAdd(picked);
+    setSelectedIds(new Set());
+  }
 
   function openPreview(item: AgentPickerItem) {
     setPreviewTarget({
@@ -140,8 +162,20 @@ export function AgentCatalogPicker({
             {items.map((item) => (
               <li
                 key={item.id}
-                className="flex items-center gap-2 rounded-lg border border-border/60 p-2"
+                className={cn(
+                  "flex items-center gap-2 rounded-lg border border-border/60 p-2",
+                  batchMode && selectedIds.has(item.id) && "border-primary/50 bg-primary/5",
+                )}
               >
+                {batchMode ? (
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(item.id)}
+                    onChange={() => toggleSelected(item.id)}
+                    className="h-4 w-4 shrink-0 accent-primary"
+                    aria-label={`Selecionar ${item.name}`}
+                  />
+                ) : null}
                 <button
                   type="button"
                   className="group relative flex h-14 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-black/30"
@@ -169,12 +203,13 @@ export function AgentCatalogPicker({
                     {item.team} · #{item.defIndex}
                   </p>
                 </div>
+                {!batchMode ? (
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    onSelect(item);
+                    onSelect?.(item);
                     if (singleSelect) {
                       setSearch("");
                       setItems([]);
@@ -183,9 +218,16 @@ export function AgentCatalogPicker({
                 >
                   <Plus className="h-3.5 w-3.5" />
                 </Button>
+                ) : null}
               </li>
             ))}
           </ul>
+          {batchMode && selectedIds.size > 0 ? (
+            <Button type="button" size="sm" variant="primary" className="w-full" onClick={confirmBatch}>
+              Adicionar {selectedIds.size} agente{selectedIds.size === 1 ? "" : "s"} selecionado
+              {selectedIds.size === 1 ? "" : "s"}
+            </Button>
+          ) : null}
           {totalPages > 1 && (
             <div className="flex items-center justify-between text-xs text-muted">
               <Button

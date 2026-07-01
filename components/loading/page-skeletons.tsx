@@ -101,13 +101,13 @@ export function AdminPageSkeleton() {
 
 export function MarketingPageSkeleton() {
   return (
-    <div className="space-y-12 px-4 py-16 sm:px-6 lg:px-8" aria-busy="true" aria-live="polite">
+    <div className="layout-container space-y-12 py-16" aria-busy="true" aria-live="polite">
       <div className="mx-auto max-w-4xl space-y-4 text-center">
         <Skeleton className="mx-auto h-10 w-64" />
         <SkeletonText className="mx-auto w-96 max-w-full" />
         <Skeleton className="mx-auto h-12 w-48 rounded-xl" />
       </div>
-      <div className="mx-auto grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
           <SkeletonCard key={i} className="h-52" />
         ))}

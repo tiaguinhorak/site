@@ -12,7 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import type { RankingBoardLabels } from "@/lib/ranking/ranking-board-labels";
 import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
 import { ProfileDisplayName } from "@/components/profile/profile-display-name";
 import { Button } from "@/components/ui/button";
@@ -21,13 +21,30 @@ import { getCountryFlag } from "@/lib/profile";
 import { EloRankBadgeI18n } from "@/components/ranked/elo-rank-badge-i18n";
 import {
   LEADERBOARD_PAGE_SIZE,
+  LEADERBOARD_SORT_VALUES,
   type LeaderboardPageResult,
   type LeaderboardPlayer,
   type LeaderboardSort,
 } from "@/lib/leaderboard/types";
 import { cn } from "@/lib/utils";
+import type { PublicRankedSeasonOption } from "@/lib/ranked/season-service";
+import type { PublicSeasonPrizeDisplay } from "@/lib/ranked/season-prize-display";
+import { SeasonPrizesPanel } from "@/components/ranking/season-prizes-panel";
+import { PixPrizeAlert } from "@/components/ranking/pix-prize-alert";
 
 const rankAccent = ["text-amber-400", "text-zinc-300", "text-orange-400"];
+
+function formatPaginationSummary(
+  template: string,
+  page: number,
+  totalPages: number,
+  count: number,
+) {
+  return template
+    .replace(/\{page\}/g, String(page))
+    .replace(/\{total\}/g, String(totalPages))
+    .replace(/\{count\}/g, String(count));
+}
 const planStyles = {
   free: "bg-muted/20 text-muted",
   premium: "bg-primary/15 text-primary",
@@ -36,22 +53,38 @@ const planStyles = {
 
 type RankingBoardProps = {
   initialData: LeaderboardPageResult;
+  labels: RankingBoardLabels;
+  seasons?: PublicRankedSeasonOption[];
+  defaultSeasonId?: string | null;
+  prizesBySeasonId?: Record<string, PublicSeasonPrizeDisplay[]>;
   variant?: "dashboard" | "marketing";
 };
 
-export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoardProps) {
-  const t = useTranslations("ranking");
+export function RankingBoard({
+  initialData,
+  labels,
+  seasons = [],
+  defaultSeasonId = null,
+  prizesBySeasonId = {},
+  variant = "dashboard",
+}: RankingBoardProps) {
+  const t = labels;
   const [data, setData] = useState(initialData);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [sort, setSort] = useState<LeaderboardSort>(initialData.sort);
   const [page, setPage] = useState(initialData.page);
+  const [seasonId, setSeasonId] = useState<string | null>(
+    initialData.season?.id ?? defaultSeasonId,
+  );
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
-  const skipSearchFetch = useRef(true);
+  const userFiltersTouched = useRef(false);
   const inflightRef = useRef<AbortController | null>(null);
   const sortRef = useRef(sort);
+  const seasonRef = useRef(seasonId);
   sortRef.current = sort;
+  seasonRef.current = seasonId;
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(query.trim()), 300);
@@ -61,7 +94,12 @@ export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoar
   const totalPages = Math.max(1, Math.ceil(data.total / data.limit));
 
   const loadPage = useCallback(
-    async (nextPage: number, nextQuery: string, nextSort: LeaderboardSort) => {
+    async (
+      nextPage: number,
+      nextQuery: string,
+      nextSort: LeaderboardSort,
+      nextSeasonId: string | null = seasonRef.current,
+    ) => {
       inflightRef.current?.abort();
       const controller = new AbortController();
       inflightRef.current = controller;
@@ -76,6 +114,7 @@ export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoar
           sort: nextSort,
         });
         if (nextQuery) params.set("q", nextQuery);
+        if (nextSeasonId) params.set("seasonId", nextSeasonId);
 
         const res = await fetch(`/api/leaderboard?${params.toString()}`, {
           credentials: "same-origin",
@@ -110,52 +149,130 @@ export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoar
   );
 
   useEffect(() => {
-    if (skipSearchFetch.current) {
-      skipSearchFetch.current = false;
-      return;
-    }
-    void loadPage(1, debouncedQuery, sortRef.current);
+    if (!userFiltersTouched.current) return;
+    void loadPage(1, debouncedQuery, sortRef.current, seasonRef.current);
   }, [debouncedQuery, loadPage]);
 
   function changeSort(nextSort: LeaderboardSort) {
     if (nextSort === sort) return;
+    userFiltersTouched.current = true;
     setSort(nextSort);
-    void loadPage(1, debouncedQuery, nextSort);
+    void loadPage(1, debouncedQuery, nextSort, seasonId);
+  }
+
+  function changeSeason(nextSeasonId: string | null) {
+    userFiltersTouched.current = true;
+    setSeasonId(nextSeasonId);
+    void loadPage(1, debouncedQuery, sort, nextSeasonId);
   }
 
   function goToPage(next: number) {
+    userFiltersTouched.current = true;
     const clamped = Math.min(totalPages, Math.max(1, next));
-    void loadPage(clamped, debouncedQuery, sort);
+    void loadPage(clamped, debouncedQuery, sort, seasonId);
+  }
+
+  function handleSearchChange(value: string) {
+    setQuery(value);
+    if (!value.trim()) {
+      userFiltersTouched.current = false;
+      setData(initialData);
+      setPage(initialData.page);
+      setSort(initialData.sort);
+      setSeasonId(initialData.season?.id ?? defaultSeasonId);
+      setLoadError(false);
+      return;
+    }
+    userFiltersTouched.current = true;
   }
 
   const profileHref = (nickname: string) => `/player/${nickname}`;
 
   const showPodium =
     page === 1 && !debouncedQuery && sort === "points" && data.players.length >= 1;
+  const isArchivedSeason = data.season?.archived === true;
+  const availableSorts = data.availableSorts ?? LEADERBOARD_SORT_VALUES;
   const podium = showPodium ? data.players.slice(0, 3) : [];
   const podiumOrder = podium.length >= 3 ? [podium[1], podium[0], podium[2]] : podium;
 
   const sortOptions: { id: LeaderboardSort; label: string }[] = [
-    { id: "points", label: t("sortPoints") },
-    { id: "elo", label: t("sortElo") },
-    { id: "kd", label: t("sortKd") },
-    { id: "wins", label: t("sortWins") },
-    { id: "winRate", label: t("sortWinRate") },
-    { id: "kills", label: t("sortKills") },
-    { id: "assists", label: t("sortAssists") },
-    { id: "mvps", label: t("sortMvps") },
-    { id: "hs", label: t("sortHs") },
-    { id: "clutch", label: t("sortClutch") },
-    { id: "utility", label: t("sortUtility") },
-    { id: "awp", label: t("sortAwp") },
-    { id: "level", label: t("sortLevel") },
-  ];
+    { id: "points", label: t.sortPoints },
+    { id: "elo", label: t.sortElo },
+    { id: "kd", label: t.sortKd },
+    { id: "wins", label: t.sortWins },
+    { id: "winRate", label: t.sortWinRate },
+    { id: "kills", label: t.sortKills },
+    { id: "assists", label: t.sortAssists },
+    { id: "mvps", label: t.sortMvps },
+    { id: "hs", label: t.sortHs },
+    { id: "clutch", label: t.sortClutch },
+    { id: "utility", label: t.sortUtility },
+    { id: "awp", label: t.sortAwp },
+    { id: "level", label: t.sortLevel },
+  ].filter((option): option is { id: LeaderboardSort; label: string } =>
+    availableSorts.includes(option.id as LeaderboardSort),
+  );
+
+  const selectedSeason =
+    seasons.find((season) => season.id === seasonId) ??
+    (data.season
+      ? {
+          id: data.season.id,
+          name: data.season.name,
+          seasonNumber: data.season.seasonNumber,
+          active: data.season.active,
+          archived: data.season.archived,
+        }
+      : null);
+
+  const selectedSeasonPrizes =
+    seasonId && prizesBySeasonId[seasonId] ? prizesBySeasonId[seasonId]! : [];
 
   return (
     <div className="space-y-8 sm:space-y-10">
+      {seasons.length > 0 && (
+        <div className="flex flex-col gap-3 rounded-card glass border border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted">{t.seasonLabel}</p>
+            <p className="mt-1 font-display text-lg font-bold text-foreground">
+              {selectedSeason?.name ?? t.seasonCurrent}
+            </p>
+            {isArchivedSeason && (
+              <p className="mt-1 text-sm text-muted">{t.seasonArchivedHint}</p>
+            )}
+          </div>
+          <label className="flex w-full flex-col gap-1.5 sm:w-auto sm:min-w-[240px]">
+            <span className="sr-only">{t.seasonSelectPlaceholder}</span>
+            <select
+              value={seasonId ?? ""}
+              onChange={(event) => changeSeason(event.target.value || null)}
+              disabled={loading}
+              className="rounded-lg border border-border bg-background/80 px-3 py-2 text-sm text-foreground outline-none ring-primary/40 focus:ring-2"
+            >
+              {seasons.map((season) => (
+                <option key={season.id} value={season.id}>
+                  {season.name}
+                  {season.active ? ` (${t.seasonCurrent})` : season.archived ? ` (${t.seasonArchived})` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
+
+      <PixPrizeAlert />
+
+      {selectedSeason && selectedSeasonPrizes.length > 0 && (
+        <SeasonPrizesPanel
+          seasonName={selectedSeason.name}
+          archived={isArchivedSeason}
+          prizes={selectedSeasonPrizes}
+        />
+      )}
+
       {loadError && (
         <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-          {t("loadError")}
+          {t.loadError}
         </p>
       )}
 
@@ -175,7 +292,7 @@ export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoar
               />
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-                  {t("yourPosition")}
+                  {t.yourPosition}
                 </p>
                 <p className="font-display text-2xl font-bold text-foreground">
                   #{data.you.rank}{" "}
@@ -186,15 +303,15 @@ export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoar
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-              <StatPill label={t("colPoints")} value={data.you.points.toLocaleString("pt-BR")} highlight />
+              <StatPill label={t.colPoints} value={data.you.points.toLocaleString("pt-BR")} highlight />
               <div className="rounded-xl border border-border px-3 py-2 text-center sm:text-left">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">{t("colElo")}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">{t.colElo}</p>
                 <div className="mt-1 flex justify-center sm:justify-start">
                   <EloRankBadgeI18n elo={data.you.elo} size="sm" />
                 </div>
               </div>
-              <StatPill label={t("colKd")} value={data.you.kd.toFixed(2)} />
-              <StatPill label={t("colWinRate")} value={`${data.you.winRate}%`} />
+              <StatPill label={t.colKd} value={data.you.kd.toFixed(2)} />
+              <StatPill label={t.colWinRate} value={`${data.you.winRate}%`} />
             </div>
           </div>
         </motion.div>
@@ -206,8 +323,8 @@ export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoar
           <input
             type="search"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("searchPlaceholder")}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder={t.searchPlaceholder}
             className="w-full rounded-xl border border-border bg-[color-mix(in_srgb,var(--background)_80%,transparent)] py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
@@ -233,7 +350,7 @@ export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoar
       {showPodium && podium.length > 0 && (
         <div className="overflow-hidden rounded-card glass-strong border border-[color-mix(in_srgb,var(--primary)_18%,transparent)]">
           <div className="border-b border-border px-5 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-primary">{t("topSeason")}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary">{t.topSeason}</p>
           </div>
           <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-3 sm:items-end sm:gap-4 sm:p-5">
             {podiumOrder.map((player) => (
@@ -242,7 +359,7 @@ export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoar
                 player={player}
                 place={player.rank - 1}
                 profileHref={profileHref(player.nickname)}
-                t={t}
+                labels={t}
                 compact={player.rank !== 1}
               />
             ))}
@@ -254,12 +371,12 @@ export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoar
         {data.players.length === 0 ? (
           <div className="p-12 text-center">
             <Medal className="mx-auto h-10 w-10 text-muted" />
-            <p className="mt-4 text-muted">{t("empty")}</p>
+            <p className="mt-4 text-muted">{t.empty}</p>
             {variant === "dashboard" && (
               <div className="mt-6">
                 <ButtonLink href="/dashboard/ranked" variant="primary" size="sm">
                   <Trophy className="h-4 w-4" />
-                  {t("playRanked")}
+                  {t.playRanked}
                 </ButtonLink>
               </div>
             )}
@@ -268,14 +385,14 @@ export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoar
           <>
             <div className="hidden border-b border-border px-5 py-3 text-xs font-semibold uppercase tracking-wider text-muted md:grid md:grid-cols-[3rem_1fr_repeat(7,minmax(0,4rem))] md:gap-3">
               <span>#</span>
-              <span>{t("colPlayer")}</span>
-              <span className="text-right">{t("colPoints")}</span>
-              <span className="text-right">{t("colElo")}</span>
-              <span className="text-right">{t("colKd")}</span>
-              <span className="text-right">{t("colKills")}</span>
-              <span className="text-right">{t("colWins")}</span>
-              <span className="text-right">{t("colWinRate")}</span>
-              <span className="text-right">{t("colMatches")}</span>
+              <span>{t.colPlayer}</span>
+              <span className="text-right">{t.colPoints}</span>
+              <span className="text-right">{t.colElo}</span>
+              <span className="text-right">{t.colKd}</span>
+              <span className="text-right">{t.colKills}</span>
+              <span className="text-right">{t.colWins}</span>
+              <span className="text-right">{t.colWinRate}</span>
+              <span className="text-right">{t.colMatches}</span>
             </div>
             <ul className={cn(loading && "pointer-events-none opacity-60")}>
               {data.players.map((player) => (
@@ -285,7 +402,7 @@ export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoar
                   profileHref={profileHref(player.nickname)}
                   highlightYou={data.you?.nickname === player.nickname}
                   inPodium={showPodium && player.rank <= 3}
-                  t={t}
+                  labels={t}
                 />
               ))}
             </ul>
@@ -295,11 +412,7 @@ export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoar
         {data.total > data.limit && (
           <div className="flex flex-col items-center justify-between gap-3 border-t border-border px-5 py-4 sm:flex-row">
             <p className="text-sm text-muted">
-              {t("paginationSummary", {
-                page,
-                total: totalPages,
-                count: data.total,
-              })}
+              {formatPaginationSummary(t.paginationSummary, page, totalPages, data.total)}
             </p>
             <div className="flex items-center gap-2">
               <Button
@@ -310,7 +423,7 @@ export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoar
                 onClick={() => goToPage(page - 1)}
               >
                 <ChevronLeft className="h-4 w-4" />
-                {t("prev")}
+                {t.prev}
               </Button>
               <Button
                 type="button"
@@ -319,7 +432,7 @@ export function RankingBoard({ initialData, variant = "dashboard" }: RankingBoar
                 disabled={page >= totalPages || loading}
                 onClick={() => goToPage(page + 1)}
               >
-                {t("next")}
+                {t.next}
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
@@ -358,13 +471,13 @@ function PodiumCard({
   player,
   place,
   profileHref,
-  t,
+  labels,
   compact = false,
 }: {
   player: LeaderboardPlayer;
   place: number;
   profileHref: string;
-  t: ReturnType<typeof useTranslations<"ranking">>;
+  labels: RankingBoardLabels;
   compact?: boolean;
 }) {
   const Icon = place === 0 ? Crown : Medal;
@@ -388,7 +501,7 @@ function PodiumCard({
         )}
       >
         <Icon className="h-3 w-3" />
-        {place === 0 ? t("topSeason") : `#${player.rank}`}
+        {place === 0 ? labels.topSeason : `#${player.rank}`}
       </span>
       <div className="mt-3 flex items-center gap-3">
         <UserProfileAvatar
@@ -425,9 +538,9 @@ function PodiumCard({
         </div>
       </div>
       <div className="mt-4 grid grid-cols-3 gap-2">
-        <StatPill label={t("colPoints")} value={player.points.toLocaleString("pt-BR")} highlight />
-        <StatPill label={t("colKd")} value={player.kd.toFixed(2)} />
-        <StatPill label={t("colWinRate")} value={`${player.winRate}%`} />
+        <StatPill label={labels.colPoints} value={player.points.toLocaleString("pt-BR")} highlight />
+        <StatPill label={labels.colKd} value={player.kd.toFixed(2)} />
+        <StatPill label={labels.colWinRate} value={`${player.winRate}%`} />
       </div>
     </motion.div>
   );
@@ -438,13 +551,13 @@ function LeaderboardRow({
   profileHref,
   highlightYou,
   inPodium,
-  t,
+  labels,
 }: {
   player: LeaderboardPlayer;
   profileHref: string;
   highlightYou: boolean;
   inPodium?: boolean;
-  t: ReturnType<typeof useTranslations<"ranking">>;
+  labels: RankingBoardLabels;
 }) {
   return (
     <li

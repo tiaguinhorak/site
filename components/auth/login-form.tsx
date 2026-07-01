@@ -1,11 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, ArrowRight } from "lucide-react";
+import { Lock, User, ArrowRight } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
-import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { HoneypotField } from "@/components/ui/honeypot-field";
@@ -14,19 +12,23 @@ import { secureApi } from "@/lib/api/client";
 import { notifyAuthSessionChanged } from "@/lib/auth/auth-events";
 import { useUser } from "@/lib/hooks/use-user";
 import { toast } from "@/lib/toast";
+import { sanitizeNickname } from "@/lib/security/sanitize";
 import {
   loginSchema,
   formatZodErrors,
   firstZodError,
 } from "@/lib/security/schemas";
 
+function normalizeNicknameInput(value: string): string {
+  return value.toUpperCase().replace(/[^A-Z0-9_]/g, "").slice(0, 24);
+}
+
 export function LoginForm() {
   const router = useRouter();
   const { refresh } = useUser();
-  const t = useTranslations("authForm");
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [email, setEmail] = useState("");
+  const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
   const [honeypot, setHoneypot] = useState("");
@@ -35,7 +37,7 @@ export function LoginForm() {
     setFieldErrors({});
 
     const parsed = loginSchema.safeParse({
-      email,
+      nickname: sanitizeNickname(nickname),
       password,
       remember,
       website: honeypot,
@@ -67,42 +69,49 @@ export function LoginForm() {
   }
 
   return (
-    <div>
-      <ButtonLinkSteam mode="login" disabled={loading} label={t("signInSteam")} />
+    <div className="space-y-6">
+      <a
+        href="/api/auth/steam?mode=login"
+        className={`relative inline-flex h-13 w-full items-center justify-center gap-2 rounded-xl font-display text-sm font-semibold uppercase tracking-wide glass text-foreground transition-all hover:glow-ring hover:-translate-y-0.5 ${loading ? "pointer-events-none opacity-50" : ""}`}
+      >
+        <SteamIcon className="h-5 w-5 text-primary" />
+        Entrar com Steam
+      </a>
 
-      <div className="my-6 flex items-center gap-4">
+      <div className="my-2 flex items-center gap-4">
         <span className="h-px flex-1 bg-border" />
-        <span className="text-xs uppercase tracking-wider text-muted">
-          {t("orEmail")}
-        </span>
+        <span className="text-xs uppercase tracking-wider text-muted">ou nick e senha</span>
         <span className="h-px flex-1 bg-border" />
       </div>
+
+      <p className="text-sm text-muted">
+        Não consegue abrir a Steam agora? Entre com seu nick do site e a senha definida no cadastro.
+      </p>
 
       <form
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
-          submitLogin();
+          void submitLogin();
         }}
         noValidate
       >
         <HoneypotField value={honeypot} onChange={setHoneypot} />
 
         <Input
-          label={t("email")}
-          type="email"
-          placeholder={t("emailPlaceholder")}
-          autoComplete="email"
-          maxLength={254}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          error={fieldErrors.email}
-          icon={<Mail className="h-4.5 w-4.5" />}
+          label="Nick"
+          placeholder="SEU_NICK"
+          autoComplete="username"
+          maxLength={24}
+          value={nickname}
+          onChange={(e) => setNickname(normalizeNicknameInput(e.target.value))}
+          error={fieldErrors.nickname}
+          icon={<User className="h-4.5 w-4.5" />}
         />
         <Input
-          label={t("password")}
+          label="Senha"
           type="password"
-          placeholder={t("passwordPlaceholder")}
+          placeholder="Sua senha"
           autoComplete="current-password"
           maxLength={128}
           value={password}
@@ -111,52 +120,27 @@ export function LoginForm() {
           icon={<Lock className="h-4.5 w-4.5" />}
         />
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-muted">
-            <input
-              type="checkbox"
-              checked={remember}
-              onChange={(e) => setRemember(e.target.checked)}
-              className="h-4 w-4 rounded border-border accent-[var(--primary)]"
-            />
-            {t("remember")}
-          </label>
-          <Link href="#" className="text-sm text-primary hover:underline">
-            {t("forgot")}
-          </Link>
-        </div>
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-muted">
+          <input
+            type="checkbox"
+            checked={remember}
+            onChange={(e) => setRemember(e.target.checked)}
+            className="h-4 w-4 rounded border-border accent-[var(--primary)]"
+          />
+          Lembrar de mim
+        </label>
 
         <Button type="submit" size="lg" className="w-full" disabled={loading}>
           {loading ? (
             <Spinner size="md" />
           ) : (
             <>
-              {t("signIn")}
+              Entrar
               <ArrowRight className="h-4 w-4" />
             </>
           )}
         </Button>
       </form>
     </div>
-  );
-}
-
-function ButtonLinkSteam({
-  mode,
-  disabled,
-  label = "Entrar com Steam",
-}: {
-  mode: "login" | "register";
-  disabled?: boolean;
-  label?: string;
-}) {
-  return (
-    <a
-      href={`/api/auth/steam?mode=${mode}`}
-      className={`relative inline-flex h-13 w-full items-center justify-center gap-2 rounded-xl font-display text-sm font-semibold uppercase tracking-wide glass text-foreground transition-all hover:glow-ring hover:-translate-y-0.5 ${disabled ? "pointer-events-none opacity-50" : ""}`}
-    >
-      <SteamIcon className="h-5 w-5 text-primary" />
-      {label}
-    </a>
   );
 }

@@ -20,7 +20,6 @@ import { isUserBanned } from "@/lib/admin/punishments";
 import { onSteamLinked } from "@/lib/anti-smurf/service";
 import { recordAccountFingerprint } from "@/lib/anti-smurf/fingerprint";
 import { refreshSteamProfileForUserId } from "@/lib/steam/sync-profiles";
-import { syncStaleSteamProfilesBackground } from "@/lib/steam/sync-profiles-background";
 
 function minimalSteamProfile(steamId: string): SteamProfileData {
   return {
@@ -52,8 +51,6 @@ export async function GET(request: NextRequest) {
 }
 
 async function handleSteamCallback(request: NextRequest) {
-  syncStaleSteamProfilesBackground();
-
   const mode = request.nextUrl.searchParams.get("mode") ?? "login";
   const params = request.nextUrl.searchParams;
 

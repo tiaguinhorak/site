@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import { resolveRankedMatchSeasonId } from "@/lib/ranked/season-match";
 import { cancelCsgoMatchIfActive, cancelCsgoMatchesForRoom } from "@/lib/csgo-api/cancel-stale-matches";
 import { completeCsgoVetoForMap } from "@/lib/csgo-api/complete-veto-for-map";
 import { csgoBackendFetch } from "@/lib/csgo-api/client";
@@ -501,6 +502,7 @@ export async function createMatchSessionFromChallenge(challengeId: string) {
   });
 
   const allUserIds = [...partyA.members, ...partyB.members].map((m) => m.userId);
+  const seasonId = await resolveRankedMatchSeasonId();
 
   const session = await prisma.$transaction(async (tx) => {
     const created = await tx.rankedMatchSession.create({
@@ -508,6 +510,7 @@ export async function createMatchSessionFromChallenge(challengeId: string) {
         challengeId,
         partyAId: challenge.fromPartyId,
         partyBId: challenge.toPartyId,
+        seasonId,
         status: "voting",
         voteEndsAt: new Date(Date.now() + RANKED_VOTE_SECONDS * 1000),
       },
@@ -889,6 +892,7 @@ export async function rematchRankedSession(userId: string, sessionId: string) {
   }
 
   const playerIds = getSessionPlayerIds(prev);
+  const seasonId = prev.seasonId ?? (await resolveRankedMatchSeasonId());
   const next = await prisma.$transaction(async (tx) => {
     const created = await tx.rankedMatchSession.create({
       data: {
@@ -897,6 +901,7 @@ export async function rematchRankedSession(userId: string, sessionId: string) {
         lobbyRoomId: prev.lobbyRoomId,
         matchSource: prev.matchSource,
         teamSize: prev.teamSize,
+        seasonId,
         status: "voting",
         voteEndsAt: new Date(Date.now() + RANKED_VOTE_SECONDS * 1000),
       },
@@ -945,6 +950,7 @@ export async function swapTeamsRematch(userId: string, sessionId: string) {
     throw new RankedPartyError("notInRoom", 403);
   }
 
+  const seasonId = prev.seasonId ?? (await resolveRankedMatchSeasonId());
   const swapped = await prisma.$transaction(async (tx) => {
     const created = await tx.rankedMatchSession.create({
       data: {
@@ -953,6 +959,7 @@ export async function swapTeamsRematch(userId: string, sessionId: string) {
         lobbyRoomId: prev.lobbyRoomId,
         matchSource: prev.matchSource,
         teamSize: prev.teamSize,
+        seasonId,
         status: "voting",
         voteEndsAt: new Date(Date.now() + RANKED_VOTE_SECONDS * 1000),
       },

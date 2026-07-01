@@ -41,6 +41,14 @@ export type LeaderboardPlayer = {
   customization: PublicProfileCustomization | null;
 };
 
+export type LeaderboardSeasonMeta = {
+  id: string;
+  name: string;
+  seasonNumber: number;
+  active: boolean;
+  archived: boolean;
+};
+
 export type LeaderboardPageResult = {
   players: LeaderboardPlayer[];
   total: number;
@@ -48,6 +56,9 @@ export type LeaderboardPageResult = {
   limit: number;
   sort: LeaderboardSort;
   you: LeaderboardPlayer | null;
+  season?: LeaderboardSeasonMeta | null;
+  availableSorts?: LeaderboardSort[];
+  readonly?: boolean;
 };
 
 export const LEADERBOARD_SORT_VALUES: LeaderboardSort[] = [
@@ -67,6 +78,15 @@ export const LEADERBOARD_SORT_VALUES: LeaderboardSort[] = [
 ];
 
 export const LEADERBOARD_PAGE_SIZE = 25;
+
+export const ARCHIVED_SEASON_SORTS: LeaderboardSort[] = [
+  "points",
+  "elo",
+  "kd",
+  "wins",
+  "winRate",
+  "kills",
+];
 
 export type RankedMatchHistoryEntry = {
   id: string;

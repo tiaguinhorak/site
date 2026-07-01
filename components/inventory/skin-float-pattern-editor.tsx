@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { secureApi } from "@/lib/api/client";
 import {
   DEFAULT_SKIN_FLOAT,
   MAX_SKIN_SEED,
@@ -60,19 +61,16 @@ export function SkinFloatPatternEditor({
   async function handleSave() {
     setSaving(true);
     try {
-      const res = await fetch("/api/inventory/customize", {
+      const result = await secureApi<{ ok?: boolean }>("/api/inventory/customize", {
         method: "POST",
-        credentials: "same-origin",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+        json: {
           catalogSkinId,
           floatValue: clampSkinFloat(floatInput),
           seed: clampSkinSeed(seedInput),
-        }),
+        },
       });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { error?: string } | null;
-        toast.error(body?.error ?? t("gameSyncPartial"));
+      if (!result.ok) {
+        toast.error(result.error ?? t("gameSyncPartial"));
         return;
       }
       toast.success(t("floatPatternSaved"));

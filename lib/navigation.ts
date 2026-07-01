@@ -298,6 +298,13 @@ export const adminNav = [
     title: "Regras de jogo",
     description: "Aquecimento (1 min), gold no warmup, comprar em qualquer lugar, spawns aleatórios e respawn DM por pool.",
   },
+  {
+    label: "Temporadas",
+    href: "/admin/temporadas",
+    icon: "Trophy",
+    title: "Temporadas rankeadas",
+    description: "Criar seasons, agendar reset, arquivar ranking e premiação do top 3.",
+  },
 ] as const;
 
 export type AdminNavItem = {
@@ -334,7 +341,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     id: "infra",
     label: "Infra",
     icon: "Server",
-    items: [adminNav[5], adminNav[6], adminNav[7], adminNav[8], adminNav[13]],
+    items: [adminNav[5], adminNav[6], adminNav[7], adminNav[8], adminNav[13], adminNav[14]],
   },
   {
     id: "system",

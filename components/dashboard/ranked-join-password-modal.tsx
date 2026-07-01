@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRankedParty } from "@/components/providers/ranked-party-provider";
+import { ModalPortal } from "@/components/ui/modal-portal";
 
 type Props = {
   open: boolean;
@@ -47,6 +48,7 @@ export function RankedJoinPasswordModal({ open, teamName, onClose, onConfirm }: 
   return (
     <AnimatePresence>
       {open && (
+        <ModalPortal>
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -110,6 +112,7 @@ export function RankedJoinPasswordModal({ open, teamName, onClose, onConfirm }: 
             </div>
           </motion.div>
         </motion.div>
+        </ModalPortal>
       )}
     </AnimatePresence>
   );

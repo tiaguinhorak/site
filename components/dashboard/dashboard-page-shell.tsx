@@ -18,8 +18,8 @@ export function DashboardPageShell({
   return (
     <div
       className={cn(
-        "mx-auto w-full min-w-0 space-y-10 sm:space-y-12",
-        wide ? "max-w-[min(100%,1440px)]" : "max-w-6xl",
+        "w-full min-w-0 space-y-10 sm:space-y-12",
+        wide ? "layout-container-flush" : "layout-container",
       )}
     >
       <PageHeader title={title} description={description} />
