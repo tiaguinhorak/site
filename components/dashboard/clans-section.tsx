@@ -323,7 +323,7 @@ function CreateClanCard({
         </div>
         <p className="mt-2 text-sm text-muted">{t("eliteRequiredDesc")}</p>
         <div className="mt-4">
-          <ButtonLink href="/dashboard/premium" variant="primary">
+          <ButtonLink href="/dashboard/planos" variant="primary">
             {t("upgradeElite")}
           </ButtonLink>
         </div>

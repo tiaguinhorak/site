@@ -210,6 +210,7 @@ export async function getSubscriptionPlans() {
       });
       return plans.map((plan) => ({
         id: plan.id,
+        slug: plan.slug,
         name: plan.name,
         price: plan.priceCents === 0 ? "R$0" : formatPriceCents(plan.priceCents),
         period: plan.period,

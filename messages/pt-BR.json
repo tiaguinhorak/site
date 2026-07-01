@@ -33,6 +33,7 @@
     "inventory": "Inventário",
     "anticheat": "Anticheat",
     "premium": "Premium",
+    "plans": "Planos",
     "support": "Suporte",
     "admin": "Admin",
     "playerArea": "Área do jogador",
@@ -327,6 +328,8 @@
     "newsTitle": "Central de notícias",
     "newsDesc": "Patches, eventos e novidades da clutchclube.",
     "premiumTitle": "Premium",
+    "plansTitle": "Planos",
+    "plansDesc": "Compare os planos Free, Premium e Elite. Assine para você ou presenteie um amigo.",
     "premiumDesc": "Compare planos e faça upgrade para desbloquear todos os benefícios.",
     "storeTitle": "Loja",
     "storeDesc": "Skins, agentes e cosméticos exclusivos nos servidores clutchclube.",
@@ -1081,6 +1084,7 @@
     "giftCoins": "Moedas",
     "giftItem": "Item da loja",
     "giftSubscription": "Assinatura",
+    "giftPayBrl": "Pagar em R$",
     "amount": "Quantidade",
     "selectItem": "Selecione o item",
     "noGiftItems": "Nenhum item disponível para presentear com moedas.",
@@ -1261,6 +1265,7 @@
     "coinShopEmpty": "Nenhum item exclusivo de moedas no momento. Configure no painel admin.",
     "buyNow": "Comprar agora",
     "buyWithCoins": "Comprar com moedas",
+    "giftItem": "Presentear",
     "notEnoughCoins": "Moedas insuficientes",
     "coinsLabel": "moedas",
     "openCase": "Abrir caixa",
@@ -1526,6 +1531,11 @@
     "noRooms": "Nenhuma sala encontrada",
     "noRoomsDesc": "Use Auto lobby ou aguarde novas salas do sistema.",
     "clearFilters": "Limpar filtros"
+  },
+  "plans": {
+    "currentPlan": "Plano atual",
+    "giftPlan": "Presentear plano",
+    "purchaseSuccess": "Plano {plan} ativado com sucesso!"
   },
   "upgrade": {
     "badge": "Upgrade",

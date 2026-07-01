@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Coins, Flame, Loader2, Package, ShoppingBag, ShoppingCart, X } from "lucide-react";
+import { Coins, Flame, Gift, Loader2, Package, ShoppingBag, ShoppingCart, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { RemoteImage } from "@/components/ui/remote-image";
@@ -12,6 +12,7 @@ import { secureApi } from "@/lib/api/client";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { ModalPortal } from "@/components/ui/modal-portal";
+import { GiftModal } from "@/components/gifts/gift-modal";
 import { StoreRewardsPreview } from "@/components/dashboard/store-rewards-preview";
 import { dispatchStoreCartOpen, dispatchStoreCartUpdated, useStoreCart } from "@/lib/hooks/use-store-cart";
 import { dispatchInventoryRefresh } from "@/lib/inventory/inventory-refresh-events";
@@ -174,6 +175,7 @@ function StoreItemCard({
   addingToCartId,
   onPurchase,
   onAddToCart,
+  onGift,
   shopMode = "brl",
 }: {
   item: StoreItem;
@@ -182,6 +184,7 @@ function StoreItemCard({
   addingToCartId: string | null;
   onPurchase: (item: StoreItem, currency: "brl" | "coins") => void;
   onAddToCart: (item: StoreItem) => void;
+  onGift: (item: StoreItem) => void;
   shopMode?: "brl" | "coins";
 }) {
   const t = useTranslations("store");
@@ -390,6 +393,19 @@ function StoreItemCard({
                 )}
               </Button>
             )}
+            {(item.canPurchase || item.canBuyWithCoins) && (
+              <Button
+                type="button"
+                variant="ghost"
+                size={featured ? "lg" : "md"}
+                className="w-full"
+                disabled={isPurchasing || isAddingToCart}
+                onClick={() => onGift(item)}
+              >
+                <Gift className="h-4 w-4" />
+                {t("giftItem")}
+              </Button>
+            )}
           </div>
         </div>
 
@@ -417,6 +433,7 @@ export function StoreSection({ shopMode = "brl" }: { shopMode?: "brl" | "coins" 
   const [purchasingId, setPurchasingId] = useState<string | null>(null);
   const [addingToCartId, setAddingToCartId] = useState<string | null>(null);
   const [purchaseResult, setPurchaseResult] = useState<PurchaseResult | null>(null);
+  const [giftItemId, setGiftItemId] = useState<string | null>(null);
 
   const apiPath = shopMode === "coins" ? "/api/store?coinShop=1" : "/api/store";
 
@@ -535,6 +552,7 @@ export function StoreSection({ shopMode = "brl" }: { shopMode?: "brl" | "coins" 
             addingToCartId={addingToCartId}
             onPurchase={handlePurchase}
             onAddToCart={handleAddToCart}
+            onGift={(item) => setGiftItemId(item.id)}
           />
         )}
 
@@ -549,6 +567,7 @@ export function StoreSection({ shopMode = "brl" }: { shopMode?: "brl" | "coins" 
                 addingToCartId={addingToCartId}
                 onPurchase={handlePurchase}
                 onAddToCart={handleAddToCart}
+                onGift={(item) => setGiftItemId(item.id)}
               />
             ))}
           </div>
@@ -560,6 +579,14 @@ export function StoreSection({ shopMode = "brl" }: { shopMode?: "brl" | "coins" 
           <PurchaseResultModal result={purchaseResult} onClose={() => setPurchaseResult(null)} />
         )}
       </AnimatePresence>
+
+      {giftItemId && (
+        <GiftModal
+          presetItemId={giftItemId}
+          presetMode="item"
+          onClose={() => setGiftItemId(null)}
+        />
+      )}
     </>
   );
 }

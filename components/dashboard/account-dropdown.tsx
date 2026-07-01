@@ -73,7 +73,7 @@ export function AccountDropdown({ className }: Props) {
           customization={user.customization}
           size="sm"
         />
-        <span className="hidden max-w-[88px] truncate md:block">
+        <span className="hidden max-w-[88px] truncate xl:block">
           <SocialUserName user={user} nameClassName="text-sm" />
         </span>
         <ChevronDown

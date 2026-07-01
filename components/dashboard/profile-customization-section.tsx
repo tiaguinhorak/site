@@ -206,7 +206,7 @@ export function ProfileCustomizationSection() {
             <p className="mt-2 max-w-lg text-sm text-muted">{t("eliteDesc")}</p>
           </div>
           <PlanBadge plan="elite" size="lg" />
-          <ButtonLink href="/dashboard/premium" variant="primary">
+          <ButtonLink href="/dashboard/planos" variant="primary">
             {t("upgradeElite")}
           </ButtonLink>
         </div>

@@ -114,9 +114,11 @@ export function WalletDropdown() {
           open && "ring-1 ring-primary/40",
         )}
       >
-        <Coins className="h-4 w-4 text-amber-400" />
-        <span className="font-mono tabular-nums">{user.coins.toLocaleString("pt-BR")}</span>
-        <ChevronDown className={cn("h-3.5 w-3.5 text-muted transition-transform", open && "rotate-180")} />
+        <Coins className="h-4 w-4 shrink-0 text-amber-400" />
+        <span className="hidden font-mono tabular-nums sm:inline">
+          {user.coins.toLocaleString("pt-BR")}
+        </span>
+        <ChevronDown className={cn("hidden h-3.5 w-3.5 shrink-0 text-muted transition-transform sm:block", open && "rotate-180")} />
       </button>
 
       <AnimatePresence>

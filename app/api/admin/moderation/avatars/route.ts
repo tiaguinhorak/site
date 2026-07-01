@@ -7,6 +7,7 @@ import {
   parseJsonBody,
 } from "@/lib/security/api-guard";
 import { requireAdmin } from "@/lib/auth/admin";
+import { prisma } from "@/lib/prisma";
 import { resolveSteamDisplayName, STEAM_DISPLAY_NAME_SELECT } from "@/lib/steam/display-name";
 import { RATE_LIMITS } from "@/lib/security/constants";
 import { firstZodError } from "@/lib/security/schemas";
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
   });
 
   return NextResponse.json({
-    pending: pending.map((u) => ({
+    pending: pending.map((u: (typeof pending)[number]) => ({
       ...u,
       displayName: resolveSteamDisplayName(u),
       plan: u.plan.toLowerCase(),

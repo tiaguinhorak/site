@@ -69,7 +69,7 @@ export function UpgradeSection() {
           </ul>
         </div>
         <ButtonLink
-          href="/dashboard/premium"
+          href="/dashboard/planos"
           variant="primary"
           size="lg"
           className="shrink-0"

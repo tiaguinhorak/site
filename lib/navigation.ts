@@ -3,7 +3,7 @@ export const marketingNav = [
   { label: "Plataforma", href: "/plataforma", i18nKey: "platform" },
   { label: "Servidores", href: "/servidores", i18nKey: "servers" },
   { label: "Ranking", href: "/ranking", i18nKey: "ranking" },
-  { label: "Premium", href: "/premium", i18nKey: "premium" },
+  { label: "Planos", href: "/planos", i18nKey: "plans" },
 ] as const;
 
 export const marketingPages = [
@@ -40,8 +40,8 @@ export const marketingPages = [
     eyebrow: "Season 1",
   },
   {
-    href: "/premium",
-    label: "Premium",
+    href: "/planos",
+    label: "Planos",
     title: "Eleve sua experiência",
     description:
       "Slot reservado, skins liberadas, tag exclusiva e prioridade nos servidores.",

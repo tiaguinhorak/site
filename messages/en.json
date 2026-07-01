@@ -33,6 +33,7 @@
     "inventory": "Inventory",
     "anticheat": "Anticheat",
     "premium": "Premium",
+    "plans": "Plans",
     "support": "Support",
     "admin": "Admin",
     "playerArea": "Player area",
@@ -327,6 +328,8 @@
     "newsTitle": "News center",
     "newsDesc": "Patches, events and news from clutchclube.",
     "premiumTitle": "Premium",
+    "plansTitle": "Plans",
+    "plansDesc": "Compare Free, Premium and Elite plans. Subscribe for yourself or gift a friend.",
     "premiumDesc": "Compare plans and upgrade to unlock all benefits.",
     "storeTitle": "Store",
     "storeDesc": "Exclusive skins, agents and cosmetics on clutchclube servers.",
@@ -1081,6 +1084,7 @@
     "giftCoins": "Coins",
     "giftItem": "Store item",
     "giftSubscription": "Subscription",
+    "giftPayBrl": "Pay in BRL",
     "amount": "Amount",
     "selectItem": "Select item",
     "noGiftItems": "No items available to gift with coins.",
@@ -1261,6 +1265,7 @@
     "coinShopEmpty": "No exclusive coin items yet. Configure them in the admin panel.",
     "buyNow": "Buy now",
     "buyWithCoins": "Buy with coins",
+    "giftItem": "Gift",
     "notEnoughCoins": "Not enough coins",
     "coinsLabel": "coins",
     "openCase": "Open case",
@@ -1526,6 +1531,11 @@
     "noRooms": "No rooms found",
     "noRoomsDesc": "Use Auto lobby or wait for new system rooms.",
     "clearFilters": "Clear filters"
+  },
+  "plans": {
+    "currentPlan": "Current plan",
+    "giftPlan": "Gift plan",
+    "purchaseSuccess": "Plan {plan} activated successfully!"
   },
   "upgrade": {
     "badge": "Upgrade",

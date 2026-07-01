@@ -71,7 +71,7 @@ export function UserMenuDropdown({ align = "right", className }: UserMenuDropdow
     { href: "/dashboard/lobby", label: tNav("lobby"), icon: Users },
     { href: "/dashboard/ranked", label: t("ranked"), icon: Trophy },
     { href: "/dashboard/ranking", label: tNav("ranking"), icon: Medal },
-    { href: "/dashboard/premium", label: t("subscription"), icon: Crown },
+    { href: "/dashboard/planos", label: t("subscription"), icon: Crown },
     { href: "/dashboard/perfil?tab=notifications", label: tAccount("notificationSettings"), icon: Settings },
   ];
 

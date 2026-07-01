@@ -58,7 +58,7 @@ export function resolveNotificationHref(
       return "/dashboard/perfil";
     case "payment":
     case "premium":
-      return "/dashboard/premium";
+      return "/dashboard/planos";
     case "store":
       return "/dashboard/loja";
     case "cart":

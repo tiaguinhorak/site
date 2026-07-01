@@ -100,6 +100,12 @@ const NEWS_LINK: NavLinkItem = {
   i18nKey: "news",
 };
 
+const PLANS_LINK: NavLinkItem = {
+  href: "/dashboard/planos",
+  icon: "Crown",
+  i18nKey: "plans",
+};
+
 const PLAY_GROUP: NavGroup = {
   id: "play",
   i18nKey: "play",
@@ -132,7 +138,6 @@ const SHOP_GROUP: NavGroup = {
     { href: "/dashboard/loja", icon: "ShoppingBag", i18nKey: "store" },
     { href: "/dashboard/loja-moedas", icon: "Coins", i18nKey: "coinShop" },
     { href: "/dashboard/inventario", icon: "Package", i18nKey: "inventory" },
-    { href: "/dashboard/premium", icon: "Crown", i18nKey: "premium" },
   ],
 };
 
@@ -186,7 +191,7 @@ function NavDirectLink({
       )}
     >
       <Icon className="h-4 w-4 shrink-0 text-primary" />
-      <span className="hidden lg:inline">{tNav(item.i18nKey)}</span>
+      <span className="hidden xl:inline">{tNav(item.i18nKey)}</span>
     </Link>
   );
 }
@@ -275,7 +280,7 @@ function NavDropdown({
         )}
       >
         <Icon className="h-4 w-4 shrink-0 text-primary" />
-        <span className="hidden lg:inline">{tNav(group.i18nKey)}</span>
+        <span className="hidden xl:inline">{tNav(group.i18nKey)}</span>
         <ChevronDown
           className={cn("h-3.5 w-3.5 shrink-0 transition-transform", isOpen && "rotate-180")}
         />
@@ -427,9 +432,10 @@ export function DashboardNavbar() {
         >
           <Logo className="shrink-0" />
 
-          <div className="hidden min-w-0 flex-1 items-center justify-center gap-0.5 md:flex">
+          <div className="hidden min-w-0 flex-1 items-center justify-center gap-0.5 xl:flex">
             <NavDirectLink item={OVERVIEW} pathname={pathname} tNav={tNav} />
             <NavDirectLink item={RANKED_LINK} pathname={pathname} tNav={tNav} />
+            <NavDirectLink item={PLANS_LINK} pathname={pathname} tNav={tNav} />
             <NavDirectLink item={FRIENDS_LINK} pathname={pathname} tNav={tNav} />
             <NavDirectLink item={NEWS_LINK} pathname={pathname} tNav={tNav} />
 
@@ -450,7 +456,9 @@ export function DashboardNavbar() {
 
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-1.5">
             <WalletDropdown />
-            <FriendsMenu />
+            <div className="hidden lg:block">
+              <FriendsMenu />
+            </div>
             <AccountDropdown />
             <NotificationsDropdown />
 
@@ -459,7 +467,7 @@ export function DashboardNavbar() {
               aria-label={mobileOpen ? tNav("closeMenu") : tNav("openMenu")}
               aria-expanded={mobileOpen}
               onClick={() => setMobileOpen((v) => !v)}
-              className="glass inline-flex h-10 w-10 items-center justify-center rounded-xl text-foreground md:hidden"
+              className="glass inline-flex h-10 w-10 items-center justify-center rounded-xl text-foreground xl:hidden"
             >
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -476,7 +484,7 @@ export function DashboardNavbar() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="scrim-dismiss fixed inset-0 z-[48] md:hidden"
+                className="scrim-dismiss fixed inset-0 z-[48] xl:hidden"
                 onClick={() => setMobileOpen(false)}
               />
 
@@ -485,7 +493,7 @@ export function DashboardNavbar() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
                 transition={{ duration: 0.25 }}
-                className="glass-nav-dropdown relative z-[51] mx-auto mt-3 max-h-[min(85vh,calc(100dvh-5.5rem))] max-w-[1920px] overflow-y-auto rounded-2xl p-3 md:hidden"
+                className="glass-nav-dropdown relative z-[51] mx-auto mt-3 max-h-[min(85vh,calc(100dvh-5.5rem))] max-w-[1920px] overflow-y-auto rounded-2xl p-3 xl:hidden"
               >
                 <Link
                   href={OVERVIEW.href}
@@ -516,6 +524,20 @@ export function DashboardNavbar() {
                   >
                     <Trophy className="h-4.5 w-4.5 shrink-0 text-primary" />
                     {tNav(RANKED_LINK.i18nKey)}
+                  </Link>
+                  <Link
+                    href={PLANS_LINK.href}
+                    prefetch={false}
+                    onClick={() => setMobileOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium transition-colors",
+                      isActive(pathname, PLANS_LINK.href)
+                        ? "bg-[color-mix(in_srgb,var(--primary)_16%,transparent)] text-foreground"
+                        : "text-muted hover:bg-[color-mix(in_srgb,var(--primary)_10%,transparent)] hover:text-foreground",
+                    )}
+                  >
+                    <Crown className="h-4.5 w-4.5 shrink-0 text-primary" />
+                    {tNav(PLANS_LINK.i18nKey)}
                   </Link>
                   <Link
                     href={FRIENDS_LINK.href}

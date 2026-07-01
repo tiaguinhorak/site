@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: PageProps) {
   const normalized = nickname.trim().toUpperCase();
   const user = await prisma.user.findFirst({
     where: { nickname: normalized },
-    select: { nickname: true, rank: true, elo: true, kd: true, ...STEAM_DISPLAY_NAME_SELECT },
+    select: { rank: true, elo: true, kd: true, ...STEAM_DISPLAY_NAME_SELECT },
   });
   if (!user) return { title: "Perfil não encontrado — clutchclube" };
   const displayName = resolveSteamDisplayName(user);

@@ -254,7 +254,7 @@ export function DashboardOverview() {
             <ButtonLink href="/dashboard/ranked" variant="primary" size="sm">
               {t("rankedMode")}
             </ButtonLink>
-            <ButtonLink href="/dashboard/premium" variant="outline" size="sm">
+            <ButtonLink href="/dashboard/planos" variant="outline" size="sm">
               {t("viewPlans")}
             </ButtonLink>
           </div>
