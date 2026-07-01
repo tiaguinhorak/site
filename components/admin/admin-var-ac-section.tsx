@@ -6,11 +6,16 @@ import { Button } from "@/components/ui/button";
 import { secureApi } from "@/lib/api/client";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import { SocialUserRow } from "@/components/social/social-user-row";
 
 type ReviewCase = {
   id: string;
   nickname: string;
+  displayName: string;
+  steamPersonaName: string | null;
+  plan: string | null;
   steamId: string;
+  userAvatarUrl: string | null;
   matchId: string | null;
   demoUrl: string | null;
   reason: string;
@@ -114,7 +119,17 @@ export function AdminVarAcSection() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-display text-sm font-bold text-foreground">{item.nickname}</p>
+                    <SocialUserRow
+                      user={{
+                        nickname: item.nickname,
+                        displayName: item.displayName,
+                        steamPersonaName: item.steamPersonaName,
+                        steamId: item.steamId,
+                        plan: item.plan ?? undefined,
+                        avatarUrl: item.userAvatarUrl,
+                      }}
+                      nameClassName="text-sm font-bold"
+                    />
                     <span
                       className={cn(
                         "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase",

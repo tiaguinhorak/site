@@ -25,6 +25,7 @@ import { AdminSmurfPanel } from "@/components/admin/admin-smurf-panel";
 import type { PunishmentType } from "@/lib/generated/prisma/client";
 import { cn } from "@/lib/utils";
 import { SocialUserName } from "@/components/social/social-user-name";
+import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
 
 type Punishment = {
   id: string;
@@ -36,8 +37,8 @@ type Punishment = {
   active: boolean;
   expiresAt: string | null;
   createdAt: string;
-  admin: { nickname: string };
-  revokedBy: { nickname: string } | null;
+  admin: { nickname: string; steamPersonaName?: string | null; steamId?: string | null };
+  revokedBy: { nickname: string; steamPersonaName?: string | null; steamId?: string | null } | null;
 };
 
 type UserDetail = {
@@ -311,18 +312,11 @@ export function AdminUserDetail({ userId }: { userId: string }) {
       <div className="rounded-card glass-strong p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-primary/20">
-              {user.avatarUrl || user.steamAvatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={user.avatarUrl ?? user.steamAvatarUrl ?? ""}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span className="font-display text-xl font-bold">{user.nickname.slice(0, 2)}</span>
-              )}
-            </div>
+            <UserProfileAvatar
+              avatarUrl={user.avatarUrl ?? user.steamAvatarUrl}
+              nickname={user.nickname}
+              size="lg"
+            />
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <SocialUserName user={user} nameClassName="text-2xl font-bold" showPlanBadge />
@@ -569,7 +563,9 @@ export function AdminUserDetail({ userId }: { userId: string }) {
                         </p>
                       )}
                       <p className="mt-1 text-xs text-muted">
-                        {p.admin.nickname} · {new Date(p.createdAt).toLocaleString("pt-BR")}
+                        <SocialUserName user={p.admin} nameClassName="text-xs" />
+                        {" · "}
+                        {new Date(p.createdAt).toLocaleString("pt-BR")}
                         {p.expiresAt && ` · expira ${new Date(p.expiresAt).toLocaleDateString("pt-BR")}`}
                         {!p.active && " · revogada"}
                       </p>

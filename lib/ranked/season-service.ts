@@ -10,6 +10,7 @@ import type {
 } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { creditCoins } from "@/lib/economy/wallet";
+import { resolveSteamDisplayName } from "@/lib/steam/display-name";
 import { grantStoreRewardRow } from "@/lib/store/grant-reward";
 import {
   LEADERBOARD_PARTICIPANT_WHERE,
@@ -178,6 +179,7 @@ export type SerializedRankedSeasonStanding = {
   position: number;
   userId: string;
   nickname: string;
+  displayName: string;
   avatarUrl: string | null;
   elo: number;
   competitivePoints: number;
@@ -1050,6 +1052,17 @@ export async function listSeasonStandings(
     where: { seasonId },
     orderBy: { position: "asc" },
     take: limit,
+    include: {
+      user: {
+        select: {
+          nickname: true,
+          avatarUrl: true,
+          steamAvatarUrl: true,
+          steamPersonaName: true,
+          steamId: true,
+        },
+      },
+    },
   });
 
   return rows.map((row) => ({
@@ -1057,7 +1070,10 @@ export async function listSeasonStandings(
     position: row.position,
     userId: row.userId,
     nickname: row.nickname,
-    avatarUrl: row.avatarUrl,
+    displayName: row.user
+      ? resolveSteamDisplayName(row.user)
+      : row.nickname,
+    avatarUrl: row.avatarUrl ?? row.user?.avatarUrl ?? row.user?.steamAvatarUrl ?? null,
     elo: row.elo,
     competitivePoints: row.competitivePoints,
     rankedWins: row.rankedWins,

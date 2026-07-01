@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { secureApi } from "@/lib/api/client";
 import { confirmPresets } from "@/lib/confirm-presets";
 import { cn } from "@/lib/utils";
+import { SocialUserName } from "@/components/social/social-user-name";
 
 type NotificationRow = {
   id: string;
@@ -15,7 +16,14 @@ type NotificationRow = {
   type: string;
   read: boolean;
   createdAt: string;
-  user: { id: string; nickname: string; email: string | null };
+  user: {
+    id: string;
+    nickname: string;
+    email: string | null;
+    displayName?: string;
+    steamPersonaName?: string | null;
+    steamId?: string | null;
+  };
 };
 
 type TranslationFields = { title: string; body: string };
@@ -396,7 +404,7 @@ export function AdminNotificationsSection() {
                     <p className="font-medium text-foreground">{n.title}</p>
                     <p className="text-sm text-muted">{n.body}</p>
                     <p className="mt-1 text-xs text-muted">
-                      Para {n.user.nickname}
+                      Para <SocialUserName user={n.user} nameClassName="text-xs inline" />
                       {n.user.email && ` · ${n.user.email}`}
                     </p>
                   </div>

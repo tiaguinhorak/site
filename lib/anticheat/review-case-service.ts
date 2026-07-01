@@ -2,12 +2,16 @@ import "server-only";
 
 import type { AnticheatReviewStatus, Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { resolveSteamDisplayName, STEAM_DISPLAY_NAME_SELECT } from "@/lib/steam/display-name";
 
 export type AnticheatReviewCaseRow = {
   id: string;
   userId: string | null;
   steamId: string;
   nickname: string;
+  displayName: string;
+  steamPersonaName: string | null;
+  plan: string | null;
   matchId: string | null;
   demoUrl: string | null;
   reason: string;
@@ -31,28 +35,43 @@ export async function listAnticheatReviewCases(params: {
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
     take: params.limit ?? 100,
     include: {
-      user: { select: { nickname: true, avatarUrl: true, steamAvatarUrl: true } },
+      user: {
+        select: {
+          avatarUrl: true,
+          steamAvatarUrl: true,
+          plan: true,
+          ...STEAM_DISPLAY_NAME_SELECT,
+        },
+      },
     },
   });
 
-  return rows.map((row) => ({
-    id: row.id,
-    userId: row.userId,
-    steamId: row.steamId,
-    nickname: row.nickname || row.user?.nickname || "—",
-    matchId: row.matchId,
-    demoUrl: row.demoUrl,
-    reason: row.reason,
-    evidence: row.evidence,
-    severity: row.severity,
-    status: row.status,
-    adminNotes: row.adminNotes,
-    resolvedById: row.resolvedById,
-    resolvedAt: row.resolvedAt?.toISOString() ?? null,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-    userAvatarUrl: row.user?.avatarUrl ?? row.user?.steamAvatarUrl ?? null,
-  }));
+  return rows.map((row) => {
+    const nickname = row.nickname || row.user?.nickname || "—";
+    const displayName = row.user ? resolveSteamDisplayName(row.user) : nickname;
+
+    return {
+      id: row.id,
+      userId: row.userId,
+      steamId: row.steamId,
+      nickname,
+      displayName,
+      steamPersonaName: row.user?.steamPersonaName ?? null,
+      plan: row.user?.plan?.toLowerCase() ?? null,
+      matchId: row.matchId,
+      demoUrl: row.demoUrl,
+      reason: row.reason,
+      evidence: row.evidence,
+      severity: row.severity,
+      status: row.status,
+      adminNotes: row.adminNotes,
+      resolvedById: row.resolvedById,
+      resolvedAt: row.resolvedAt?.toISOString() ?? null,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+      userAvatarUrl: row.user?.avatarUrl ?? row.user?.steamAvatarUrl ?? null,
+    };
+  });
 }
 
 export async function createAnticheatReviewCase(input: {

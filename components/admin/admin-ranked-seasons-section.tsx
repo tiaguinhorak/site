@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { secureApi } from "@/lib/api/client";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import { SocialUserName } from "@/components/social/social-user-name";
 import { surfaceInputClass } from "@/lib/ui/theme-surfaces";
 import {
   AdminRankedSeasonPrizesEditor,
@@ -54,6 +55,7 @@ type SeasonRow = {
 type StandingRow = {
   position: number;
   nickname: string;
+  displayName?: string;
   competitivePoints: number;
   elo: number;
   rankedWins: number;
@@ -818,7 +820,12 @@ export function AdminRankedSeasonsSection() {
                         {standings.map((row) => (
                           <tr key={row.position} className="border-t border-border/30">
                             <td className="py-2 pr-3 tabular-nums">{row.position}</td>
-                            <td className="py-2 pr-3">{row.nickname}</td>
+                            <td className="py-2 pr-3">
+                              <SocialUserName
+                                user={{ nickname: row.nickname, displayName: row.displayName }}
+                                nameClassName="text-sm"
+                              />
+                            </td>
                             <td className="py-2 pr-3 tabular-nums">{row.competitivePoints}</td>
                             <td className="py-2 pr-3 tabular-nums">{row.elo}</td>
                             <td className="py-2 tabular-nums">

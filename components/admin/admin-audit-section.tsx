@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ScrollText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SocialUserName } from "@/components/social/social-user-name";
 
 type AuditRow = {
   id: string;
@@ -11,7 +12,11 @@ type AuditRow = {
   targetId: string | null;
   summary: string;
   createdAt: string;
-  admin: { nickname: string };
+  admin: {
+    nickname: string;
+    steamPersonaName?: string | null;
+    steamId?: string | null;
+  };
 };
 
 export function AdminAuditSection() {
@@ -53,7 +58,9 @@ export function AdminAuditSection() {
                   <div>
                     <p className="font-medium text-foreground">{log.summary}</p>
                     <p className="mt-1 text-xs text-muted">
-                      {log.admin.nickname} · {log.action} · {log.targetType}
+                      <SocialUserName user={log.admin} nameClassName="text-xs" />
+                      {" · "}
+                      {log.action} · {log.targetType}
                       {log.targetId && ` #${log.targetId.slice(0, 8)}`}
                     </p>
                   </div>

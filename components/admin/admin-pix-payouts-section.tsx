@@ -4,11 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { MessageCircle, ExternalLink, Copy, Check, Phone, Mail, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PixIcon } from "@/components/ui/pix-icon";
-import { RemoteImage } from "@/components/ui/remote-image";
 import { secureApi } from "@/lib/api/client";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
-import { SocialUserName } from "@/components/social/social-user-name";
+import { SocialUserRow } from "@/components/social/social-user-row";
 import { surfaceInputClass } from "@/lib/ui/theme-surfaces";
 import { PIX_PAYOUT_STATUS_LABEL, type AdminPixPayoutRow } from "@/lib/ranked/pix-prize";
 
@@ -88,7 +87,6 @@ function PayoutRow({
   onUpdate: (grantId: string, patch: { status?: AdminPixPayoutRow["status"]; note?: string }) => void;
 }) {
   const [noteDraft, setNoteDraft] = useState(payout.payoutNote);
-  const avatar = payout.user.avatarUrl ?? payout.user.steamAvatarUrl;
 
   useEffect(() => {
     setNoteDraft(payout.payoutNote);
@@ -98,36 +96,35 @@ function PayoutRow({
     <article className="rounded-xl border border-border/70 bg-[color-mix(in_srgb,var(--background)_60%,transparent)] p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
-          <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--primary)_10%,transparent)]">
-            {avatar ? (
-              <RemoteImage src={avatar} alt={payout.user.nickname} fill className="object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-sm font-bold text-primary">
-                {payout.user.nickname.slice(0, 1).toUpperCase()}
-              </div>
-            )}
-          </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="font-display text-base font-bold text-foreground">
-                <SocialUserName user={payout.user} nameClassName="text-base font-bold" />
-              </p>
-              <span className="text-sm">{POSITION_MEDAL[payout.position - 1] ?? "🏅"}</span>
-              <span
-                className={cn(
-                  "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                  STATUS_CLASS[payout.status],
-                )}
-              >
-                {PIX_PAYOUT_STATUS_LABEL[payout.status]}
-              </span>
-            </div>
-            <p className="mt-0.5 text-sm text-muted">
-              {payout.seasonName} · {payout.pixAmountLabel}
-            </p>
-            <p className="text-xs text-muted">
-              Premiado em {new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(payout.grantedAt))}
-            </p>
+          <SocialUserRow
+            user={payout.user}
+            avatarSize="md"
+            nameClassName="text-base font-bold"
+            subtitle={
+              <>
+                <p className="mt-0.5 text-sm text-muted">
+                  {payout.seasonName} · {payout.pixAmountLabel}
+                </p>
+                <p className="text-xs text-muted">
+                  Premiado em{" "}
+                  {new Intl.DateTimeFormat("pt-BR", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  }).format(new Date(payout.grantedAt))}
+                </p>
+              </>
+            }
+          />
+          <div className="flex flex-col gap-1 pt-1">
+            <span className="text-sm">{POSITION_MEDAL[payout.position - 1] ?? "🏅"}</span>
+            <span
+              className={cn(
+                "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                STATUS_CLASS[payout.status],
+              )}
+            >
+              {PIX_PAYOUT_STATUS_LABEL[payout.status]}
+            </span>
           </div>
         </div>
 

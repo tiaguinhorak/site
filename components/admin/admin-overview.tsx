@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { SocialUserRow } from "@/components/social/social-user-row";
 import { SocialUserName } from "@/components/social/social-user-name";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -181,19 +182,18 @@ export function AdminOverview() {
                   href={`/admin/usuarios/${user.id}`}
                   className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-[color-mix(in_srgb,var(--primary)_8%,transparent)]"
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/15">
-                    {user.avatarUrl || user.steamAvatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={user.avatarUrl ?? user.steamAvatarUrl ?? ""} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <Users className="h-5 w-5 text-primary" />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <SocialUserName user={user} nameClassName="text-sm font-semibold" />
-                    <p className="truncate text-xs text-muted">{user.email ?? "Perfil incompleto"}</p>
-                  </div>
-                  <span className="text-xs text-muted">
+                  <SocialUserRow
+                    user={user}
+                    avatarSize="md"
+                    nameClassName="text-sm font-semibold"
+                    subtitle={
+                      <p className="truncate text-xs text-muted">
+                        {user.email ?? "Perfil incompleto"}
+                      </p>
+                    }
+                    className="min-w-0 flex-1"
+                  />
+                  <span className="shrink-0 text-xs text-muted">
                     {new Date(user.createdAt).toLocaleDateString("pt-BR")}
                   </span>
                 </Link>

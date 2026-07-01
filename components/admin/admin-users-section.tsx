@@ -6,7 +6,7 @@ import { Search, Users, ExternalLink, Ban } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { SocialUserName } from "@/components/social/social-user-name";
+import { SocialUserRow } from "@/components/social/social-user-row";
 
 type UserRow = {
   id: string;
@@ -141,20 +141,12 @@ export function AdminUsersSection() {
                 users.map((user) => (
                   <tr key={user.id} className="hover:bg-[color-mix(in_srgb,var(--primary)_6%,transparent)]">
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/10">
-                          {user.avatarUrl || user.steamAvatarUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={user.avatarUrl ?? user.steamAvatarUrl ?? ""} alt="" className="h-full w-full object-cover" />
-                          ) : (
-                            <Users className="h-4 w-4 text-primary" />
-                          )}
-                        </div>
-                        <div>
-                          <SocialUserName user={user} nameClassName="text-sm font-semibold" showPlanBadge />
-                          <p className="text-xs text-muted">@{user.nickname}</p>
-                        </div>
-                      </div>
+                      <SocialUserRow
+                        user={user}
+                        showPlanBadge
+                        nameClassName="text-sm font-semibold"
+                        subtitle={<p className="text-xs text-muted">@{user.nickname}</p>}
+                      />
                     </td>
                     <td className="px-4 py-3 text-muted">{user.email ?? "—"}</td>
                     <td className="px-4 py-3 text-muted">

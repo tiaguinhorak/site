@@ -10,6 +10,7 @@ import { punishmentTypeLabel } from "@/lib/admin/punishment-labels";
 import type { PunishmentType } from "@/lib/generated/prisma/client";
 import { cn } from "@/lib/utils";
 import { SocialUserName } from "@/components/social/social-user-name";
+import { SocialUserRow } from "@/components/social/social-user-row";
 
 type PunishmentRow = {
   id: string;
@@ -134,13 +135,13 @@ export function AdminPunishmentsSection() {
                 punishments.map((p) => (
                   <tr key={p.id} className="hover:bg-[color-mix(in_srgb,var(--primary)_6%,transparent)]">
                     <td className="px-4 py-3">
-                      <Link
-                        href={`/admin/usuarios/${p.user.id}`}
-                        className="hover:text-primary"
-                      >
-                        <SocialUserName user={p.user} nameClassName="text-sm font-semibold" />
+                      <Link href={`/admin/usuarios/${p.user.id}`} className="hover:text-primary">
+                        <SocialUserRow
+                          user={p.user}
+                          nameClassName="text-sm font-semibold"
+                          subtitle={<p className="text-xs text-muted">@{p.user.nickname}</p>}
+                        />
                       </Link>
-                      <p className="text-xs text-muted">@{p.user.nickname}</p>
                     </td>
                     <td className="px-4 py-3">
                       <span

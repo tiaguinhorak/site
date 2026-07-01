@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { prisma } from "@/lib/prisma";
 import { resolveSteamDisplayName, STEAM_DISPLAY_NAME_SELECT } from "@/lib/steam/display-name";
 
 export async function getAdminStats() {
@@ -308,14 +307,34 @@ export async function listAdminNotifications(options: {
       take: limit,
       include: {
         user: {
-          select: { id: true, nickname: true, email: true },
+          select: {
+            id: true,
+            email: true,
+            avatarUrl: true,
+            steamAvatarUrl: true,
+            plan: true,
+            ...STEAM_DISPLAY_NAME_SELECT,
+          },
         },
       },
     }),
     prisma.notification.count(),
   ]);
 
-  return { notifications, total, page, limit, pages: Math.ceil(total / limit) };
+  return {
+    notifications: notifications.map((n) => ({
+      ...n,
+      user: {
+        ...n.user,
+        displayName: resolveSteamDisplayName(n.user),
+        plan: n.user.plan.toLowerCase(),
+      },
+    })),
+    total,
+    page,
+    limit,
+    pages: Math.ceil(total / limit),
+  };
 }
 
 export async function listAdminServers() {

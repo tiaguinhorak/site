@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getAvatarInitials } from "@/lib/profile";
 import { getDefaultAvatarPresetUrl, resolveUserAvatarUrl } from "@/lib/profile/avatar";
+import { resolveSteamDisplayName } from "@/lib/steam/display-name";
 import { flagFromCountryCode } from "@/lib/profile/countries";
 import {
   LOBBY_DISPLAY_SLOTS,
@@ -95,11 +96,14 @@ function buildLobbyPlayer(
     : steamProfile?.avatarUrl ?? getDefaultAvatarPresetUrl();
 
   const elo = dbUser?.elo ?? 1000 + (hashString(steamId) % 800);
+  const resolvedDisplayName = dbUser
+    ? resolveSteamDisplayName(dbUser)
+    : personaName;
 
   return {
     id: dbUser?.id ?? steamId,
     nickname: dbUser?.nickname ?? personaName,
-    displayName: personaName,
+    displayName: resolvedDisplayName,
     level: eloToLevel(elo),
     avatarUrl,
     avatarInitials: getAvatarInitials("", "", personaName),

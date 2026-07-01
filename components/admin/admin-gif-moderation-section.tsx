@@ -8,6 +8,7 @@ import { secureApi } from "@/lib/api/client";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { SocialUserName } from "@/components/social/social-user-name";
+import { SocialUserRow } from "@/components/social/social-user-row";
 
 type PendingAvatarGif = {
   id: string;
@@ -219,13 +220,17 @@ export function AdminGifModerationSection() {
               className="flex flex-col gap-4 rounded-xl border border-border/60 bg-background/40 p-4"
             >
               <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-                <div>
-                  <SocialUserName user={item} nameClassName="text-sm font-bold" showPlanBadge />
-                  <p className="text-xs text-muted">
-                    Plano {item.plan} ·{" "}
-                    {new Date(item.updatedAt).toLocaleString("pt-BR")}
-                  </p>
-                </div>
+                <SocialUserRow
+                  user={{ ...item, avatarUrl: null }}
+                  showPlanBadge
+                  nameClassName="text-sm font-bold"
+                  subtitle={
+                    <p className="text-xs text-muted">
+                      Plano {item.plan} ·{" "}
+                      {new Date(item.updatedAt).toLocaleString("pt-BR")}
+                    </p>
+                  }
+                />
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <Button
                     type="button"

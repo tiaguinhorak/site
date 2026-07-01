@@ -11,8 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
-import { SocialUserName } from "@/components/social/social-user-name";
+import { SocialUserRow } from "@/components/social/social-user-row";
 import type { PublicProfileCustomization } from "@/lib/profile/serialize-customization";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,18 +56,6 @@ type StoreItemLite = {
 };
 
 type Tab = "friends" | "requests" | "add";
-
-function Avatar({ user, size = 40 }: { user: FriendUser; size?: number }) {
-  const avatarSize = size <= 32 ? "sm" : size <= 44 ? "md" : "lg";
-  return (
-    <UserProfileAvatar
-      avatarUrl={user.avatarUrl}
-      nickname={user.nickname}
-      customization={user.customization}
-      size={avatarSize}
-    />
-  );
-}
 
 export function FriendsSection() {
   const t = useTranslations("friends");
@@ -224,14 +211,18 @@ function FriendsList({
           key={friend.id}
           className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-0"
         >
-          <Avatar user={friend} />
-          <div className="min-w-0 flex-1">
-            <SocialUserName user={friend} link nameClassName="text-sm" />
-            <p className="text-xs text-muted">
-              {getCountryFlag(friend.country)} {t("level", { level: friend.level })} · ELO{" "}
-              {friend.elo}
-            </p>
-          </div>
+          <SocialUserRow
+            user={friend}
+            link
+            nameClassName="text-sm"
+            className="min-w-0 flex-1"
+            subtitle={
+              <p className="text-xs text-muted">
+                {getCountryFlag(friend.country)} {t("level", { level: friend.level })} · ELO{" "}
+                {friend.elo}
+              </p>
+            }
+          />
           <Button type="button" size="sm" variant="primary" onClick={() => onGift(friend)}>
             <Gift className="h-4 w-4" />
             {t("gift")}
@@ -289,11 +280,14 @@ function RequestsView({
                 key={req.friendshipId}
                 className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-0"
               >
-                <Avatar user={req.user} />
-                <div className="min-w-0 flex-1">
-                  <SocialUserName user={req.user} nameClassName="text-sm" />
-                  <p className="text-xs text-muted">{t("level", { level: req.user.level })}</p>
-                </div>
+                <SocialUserRow
+                  user={req.user}
+                  nameClassName="text-sm"
+                  className="min-w-0 flex-1"
+                  subtitle={
+                    <p className="text-xs text-muted">{t("level", { level: req.user.level })}</p>
+                  }
+                />
                 <Button
                   type="button"
                   size="sm"
@@ -350,11 +344,12 @@ function RequestsView({
                 key={req.friendshipId}
                 className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-0"
               >
-                <Avatar user={req.user} />
-                <div className="min-w-0 flex-1">
-                  <SocialUserName user={req.user} nameClassName="text-sm" />
-                  <p className="text-xs text-muted">{t("pending")}</p>
-                </div>
+                <SocialUserRow
+                  user={req.user}
+                  nameClassName="text-sm"
+                  className="min-w-0 flex-1"
+                  subtitle={<p className="text-xs text-muted">{t("pending")}</p>}
+                />
                 <Button
                   type="button"
                   size="sm"
@@ -448,13 +443,17 @@ function AddFriends({
         key={user.id}
         className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-0"
       >
-        <Avatar user={user} />
-        <div className="min-w-0 flex-1">
-          <SocialUserName user={user} link nameClassName="text-sm" />
-          <p className="text-xs text-muted">
-            {getCountryFlag(user.country)} {t("level", { level: user.level })}
-          </p>
-        </div>
+        <SocialUserRow
+          user={user}
+          link
+          nameClassName="text-sm"
+          className="min-w-0 flex-1"
+          subtitle={
+            <p className="text-xs text-muted">
+              {getCountryFlag(user.country)} {t("level", { level: user.level })}
+            </p>
+          }
+        />
         {user.relationship === "friends" ? (
           <span className="text-xs font-semibold text-emerald-400">{t("alreadyFriends")}</span>
         ) : user.relationship === "outgoing" ? (
@@ -685,8 +684,7 @@ function GiftModal({
                       onClick={() => setRecipient(user)}
                       className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-[color-mix(in_srgb,var(--primary)_8%,transparent)]"
                     >
-                      <Avatar user={user} size={32} />
-                      <SocialUserName user={user} nameClassName="text-sm" />
+                      <SocialUserRow user={user} nameClassName="text-sm" />
                     </button>
                   </li>
                 ))}

@@ -286,11 +286,6 @@ export function ClansSection() {
   );
 }
 
-const roleIcon: Record<ClanRole, typeof Crown> = {
-  OWNER: Crown,
-  OFFICER: ShieldCheck,
-  MEMBER: Shield,
-};
 
 function CreateClanCard({
   tag,
