@@ -6,6 +6,7 @@ import { Search, Users, ExternalLink, Ban } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { SocialUserName } from "@/components/social/social-user-name";
 
 type UserRow = {
   id: string;
@@ -16,6 +17,7 @@ type UserRow = {
   plan: string;
   steamId: string | null;
   steamPersonaName: string | null;
+  displayName?: string;
   steamAvatarUrl: string | null;
   avatarUrl: string | null;
   country: string;
@@ -149,14 +151,14 @@ export function AdminUsersSection() {
                           )}
                         </div>
                         <div>
-                          <p className="font-semibold">{user.nickname}</p>
-                          <p className="text-xs text-muted">{user.firstName} {user.lastName}</p>
+                          <SocialUserName user={user} nameClassName="text-sm font-semibold" showPlanBadge />
+                          <p className="text-xs text-muted">@{user.nickname}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-muted">{user.email ?? "—"}</td>
                     <td className="px-4 py-3 text-muted">
-                      {user.steamPersonaName ?? user.steamId ?? "—"}
+                      {user.steamId ?? "—"}
                     </td>
                     <td className="px-4 py-3">
                       {user.isBanned ? (

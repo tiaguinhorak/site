@@ -59,7 +59,9 @@ function ChatWindow({
           customization={friend.customization}
           size="sm"
         />
-        <span className="truncate text-sm font-semibold text-foreground">{friend.displayName}</span>
+        <span className="truncate text-sm font-semibold text-foreground">
+          <SocialUserName user={friend} nameClassName="text-sm font-semibold" />
+        </span>
         {(friends.unread[friend.id] ?? 0) > 0 && (
           <span className="ml-auto rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
             {friends.unread[friend.id]}

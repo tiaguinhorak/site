@@ -23,6 +23,7 @@ type FeedItem =
       id: string;
       userId: string;
       nickname: string;
+      displayName: string;
       body: string;
       at: number;
       iso: string;
@@ -53,6 +54,7 @@ export function RankedRoomChat({ className }: { className?: string }) {
         id: `m-${m.id}`,
         userId: m.userId,
         nickname: m.nickname,
+        displayName: m.displayName,
         body: m.body,
         at: new Date(m.createdAt).getTime(),
         iso: m.createdAt,
@@ -133,7 +135,7 @@ export function RankedRoomChat({ className }: { className?: string }) {
               >
                 {!own && (
                   <span className="mb-0.5 px-1 text-[10px] font-semibold text-primary">
-                    {item.nickname}
+                    {item.displayName}
                   </span>
                 )}
                 <div

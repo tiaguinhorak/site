@@ -8,6 +8,7 @@ import { RemoteImage } from "@/components/ui/remote-image";
 import { secureApi } from "@/lib/api/client";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import { SocialUserName } from "@/components/social/social-user-name";
 import { surfaceInputClass } from "@/lib/ui/theme-surfaces";
 import { PIX_PAYOUT_STATUS_LABEL, type AdminPixPayoutRow } from "@/lib/ranked/pix-prize";
 
@@ -108,7 +109,9 @@ function PayoutRow({
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="font-display text-base font-bold text-foreground">{payout.user.nickname}</p>
+              <p className="font-display text-base font-bold text-foreground">
+                <SocialUserName user={payout.user} nameClassName="text-base font-bold" />
+              </p>
               <span className="text-sm">{POSITION_MEDAL[payout.position - 1] ?? "🏅"}</span>
               <span
                 className={cn(

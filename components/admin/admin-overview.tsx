@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { SocialUserName } from "@/components/social/social-user-name";
 import type { LucideIcon } from "lucide-react";
 import {
   Users,
@@ -189,7 +190,7 @@ export function AdminOverview() {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-display font-semibold">{user.nickname}</p>
+                    <SocialUserName user={user} nameClassName="text-sm font-semibold" />
                     <p className="truncate text-xs text-muted">{user.email ?? "Perfil incompleto"}</p>
                   </div>
                   <span className="text-xs text-muted">

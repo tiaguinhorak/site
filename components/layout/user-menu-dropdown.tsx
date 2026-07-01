@@ -29,6 +29,7 @@ import { useUser } from "@/lib/hooks/use-user";
 import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
 import { useTheme } from "@/lib/theme";
 import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
+import { SocialUserName } from "@/components/social/social-user-name";
 import { cn } from "@/lib/utils";
 
 type UserMenuDropdownProps = {
@@ -93,8 +94,8 @@ export function UserMenuDropdown({ align = "right", className }: UserMenuDropdow
           customization={user.customization}
           size="sm"
         />
-        <span className="hidden max-w-[100px] truncate font-display text-sm font-semibold text-foreground sm:block">
-          {user.displayName}
+        <span className="hidden max-w-[100px] truncate sm:block">
+          <SocialUserName user={user} nameClassName="text-sm" />
         </span>
         <ChevronDown
           className={cn(
@@ -121,9 +122,7 @@ export function UserMenuDropdown({ align = "right", className }: UserMenuDropdow
               size="md"
             />
             <div className="min-w-0">
-              <p className="truncate font-display text-sm font-bold text-foreground">
-                {user.displayName}
-              </p>
+              <SocialUserName user={user} nameClassName="text-sm font-bold" showPlanBadge />
               <span className="mt-1 inline-flex rounded-md border border-border/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted">
                 {planLabel}
               </span>

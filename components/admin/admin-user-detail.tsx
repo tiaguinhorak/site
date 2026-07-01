@@ -24,6 +24,7 @@ import { AdminUserInventoryPanel } from "@/components/admin/admin-user-inventory
 import { AdminSmurfPanel } from "@/components/admin/admin-smurf-panel";
 import type { PunishmentType } from "@/lib/generated/prisma/client";
 import { cn } from "@/lib/utils";
+import { SocialUserName } from "@/components/social/social-user-name";
 
 type Punishment = {
   id: string;
@@ -324,7 +325,8 @@ export function AdminUserDetail({ userId }: { userId: string }) {
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="font-display text-2xl font-bold">{user.nickname}</h2>
+                <SocialUserName user={user} nameClassName="text-2xl font-bold" showPlanBadge />
+                <p className="text-sm text-muted">@{user.nickname}</p>
                 {user.isAdmin && (
                   <span className="rounded-full bg-primary/20 px-2 py-0.5 text-xs font-semibold text-primary">
                     Admin

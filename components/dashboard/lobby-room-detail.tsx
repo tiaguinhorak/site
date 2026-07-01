@@ -17,6 +17,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
+import { SocialUserRow } from "@/components/social/social-user-row";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { MapPicker } from "@/components/admin/pickers/map-picker";
@@ -286,18 +287,16 @@ export function LobbyRoomDetail({ roomId }: { roomId: string }) {
                     key={member.id}
                     className="flex items-center gap-3 rounded-xl border border-border px-3 py-2"
                   >
-                    <UserProfileAvatar
-                      avatarUrl={member.avatarUrl}
-                      nickname={member.nickname}
-                      customization={member.customization}
-                      size="sm"
+                    <SocialUserRow
+                      user={member}
+                      subtitle={
+                        <p className="text-xs text-muted">{t("levelLabel", { level: member.level })}</p>
+                      }
                     />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium">{member.displayName}</p>
-                      <p className="text-xs text-muted">{t("levelLabel", { level: member.level })}</p>
-                    </div>
                     {member.id === room.hostUserId && (
-                      <span className="text-[10px] font-semibold uppercase text-primary">{t("hostLabel")}</span>
+                      <span className="shrink-0 text-[10px] font-semibold uppercase text-primary">
+                        {t("hostLabel")}
+                      </span>
                     )}
                   </li>
                 ) : (

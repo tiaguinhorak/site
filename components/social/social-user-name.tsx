@@ -2,26 +2,25 @@
 
 import Link from "next/link";
 import { ProfileDisplayName } from "@/components/profile/profile-display-name";
-import type { PublicProfileCustomization } from "@/lib/profile/serialize-customization";
+import {
+  normalizeSocialPlan,
+  resolveSocialDisplayName,
+  type SocialUserFields,
+} from "@/lib/profile/social-user";
 import { cn } from "@/lib/utils";
 
-type SocialUser = {
-  nickname: string;
-  displayName: string;
-  plan: string;
-  customization?: PublicProfileCustomization | null;
-};
-
 type Props = {
-  user: SocialUser;
+  user: SocialUserFields;
   className?: string;
   nameClassName?: string;
   link?: boolean;
   badgeSize?: "sm" | "md" | "lg";
   showPlanBadge?: boolean;
+  /** Texto após o nome (ex.: " (você)"). */
+  suffix?: string;
 };
 
-/** Nome + badge de plano consistentes em amigos, chat, ranked e buscas. */
+/** Nome + badge de plano consistentes em toda a plataforma. */
 export function SocialUserName({
   user,
   className,
@@ -29,16 +28,15 @@ export function SocialUserName({
   link = false,
   badgeSize = "sm",
   showPlanBadge = false,
+  suffix,
 }: Props) {
-  const plan = (user.plan === "premium" || user.plan === "elite" ? user.plan : "free") as
-    | "free"
-    | "premium"
-    | "elite";
+  const displayName = resolveSocialDisplayName(user);
+  const plan = normalizeSocialPlan(user.plan);
 
   const inner = (
     <ProfileDisplayName
       nickname={user.nickname}
-      displayName={user.displayName}
+      displayName={displayName}
       plan={plan}
       customization={user.customization}
       className={className}
@@ -48,6 +46,15 @@ export function SocialUserName({
     />
   );
 
+  const content = suffix ? (
+    <span className="inline-flex min-w-0 items-center gap-0 truncate">
+      {inner}
+      <span className="shrink-0 text-muted">{suffix}</span>
+    </span>
+  ) : (
+    inner
+  );
+
   if (link) {
     return (
       <Link
@@ -55,10 +62,10 @@ export function SocialUserName({
         prefetch={false}
         className="min-w-0 truncate hover:text-primary"
       >
-        {inner}
+        {content}
       </Link>
     );
   }
 
-  return <span className="min-w-0 truncate">{inner}</span>;
+  return <span className="min-w-0 truncate">{content}</span>;
 }

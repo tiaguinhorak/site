@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { MapThumbnail } from "@/components/ui/map-thumbnail";
+import { SocialUserName } from "@/components/social/social-user-name";
 import type {
   MatchDetail,
   MatchDetailDeath,
@@ -82,7 +83,9 @@ function Scoreboard({
         <tbody>
           {rows.map((p) => (
             <tr key={p.steamId} className="border-t border-white/5">
-              <td className="px-4 py-2 text-left font-medium text-foreground">{p.displayName}</td>
+              <td className="px-4 py-2 text-left font-medium text-foreground">
+                <SocialUserName user={p} nameClassName="text-sm font-medium" />
+              </td>
               <td className="px-2 py-2 text-center text-foreground">{p.kills}</td>
               <td className="px-2 py-2 text-center text-muted">{p.deaths}</td>
               <td className="px-2 py-2 text-center text-muted">{p.assists}</td>
@@ -369,7 +372,8 @@ export function MatchDetailView({ match }: MatchDetailViewProps) {
                   <Icon className="h-4 w-4 text-primary" />
                   <div>
                     <p className="text-xs font-semibold text-foreground">
-                      {t(`highlightType.${h.type}` as never)} · {h.displayName}
+                      {t(`highlightType.${h.type}` as never)} ·{" "}
+                      <SocialUserName user={h} nameClassName="text-xs font-semibold" />
                     </p>
                     {h.detail ? <p className="text-[10px] text-muted">{h.detail}</p> : null}
                   </div>

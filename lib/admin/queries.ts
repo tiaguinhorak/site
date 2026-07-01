@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
+import { resolveSteamDisplayName, STEAM_DISPLAY_NAME_SELECT } from "@/lib/steam/display-name";
 
 export async function getAdminStats() {
   const now = new Date();
@@ -60,10 +62,8 @@ export async function getAdminStats() {
       take: 8,
       select: {
         id: true,
-        nickname: true,
+        ...STEAM_DISPLAY_NAME_SELECT,
         email: true,
-        steamPersonaName: true,
-        steamId: true,
         plan: true,
         createdAt: true,
         avatarUrl: true,
@@ -95,7 +95,11 @@ export async function getAdminStats() {
     totalNews,
     totalStoreItems,
     totalGameModes,
-    recentUsers,
+    recentUsers: recentUsers.map((u) => ({
+      ...u,
+      displayName: resolveSteamDisplayName(u),
+      plan: u.plan.toLowerCase(),
+    })),
     recentAudit,
   };
 }
@@ -193,6 +197,7 @@ export async function listAdminUsers(options: {
   return {
     users: users.map((u) => ({
       ...u,
+      displayName: resolveSteamDisplayName(u),
       isBanned: u.punishments.length > 0,
       banInfo: u.punishments[0] ?? null,
       punishments: undefined,

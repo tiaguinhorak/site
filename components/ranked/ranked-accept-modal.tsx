@@ -6,6 +6,7 @@ import { CheckCircle2, Loader2, Swords, X, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { RankedTeamRoster } from "@/components/ranked/ranked-team-roster";
+import { SocialUserName } from "@/components/social/social-user-name";
 import { RankedFlowStepper } from "@/components/ranked/ranked-flow-stepper";
 import type { RankedMatchSessionView } from "@/lib/ranked/party-shared";
 import { ModalPortal } from "@/components/ui/modal-portal";
@@ -144,8 +145,7 @@ export function RankedAcceptModal({
                     <Loader2 className="h-4 w-4 shrink-0 motion-safe-spin text-muted" />
                   )}
                   <span className="truncate">
-                    {a.displayName}
-                    {a.isYou ? ` ${t("you")}` : ""}
+                    <SocialUserName user={a} suffix={a.isYou ? ` ${t("you")}` : undefined} />
                   </span>
                 </li>
               ))}

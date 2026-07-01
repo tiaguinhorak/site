@@ -7,10 +7,12 @@ import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
 import { secureApi } from "@/lib/api/client";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import { SocialUserName } from "@/components/social/social-user-name";
 
 type PendingAvatarGif = {
   id: string;
   nickname: string;
+  displayName?: string;
   avatarUrl: string | null;
   avatarModerationStatus: string;
   plan: string;
@@ -20,6 +22,7 @@ type PendingAvatarGif = {
 type PendingBannerGif = {
   id: string;
   nickname: string;
+  displayName?: string;
   profileBannerUrl: string | null;
   profileBannerModerationStatus: string;
   plan: string;
@@ -171,7 +174,7 @@ export function AdminGifModerationSection() {
                   size="md"
                 />
                 <div className="min-w-0">
-                  <p className="truncate font-display font-bold">{item.nickname}</p>
+                  <SocialUserName user={item} nameClassName="text-sm font-bold" showPlanBadge />
                   <p className="text-xs text-muted">
                     Plano {item.plan} ·{" "}
                     {new Date(item.updatedAt).toLocaleString("pt-BR")}
@@ -217,7 +220,7 @@ export function AdminGifModerationSection() {
             >
               <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="font-display font-bold">{item.nickname}</p>
+                  <SocialUserName user={item} nameClassName="text-sm font-bold" showPlanBadge />
                   <p className="text-xs text-muted">
                     Plano {item.plan} ·{" "}
                     {new Date(item.updatedAt).toLocaleString("pt-BR")}

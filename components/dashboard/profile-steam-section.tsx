@@ -25,6 +25,8 @@ type ProfileSteamSectionProps = {
     | "steamLinked"
     | "steamId"
     | "steamPersonaName"
+    | "nickname"
+    | "displayName"
     | "steamAvatarUrl"
     | "steamProfileUrl"
     | "steamCountryCode"
@@ -44,6 +46,8 @@ export function ProfileSteamSection({
     steamLinked,
     steamId,
     steamPersonaName,
+    nickname,
+    displayName,
     steamAvatarUrl,
     steamProfileUrl,
     steamCountryCode,
@@ -85,7 +89,7 @@ export function ProfileSteamSection({
               </div>
               <div>
                 <p className="font-display text-base font-bold text-foreground">
-                  {steamLinked ? (steamPersonaName ?? t("accountSteam")) : t("notLinked")}
+                  {steamLinked ? displayName : t("notLinked")}
                 </p>
                 <span
                   className={cn(
@@ -183,7 +187,7 @@ export function ProfileSteamSection({
               },
               {
                 label: t("rowPersona"),
-                value: steamPersonaName ?? "—",
+                value: displayName,
                 icon: SteamIcon,
                 steamIcon: true,
               },

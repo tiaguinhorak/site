@@ -312,7 +312,11 @@ export async function getOrCreatePartyForUser(
     });
   });
 
-  await logRankedPartyActivity(created.id, "created", created.leader.nickname);
+  await logRankedPartyActivity(
+    created.id,
+    "created",
+    resolveSteamDisplayName(created.leader),
+  );
 
   void notifyPartyMembers(created.id, "party");
   return serializeParty(created, userId);
@@ -454,7 +458,11 @@ export async function joinPartyByInviteCode(userId: string, inviteCode: string) 
   });
   const joiner = refreshed.members.find((m) => m.userId === userId);
   if (joiner && !party.members.some((m) => m.userId === userId)) {
-    await logRankedPartyActivity(party.id, "joined", joiner.user.nickname);
+    await logRankedPartyActivity(
+      party.id,
+      "joined",
+      resolveSteamDisplayName(joiner.user),
+    );
     void notifyPartyMembers(party.id, "party");
   }
   return serializeParty(refreshed, userId);
@@ -505,10 +513,14 @@ export async function leaveParty(userId: string) {
 
   const leaver = await prisma.user.findUnique({
     where: { id: userId },
-    select: { nickname: true },
+    select: STEAM_DISPLAY_NAME_SELECT,
   });
   await prisma.rankedPartyMember.delete({ where: { id: membership.id } });
-  await logRankedPartyActivity(party.id, "left", leaver?.nickname ?? "Jogador");
+  await logRankedPartyActivity(
+    party.id,
+    "left",
+    leaver ? resolveSteamDisplayName(leaver) : "Jogador",
+  );
 
   const updates: { leaderUserId?: string; status: string } = {
     status: remaining.length >= RANKED_TEAM_SIZE ? "full" : "open",
@@ -558,16 +570,16 @@ export async function kickMemberFromParty(leaderUserId: string, targetUserId: st
   await cancelRankedQueueForParty(membership.partyId);
 
   const [targetUser, leader] = await Promise.all([
-    prisma.user.findUnique({ where: { id: targetUserId }, select: { nickname: true } }),
-    prisma.user.findUnique({ where: { id: leaderUserId }, select: { nickname: true } }),
+    prisma.user.findUnique({ where: { id: targetUserId }, select: STEAM_DISPLAY_NAME_SELECT }),
+    prisma.user.findUnique({ where: { id: leaderUserId }, select: STEAM_DISPLAY_NAME_SELECT }),
   ]);
 
   await prisma.rankedPartyMember.delete({ where: { id: target.id } });
   await logRankedPartyActivity(
     membership.partyId,
     "kicked",
-    targetUser?.nickname ?? "Jogador",
-    leader?.nickname,
+    targetUser ? resolveSteamDisplayName(targetUser) : "Jogador",
+    leader ? resolveSteamDisplayName(leader) : null,
   );
 
   const remaining = membership.party.members.filter((m) => m.userId !== targetUserId);
@@ -718,7 +730,11 @@ export async function joinPartyById(
   });
   const joiner = refreshed.members.find((m) => m.userId === userId);
   if (joiner && !party.members.some((m) => m.userId === userId)) {
-    await logRankedPartyActivity(party.id, "joined", joiner.user.nickname);
+    await logRankedPartyActivity(
+      party.id,
+      "joined",
+      resolveSteamDisplayName(joiner.user),
+    );
     void notifyPartyMembers(party.id, "party");
   }
   return serializeParty(refreshed, userId);

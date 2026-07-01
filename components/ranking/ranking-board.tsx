@@ -15,6 +15,7 @@ import {
 import type { RankingBoardLabels } from "@/lib/ranking/ranking-board-labels";
 import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
 import { ProfileDisplayName } from "@/components/profile/profile-display-name";
+import { SocialUserName } from "@/components/social/social-user-name";
 import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button";
 import { getCountryFlag } from "@/lib/profile";
@@ -297,7 +298,7 @@ export function RankingBoard({
                 <p className="font-display text-2xl font-bold text-foreground">
                   #{data.you.rank}{" "}
                   <span className="text-base font-semibold text-muted">
-                    · {data.you.displayName}
+                    · <SocialUserName user={data.you} nameClassName="text-base" />
                   </span>
                 </p>
               </div>

@@ -21,6 +21,7 @@ import {
 } from "@/components/providers/ranked-party-provider";
 import { useFriendsOptional } from "@/components/providers/friends-provider";
 import { SocialUserName } from "@/components/social/social-user-name";
+import { SocialUserRow } from "@/components/social/social-user-row";
 import { secureApi } from "@/lib/api/client";
 import { toast } from "@/lib/toast";
 import { MapChip } from "@/components/ui/map-chip";
@@ -67,7 +68,11 @@ function CompactSlot({
           large ? "max-w-[5.5rem] text-xs" : "max-w-[4.5rem] text-[10px]",
         )}
       >
-        {player ? player.displayName : t("slotEmpty")}
+        {player ? (
+          <SocialUserName user={player} nameClassName={large ? "text-xs" : "text-[10px]"} />
+        ) : (
+          t("slotEmpty")
+        )}
       </p>
       {player?.canKick && onKick && (
         <button

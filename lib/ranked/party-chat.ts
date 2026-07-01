@@ -1,11 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { RankedPartyError } from "@/lib/ranked/party-service";
+import { resolveSteamDisplayName, STEAM_DISPLAY_NAME_SELECT } from "@/lib/steam/display-name";
 import { notifyPartyMembers } from "@/lib/realtime/notify";
 
 export type RankedPartyMessageView = {
   id: string;
   userId: string;
   nickname: string;
+  displayName: string;
   body: string;
   createdAt: string;
 };
@@ -20,15 +22,22 @@ export async function listPartyMessages(
     where: { partyId },
     orderBy: { createdAt: "desc" },
     take: limit,
+    include: {
+      user: { select: STEAM_DISPLAY_NAME_SELECT },
+    },
   });
 
-  return rows.map((row) => ({
-    id: row.id,
-    userId: row.userId,
-    nickname: row.nickname,
-    body: row.body,
-    createdAt: row.createdAt.toISOString(),
-  }));
+  return rows.map((row) => {
+    const displayName = row.user ? resolveSteamDisplayName(row.user) : row.nickname;
+    return {
+      id: row.id,
+      userId: row.userId,
+      nickname: row.nickname,
+      displayName,
+      body: row.body,
+      createdAt: row.createdAt.toISOString(),
+    };
+  });
 }
 
 export async function getPartyMessagesForUser(userId: string) {

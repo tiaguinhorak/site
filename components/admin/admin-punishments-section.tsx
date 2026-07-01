@@ -9,6 +9,7 @@ import { confirmPresets } from "@/lib/confirm-presets";
 import { punishmentTypeLabel } from "@/lib/admin/punishment-labels";
 import type { PunishmentType } from "@/lib/generated/prisma/client";
 import { cn } from "@/lib/utils";
+import { SocialUserName } from "@/components/social/social-user-name";
 
 type PunishmentRow = {
   id: string;
@@ -134,13 +135,11 @@ export function AdminPunishmentsSection() {
                     <td className="px-4 py-3">
                       <Link
                         href={`/admin/usuarios/${p.user.id}`}
-                        className="font-semibold text-primary hover:underline"
+                        className="hover:text-primary"
                       >
-                        {p.user.nickname}
+                        <SocialUserName user={p.user} nameClassName="text-sm font-semibold" />
                       </Link>
-                      <p className="text-xs text-muted">
-                        {p.user.steamPersonaName ?? p.user.email ?? "—"}
-                      </p>
+                      <p className="text-xs text-muted">@{p.user.nickname}</p>
                     </td>
                     <td className="px-4 py-3">
                       <span

@@ -24,6 +24,7 @@ import { notifyAuthSessionChanged } from "@/lib/auth/auth-events";
 import { useUser } from "@/lib/hooks/use-user";
 import { useTheme } from "@/lib/theme";
 import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
+import { SocialUserName } from "@/components/social/social-user-name";
 import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
 import { cn } from "@/lib/utils";
 
@@ -72,8 +73,8 @@ export function AccountDropdown({ className }: Props) {
           customization={user.customization}
           size="sm"
         />
-        <span className="hidden max-w-[88px] truncate font-display text-sm font-semibold text-foreground md:block">
-          {user.displayName}
+        <span className="hidden max-w-[88px] truncate md:block">
+          <SocialUserName user={user} nameClassName="text-sm" />
         </span>
         <ChevronDown
           className={cn("h-3.5 w-3.5 shrink-0 text-muted transition-transform", open && "rotate-180")}
@@ -97,9 +98,7 @@ export function AccountDropdown({ className }: Props) {
               size="md"
             />
             <div className="min-w-0">
-              <p className="truncate font-display text-sm font-bold text-foreground">
-                {user.displayName}
-              </p>
+              <SocialUserName user={user} nameClassName="text-sm font-bold" showPlanBadge />
               <p className="truncate text-xs capitalize text-muted">
                 {t("plan", { plan: user.plan ?? "free" })}
               </p>

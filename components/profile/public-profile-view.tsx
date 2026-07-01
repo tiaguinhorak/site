@@ -312,7 +312,7 @@ export function PublicProfileView({
               <div className="flex justify-between gap-4 text-sm">
                 <span className="text-muted">{labels.persona}</span>
                 <span className="font-medium text-foreground text-right">
-                  {player.steamPersonaName}
+                  {player.displayName}
                 </span>
               </div>
               {player.steamProfileUrl && (

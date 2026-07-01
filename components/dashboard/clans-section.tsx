@@ -26,6 +26,8 @@ import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EloRankBadgeI18n } from "@/components/ranked/elo-rank-badge-i18n";
+import { SocialUserName } from "@/components/social/social-user-name";
+import { SocialUserRow } from "@/components/social/social-user-row";
 import { getCountryFlag } from "@/lib/profile";
 import { getDefaultAvatarPresetUrl } from "@/lib/profile/avatar";
 import { secureApi, secureFormApi } from "@/lib/api/client";
@@ -601,16 +603,17 @@ function ClanDashboard({
                 key={req.id}
                 className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-0"
               >
-                <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-border">
-                  <AvatarImage src={req.avatarUrl ?? getDefaultAvatarPresetUrl()} alt="" size={40} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-display text-sm font-semibold text-foreground">{req.displayName}</p>
-                  <p className="text-xs text-muted">
-                    {getCountryFlag(req.country)} · <EloRankBadgeI18n elo={req.elo} size="sm" />
-                  </p>
-                  {req.message && <p className="mt-1 text-xs text-muted">{req.message}</p>}
-                </div>
+                <SocialUserRow
+                  user={{ ...req, avatarUrl: req.avatarUrl, nickname: req.nickname }}
+                  subtitle={
+                    <>
+                      <p className="text-xs text-muted">
+                        {getCountryFlag(req.country)} · <EloRankBadgeI18n elo={req.elo} size="sm" />
+                      </p>
+                      {req.message ? <p className="mt-1 text-xs text-muted">{req.message}</p> : null}
+                    </>
+                  }
+                />
                 <div className="flex shrink-0 gap-1.5">
                   <Button
                     type="button"
@@ -670,11 +673,7 @@ function ClanDashboard({
                   />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <Link
-                    href={`/player/${member.nickname}`}
-                    prefetch={false}
-                    className="flex items-center gap-1.5 truncate font-display text-sm font-semibold text-foreground hover:text-primary"
-                  >
+                  <div className="flex items-center gap-1.5">
                     <RoleIcon
                       className={cn(
                         "h-3.5 w-3.5 shrink-0",
@@ -685,8 +684,8 @@ function ClanDashboard({
                             : "text-muted",
                       )}
                     />
-                    {member.displayName}
-                  </Link>
+                    <SocialUserName user={member} link nameClassName="text-sm" />
+                  </div>
                   <p className="text-xs text-muted">
                     {getCountryFlag(member.country)} {t("memberLevel", { level: member.level })} ·{" "}
                     {member.points.toLocaleString("pt-BR")} {t("points")}

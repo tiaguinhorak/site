@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import type { RankedPartyMemberView } from "@/lib/ranked/party-shared";
-import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
+import { SocialUserRow } from "@/components/social/social-user-row";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -31,20 +31,13 @@ export function RankedTeamRoster({
       <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">{title}</p>
       <ul className={cn("space-y-2", compact && "space-y-1.5")}>
         {members.map((member) => (
-          <li key={member.id} className="flex items-center gap-2.5">
-            <UserProfileAvatar
-              avatarUrl={member.avatarUrl}
-              nickname={member.nickname}
-              customization={member.customization}
-              size={compact ? "sm" : "md"}
+          <li key={member.id}>
+            <SocialUserRow
+              user={member}
+              avatarSize={compact ? "sm" : "md"}
+              suffix={member.isYou ? ` ${t("you")}` : undefined}
+              subtitle={<p className="text-xs text-muted">{member.elo} ELO</p>}
             />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-foreground">
-                {member.displayName}
-                {member.isYou ? ` ${t("you")}` : ""}
-              </p>
-              <p className="text-xs text-muted">{member.elo} ELO</p>
-            </div>
           </li>
         ))}
       </ul>

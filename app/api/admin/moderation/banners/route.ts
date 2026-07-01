@@ -8,6 +8,7 @@ import {
 } from "@/lib/security/api-guard";
 import { requireAdmin } from "@/lib/auth/admin";
 import { prisma } from "@/lib/prisma";
+import { resolveSteamDisplayName, STEAM_DISPLAY_NAME_SELECT } from "@/lib/steam/display-name";
 import { RATE_LIMITS } from "@/lib/security/constants";
 import { firstZodError } from "@/lib/security/schemas";
 import { logAdminAction } from "@/lib/admin/audit";
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
     where: { profileBannerModerationStatus: "PENDING", profileBannerMediaType: "GIF" },
     select: {
       id: true,
-      nickname: true,
+      ...STEAM_DISPLAY_NAME_SELECT,
       profileBannerUrl: true,
       profileBannerModerationStatus: true,
       plan: true,
@@ -38,7 +39,13 @@ export async function GET(request: NextRequest) {
     take: 50,
   });
 
-  return NextResponse.json({ pending });
+  return NextResponse.json({
+    pending: pending.map((u) => ({
+      ...u,
+      displayName: resolveSteamDisplayName(u),
+      plan: u.plan.toLowerCase(),
+    })),
+  });
 }
 
 export async function PATCH(request: NextRequest) {
