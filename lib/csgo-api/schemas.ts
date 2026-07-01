@@ -98,7 +98,7 @@ export const createSkinCatalogSchema = z.object({
 
 export const giveSkinSchema = z.object({
   skinId: z.string().min(1),
-  wear: skinWearSchema.default("field_tested"),
+  wear: skinWearSchema.default("factory_new"),
   seed: z.number().int().min(0).max(1000).default(0),
   stattrak: z.boolean().default(false),
   nametag: z.string().max(32).optional(),

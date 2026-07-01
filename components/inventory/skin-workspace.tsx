@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { motion } from "motion/react";
-import { Loader2, Lock, Palette, Search, Sticker, X } from "lucide-react";
+import { Loader2, Lock, Palette, Sticker, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RemoteImage } from "@/components/ui/remote-image";
 import { SkinRarityBadge } from "@/components/skins/skin-rarity-badge";
@@ -34,11 +34,11 @@ import {
 import { cn } from "@/lib/utils";
 import {
   chipInactiveHoverClass,
-  surfaceInputClass,
   surfaceSubtleClass,
 } from "@/lib/ui/theme-surfaces";
 import { WeaponStickerSlotGrid } from "@/components/inventory/weapon-sticker-slot-grid";
 import { SkinFloatPatternEditor } from "@/components/inventory/skin-float-pattern-editor";
+import { SearchInput } from "@/components/ui/search-input";
 import { StickerPickerTile } from "@/components/inventory/sticker-picker-tile";
 import { TeamScopePicker } from "@/components/inventory/team-scope-picker";
 import type { StickerFinishVariant } from "@/lib/inventory/sticker-finish-variant";
@@ -573,10 +573,10 @@ export function SkinWorkspace({
           </button>
         </div>
 
-        <div className="grid min-h-0 flex-1 grid-rows-[auto_1fr] lg:grid-cols-2 lg:grid-rows-1">
+        <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] lg:grid-cols-2 lg:grid-rows-1">
           {/* Preview column */}
-          <div className="flex min-h-0 flex-col border-b border-border/40 lg:border-b-0 lg:border-r">
-            <div className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-hidden px-4 py-3 sm:px-6 lg:px-6 lg:py-4">
+          <div className="flex min-h-0 min-w-0 flex-col border-b border-border/40 lg:border-b-0 lg:border-r">
+            <div className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-4 py-3 sm:px-6 lg:px-6 lg:py-4">
               <div
                 className={cn(
                   "pointer-events-none absolute inset-x-8 top-20 h-32 rounded-full opacity-30 blur-3xl lg:top-24",
@@ -633,54 +633,61 @@ export function SkinWorkspace({
                   {displaySkin.weaponName} · {displaySkin.paintkitName}
                 </p>
               )}
+
+              {displaySkin.owned && anyEquipped && (
+                  <div className="mx-auto w-full max-w-xl shrink-0">
+                    <SkinFloatPatternEditor
+                      catalogSkinId={displaySkin.catalogSkinId}
+                      floatValue={displaySkin.floatValue ?? 0}
+                      seed={displaySkin.seed ?? 0}
+                      disabled={busy}
+                      onSaved={() => onSaved?.()}
+                    />
+                  </div>
+                )}
             </div>
           </div>
 
           {/* Controls column */}
-          <div className="flex min-h-0 flex-col overflow-hidden">
+          <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
             <div className="shrink-0 px-4 pt-4 sm:px-6 lg:px-8">
-              <div className="flex rounded-xl border border-border/40 p-1 glass">
+              <div className="flex min-w-0 rounded-xl border border-border/40 p-1 glass">
                 <button
                   type="button"
                   onClick={() => setTab("skins")}
                   className={cn(
-                    "flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all",
+                    "flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-xs font-semibold transition-all sm:gap-2 sm:text-sm",
                     tab === "skins"
                       ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground shadow-sm"
                       : "text-muted hover:text-foreground",
                   )}
                 >
-                  <Palette className="h-4 w-4" />
-                  {t("workspaceTabSkins")}
+                  <Palette className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{t("workspaceTabSkins")}</span>
                 </button>
                 {supportsStickers && (
                   <button
                     type="button"
                     onClick={openStickersTab}
                     className={cn(
-                      "flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all",
+                      "flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-xs font-semibold transition-all sm:gap-2 sm:text-sm",
                       tab === "stickers"
                         ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground shadow-sm"
                         : "text-muted hover:text-foreground",
                     )}
                   >
-                    <Sticker className="h-4 w-4" />
-                    {t("workspaceTabStickers")}
+                    <Sticker className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{t("workspaceTabStickers")}</span>
                   </button>
                 )}
               </div>
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-2 pt-3 sm:px-6 lg:px-6">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden px-4 pb-2 pt-3 sm:px-6 lg:px-6">
           {tab === "skins" ? (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <div className="relative shrink-0 pb-2">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-                <input
-                  className={cn(
-                    "w-full rounded-xl py-2 pl-10 pr-3 text-sm",
-                    surfaceInputClass,
-                  )}
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+              <div className="shrink-0 pb-2">
+                <SearchInput
                   placeholder={t("searchPlaceholder")}
                   value={skinPickerSearch}
                   onChange={(e) => {
@@ -696,7 +703,7 @@ export function SkinWorkspace({
                     <Loader2 className="h-6 w-6 motion-safe-spin text-muted" />
                   </div>
                 ) : (
-                  <div className="grid grid-cols-4 gap-2 pb-2">
+                  <div className="grid grid-cols-3 gap-2 pb-2 sm:grid-cols-4 lg:grid-cols-5">
                     {skinPickerItems.map((item) => {
                       const selected = item.catalogSkinId === displaySkin.catalogSkinId;
                       const equipped = item.equippedT || item.equippedCT;
@@ -790,22 +797,9 @@ export function SkinWorkspace({
                 </div>
               )}
 
-              {displaySkin.owned &&
-                anyEquipped &&
-                displaySkin.floatValue !== undefined && (
-                  <div className="shrink-0 pt-3">
-                    <SkinFloatPatternEditor
-                      catalogSkinId={displaySkin.catalogSkinId}
-                      floatValue={displaySkin.floatValue}
-                      seed={displaySkin.seed}
-                      disabled={busy}
-                      onSaved={() => onSaved?.()}
-                    />
-                  </div>
-                )}
             </div>
           ) : (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
               {!displaySkin.owned ? (
                 <div className={cn("rounded-xl p-4 text-center", surfaceSubtleClass)}>
                   <Lock className="mx-auto h-6 w-6 text-muted" aria-hidden />
@@ -840,13 +834,8 @@ export function SkinWorkspace({
                     </div>
                   )}
 
-                  <div className="relative shrink-0 pb-2">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-                    <input
-                      className={cn(
-                        "w-full rounded-xl py-2 pl-10 pr-3 text-sm",
-                        surfaceInputClass,
-                      )}
+                  <div className="shrink-0 pb-2">
+                    <SearchInput
                       placeholder={t("stickersSearchPlaceholder")}
                       value={stickerState.pickerSearch}
                       onChange={(e) => stickerState.setPickerSearch(e.target.value)}
@@ -906,7 +895,7 @@ export function SkinWorkspace({
                         <Loader2 className="h-6 w-6 motion-safe-spin text-muted" />
                       </div>
                     ) : (
-                      <div className="grid grid-cols-4 gap-2 pb-2">
+                      <div className="grid grid-cols-3 gap-2 pb-2 sm:grid-cols-4 lg:grid-cols-5">
                         {stickerState.pickerItems.map((item) => {
                           const isSelected =
                             item.defIndex > 0 &&

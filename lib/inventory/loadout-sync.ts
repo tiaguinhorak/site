@@ -3,7 +3,7 @@ import {
   isGlovesWeaponId,
   resolveGloveDefIndex,
 } from "@/lib/inventory/glove-defindex";
-import { clampSkinFloat } from "@/lib/inventory/skin-wear";
+import { clampSkinFloat, SYNC_SKIN_FLOAT_FACTORY_NEW } from "@/lib/inventory/skin-wear";
 import type { LoadoutTeam } from "@/lib/inventory/loadout-team";
 
 export type SyncWeaponEntry = {
@@ -31,10 +31,14 @@ function mapRowToSyncWeapon(row: EquippedRow, team?: LoadoutTeam): SyncWeaponEnt
       ? resolveGloveDefIndex(row.skin.weaponId, row.skin.weaponDefIndex)
       : row.skin.weaponDefIndex;
 
+  const rawFloat = clampSkinFloat(row.floatValue);
+  const wear =
+    rawFloat <= 0 ? SYNC_SKIN_FLOAT_FACTORY_NEW : rawFloat;
+
   return {
     weaponId: row.skin.weaponId,
     paintkit: row.skin.paintkit,
-    wear: clampSkinFloat(row.floatValue),
+    wear,
     seed: row.seed,
     stattrak: row.stattrak,
     stattrakCount: row.stattrakCount,

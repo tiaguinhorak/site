@@ -44,7 +44,7 @@ export function TeamScopePicker({
       ) : null}
       <div
         className={cn(
-          "grid gap-1.5 rounded-xl border border-border/40 p-1 glass",
+          "grid min-w-0 gap-1.5 rounded-xl border border-border/40 p-1 glass",
           showBoth ? "grid-cols-3" : "grid-cols-2",
         )}
         role="group"
@@ -55,7 +55,7 @@ export function TeamScopePicker({
             type="button"
             onClick={() => onChange("both")}
             className={cn(
-              "rounded-lg font-semibold transition-all",
+              "min-w-0 truncate rounded-lg font-semibold transition-all",
               pad,
               value === "both"
                 ? "bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] text-primary-foreground shadow-sm"
@@ -71,7 +71,7 @@ export function TeamScopePicker({
             type="button"
             onClick={() => onChange("CT")}
             className={cn(
-              "rounded-lg font-semibold transition-all",
+              "min-w-0 truncate rounded-lg font-semibold transition-all",
               pad,
               value === "CT"
                 ? teamPillClass("CT", true)
@@ -87,7 +87,7 @@ export function TeamScopePicker({
             type="button"
             onClick={() => onChange("T")}
             className={cn(
-              "rounded-lg font-semibold transition-all",
+              "min-w-0 truncate rounded-lg font-semibold transition-all",
               pad,
               value === "T"
                 ? teamPillClass("T", true)

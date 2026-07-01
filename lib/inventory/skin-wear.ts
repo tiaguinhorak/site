@@ -12,6 +12,9 @@ export const WEAR_TIER_BOUNDS: Array<{ wear: CsgoSkinWear; max: number }> = [
 /** Default float for a freshly equipped skin: max quality (Factory New / lowest wear). */
 export const DEFAULT_SKIN_FLOAT = 0;
 
+/** Minimum wear sent to the game plugin (0 alone can render as BS — use lowest FN float). */
+export const SYNC_SKIN_FLOAT_FACTORY_NEW = 0.001;
+
 /** Paint seed / pattern range accepted from users. */
 export const MIN_SKIN_SEED = 0;
 export const MAX_SKIN_SEED = 1000;

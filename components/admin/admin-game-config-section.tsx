@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { Loader2, Save } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { secureApi } from "@/lib/api/client";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import { surfaceInputClass } from "@/lib/ui/theme-surfaces";
 
 type GameConfig = {
   pool: string;
@@ -28,7 +28,43 @@ const POOL_LABEL: Record<string, string> = {
   public: "Público (legado)",
 };
 
-function Toggle({
+const numberInputClass = cn(
+  "h-10 w-full min-w-0 rounded-lg px-3 text-sm tabular-nums",
+  "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+  surfaceInputClass,
+);
+
+function ConfigNumberField({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="block min-w-0">
+      <span className="mb-1 block text-[11px] font-semibold uppercase leading-snug tracking-wide text-muted">
+        {label}
+      </span>
+      <input
+        type="number"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className={numberInputClass}
+      />
+    </label>
+  );
+}
+
+function ConfigToggle({
   label,
   checked,
   onChange,
@@ -38,26 +74,27 @@ function Toggle({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <label className="flex items-center justify-between gap-3 rounded-lg border border-border/40 px-3 py-2">
-      <span className="text-sm text-foreground">{label}</span>
+    <div className="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-border/40 px-3 py-2.5">
+      <span className="min-w-0 flex-1 text-sm leading-snug text-foreground">{label}</span>
       <button
         type="button"
         role="switch"
         aria-checked={checked}
+        aria-label={label}
         onClick={() => onChange(!checked)}
         className={cn(
-          "relative h-6 w-11 shrink-0 rounded-full transition-colors",
-          checked ? "bg-primary" : "bg-[color-mix(in_srgb,var(--foreground)_20%,transparent)]",
+          "relative inline-flex h-6 w-10 shrink-0 items-center rounded-full transition-colors",
+          checked ? "bg-primary" : "bg-[color-mix(in_srgb,var(--foreground)_22%,transparent)]",
         )}
       >
         <span
           className={cn(
-            "absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform",
-            checked ? "translate-x-5" : "translate-x-0.5",
+            "inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
+            checked ? "translate-x-[1.33rem]" : "translate-x-1",
           )}
         />
       </button>
-    </label>
+    </div>
   );
 }
 
@@ -108,8 +145,8 @@ export function AdminGameConfigSection() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="min-w-0 space-y-6 overflow-x-hidden">
+      <div className="min-w-0">
         <h1 className="font-display text-xl font-bold text-foreground">Regras de jogo</h1>
         <p className="mt-1 text-sm text-muted">
           Configuração por pool. Aplicada automaticamente ao subir o servidor e no início de partidas
@@ -117,83 +154,82 @@ export function AdminGameConfigSection() {
         </p>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
         {configs.map((config) => (
-          <div
+          <section
             key={config.pool}
-            className="rounded-card glass-strong p-4 sm:p-5 space-y-3"
+            className="min-w-0 overflow-hidden rounded-card glass-strong p-4 sm:p-5"
           >
-            <div className="flex items-center justify-between">
-              <h2 className="font-display text-sm font-bold uppercase tracking-wider text-foreground">
+            <header className="mb-3 flex min-w-0 items-start justify-between gap-2 border-b border-border/30 pb-3">
+              <h2 className="min-w-0 font-display text-sm font-bold uppercase leading-snug tracking-wider text-foreground">
                 {POOL_LABEL[config.pool] ?? config.pool}
               </h2>
-              <span className="text-[10px] uppercase tracking-wider text-muted">{config.pool}</span>
-            </div>
+              <span className="shrink-0 rounded-md bg-[color-mix(in_srgb,var(--foreground)_8%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted">
+                {config.pool}
+              </span>
+            </header>
 
-            <Toggle
-              label="Regras ativas"
-              checked={config.enabled}
-              onChange={(v) => update(config.pool, { enabled: v })}
-            />
+            <div className="flex min-w-0 flex-col gap-2.5">
+              <ConfigToggle
+                label="Regras ativas"
+                checked={config.enabled}
+                onChange={(v) => update(config.pool, { enabled: v })}
+              />
 
-            <div className="grid grid-cols-2 gap-3">
-              <Input
+              <ConfigNumberField
                 label="Aquecimento (segundos)"
-                type="number"
                 min={0}
                 max={600}
                 value={config.warmupSeconds}
-                onChange={(e) =>
-                  update(config.pool, { warmupSeconds: Number(e.target.value) })
-                }
+                onChange={(v) => update(config.pool, { warmupSeconds: v })}
               />
-              <Input
+
+              <ConfigNumberField
                 label="Gold no aquecimento"
-                type="number"
                 min={0}
                 max={65535}
                 value={config.warmupStartMoney}
-                onChange={(e) =>
+                onChange={(v) =>
                   update(config.pool, {
-                    warmupStartMoney: Number(e.target.value),
-                    warmupMaxMoney: Number(e.target.value),
+                    warmupStartMoney: v,
+                    warmupMaxMoney: v,
                   })
                 }
               />
+
+              <ConfigToggle
+                label="Comprar qualquer arma no aquecimento"
+                checked={config.warmupBuyAnywhere}
+                onChange={(v) => update(config.pool, { warmupBuyAnywhere: v })}
+              />
+              <ConfigToggle
+                label="Spawns aleatórios"
+                checked={config.randomSpawns}
+                onChange={(v) => update(config.pool, { randomSpawns: v })}
+              />
+              <ConfigToggle
+                label="Respawn deathmatch (ao morrer)"
+                checked={config.dmRespawn}
+                onChange={(v) => update(config.pool, { dmRespawn: v })}
+              />
+
+              <Button
+                type="button"
+                variant="primary"
+                className="mt-1 w-full"
+                disabled={savingPool === config.pool ? true : undefined}
+                onClick={() => save(config)}
+              >
+                {savingPool === config.pool ? (
+                  <Loader2 className="h-4 w-4 motion-safe-spin" />
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" /> Salvar {config.pool}
+                  </>
+                )}
+              </Button>
             </div>
-
-            <Toggle
-              label="Comprar qualquer arma no aquecimento"
-              checked={config.warmupBuyAnywhere}
-              onChange={(v) => update(config.pool, { warmupBuyAnywhere: v })}
-            />
-            <Toggle
-              label="Spawns aleatórios"
-              checked={config.randomSpawns}
-              onChange={(v) => update(config.pool, { randomSpawns: v })}
-            />
-            <Toggle
-              label="Respawn deathmatch (ao morrer)"
-              checked={config.dmRespawn}
-              onChange={(v) => update(config.pool, { dmRespawn: v })}
-            />
-
-            <Button
-              type="button"
-              variant="primary"
-              className="w-full"
-              disabled={savingPool === config.pool ? true : undefined}
-              onClick={() => save(config)}
-            >
-              {savingPool === config.pool ? (
-                <Loader2 className="h-4 w-4 motion-safe-spin" />
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" /> Salvar {config.pool}
-                </>
-              )}
-            </Button>
-          </div>
+          </section>
         ))}
       </div>
     </div>

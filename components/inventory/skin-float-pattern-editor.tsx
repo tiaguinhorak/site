@@ -83,8 +83,8 @@ export function SkinFloatPatternEditor({
   }
 
   return (
-    <div className={cn("rounded-xl p-3", surfaceSubtleClass)}>
-      <div className="mb-2 flex items-center justify-between">
+    <div className={cn("w-full min-w-0 rounded-xl p-3 sm:p-4", surfaceSubtleClass)}>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-semibold uppercase tracking-wider text-foreground">
           {t("floatPatternTitle")}
         </p>
@@ -93,39 +93,45 @@ export function SkinFloatPatternEditor({
         </span>
       </div>
 
-      <label className="mb-1 flex items-center justify-between text-xs text-muted">
-        <span>{t("floatLabel")}</span>
-        <span className="font-mono text-foreground">{floatInput.toFixed(4)}</span>
-      </label>
-      <input
-        type="range"
-        min={0}
-        max={1}
-        step={0.0001}
-        value={floatInput}
-        disabled={disabled || saving}
-        onChange={(e) => setFloatInput(Number(e.target.value))}
-        className="mb-3 w-full accent-primary"
-      />
+      <div className="space-y-3 sm:grid sm:grid-cols-2 sm:gap-3 sm:space-y-0">
+        <div className="min-w-0">
+          <label className="mb-1 flex items-center justify-between gap-2 text-xs text-muted">
+            <span className="truncate">{t("floatLabel")}</span>
+            <span className="shrink-0 font-mono text-foreground">{floatInput.toFixed(4)}</span>
+          </label>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.0001}
+            value={floatInput}
+            disabled={disabled || saving}
+            onChange={(e) => setFloatInput(Number(e.target.value))}
+            className="h-2 w-full min-w-0 accent-primary"
+          />
+        </div>
 
-      <label className="mb-1 block text-xs text-muted">
-        {t("patternLabel")} ({MIN_SKIN_SEED}–{MAX_SKIN_SEED})
-      </label>
-      <input
-        type="number"
-        min={MIN_SKIN_SEED}
-        max={MAX_SKIN_SEED}
-        value={seedInput}
-        disabled={disabled || saving}
-        onChange={(e) => setSeedInput(Number(e.target.value))}
-        className={cn("mb-3 w-full rounded-lg px-3 py-2 text-sm", surfaceInputClass)}
-      />
+        <div className="min-w-0">
+          <label className="mb-1 block truncate text-xs text-muted">
+            {t("patternLabel")} ({MIN_SKIN_SEED}–{MAX_SKIN_SEED})
+          </label>
+          <input
+            type="number"
+            min={MIN_SKIN_SEED}
+            max={MAX_SKIN_SEED}
+            value={seedInput}
+            disabled={disabled || saving}
+            onChange={(e) => setSeedInput(Number(e.target.value))}
+            className={cn("h-11 w-full min-w-0 rounded-lg px-3 text-sm", surfaceInputClass)}
+          />
+        </div>
+      </div>
 
       <Button
         type="button"
         variant="outline"
         size="sm"
-        className="w-full"
+        className="mt-3 w-full sm:mt-4"
         disabled={disabled || saving || !dirty ? true : undefined}
         onClick={handleSave}
       >
