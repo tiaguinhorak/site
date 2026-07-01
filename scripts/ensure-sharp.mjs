@@ -7,8 +7,11 @@ try {
 } catch {
   console.error(
     "\n[ensure-sharp] Pacote \"sharp\" não encontrado.\n" +
-      "Rode na raiz do site: npm install\n" +
-      "No VPS (Linux): npm install --include=optional sharp\n",
+      "Rode na raiz do site:\n" +
+      "  npm run fix:sharp\n" +
+      "Ou manualmente:\n" +
+      "  rm -rf node_modules/sharp node_modules/.sharp-* node_modules/@img/sharp-*\n" +
+      "  npm install --include=optional sharp\n",
   );
   process.exit(1);
 }
