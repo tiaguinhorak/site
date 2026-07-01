@@ -574,9 +574,7 @@ function ClanDashboard({
       {activeTab === "members" && (
         <section>
           <ul className="overflow-hidden rounded-card glass">
-            {clan.members.map((member) => {
-              const RoleIcon = roleIcon[member.role];
-              return (
+            {clan.members.map((member) => (
                 <motion.li
                   key={member.userId}
                   initial={{ opacity: 0, y: 8 }}
@@ -585,24 +583,30 @@ function ClanDashboard({
                 >
                   <SocialUserRow
                     user={member}
+                    avatarSize="md"
                     link
                     showPlanBadge
+                    className="min-w-0 flex-1"
                     subtitle={
-                      <p className="text-xs text-muted">
-                        {getCountryFlag(member.country)} {t("memberLevel", { level: member.level })}{" "}
-                        · {member.points.toLocaleString("pt-BR")} {t("points")}
+                      <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-muted">
+                        {getCountryFlag(member.country)}
+                        <span>{t("memberLevel", { level: member.level })}</span>
+                        <span>·</span>
+                        <EloRankBadgeI18n elo={member.elo} size="sm" />
+                        <span>·</span>
+                        <span>
+                          {member.points.toLocaleString("pt-BR")} {t("points")}
+                        </span>
+                        <span>·</span>
+                        <span className="font-semibold text-primary/90">
+                          {member.role === "OWNER"
+                            ? t("roleOwner")
+                            : member.role === "OFFICER"
+                              ? t("roleOfficer")
+                              : t("roleMember")}
+                        </span>
                       </p>
                     }
-                  />
-                  <RoleIcon
-                    className={cn(
-                      "h-4 w-4 shrink-0",
-                      member.role === "OWNER"
-                        ? "text-amber-400"
-                        : member.role === "OFFICER"
-                          ? "text-primary"
-                          : "text-muted",
-                    )}
                   />
                   {canManage && member.role !== "OWNER" && (
                     <div className="flex shrink-0 items-center gap-1.5">
@@ -652,8 +656,7 @@ function ClanDashboard({
                     </div>
                   )}
                 </motion.li>
-              );
-            })}
+            ))}
           </ul>
         </section>
       )}
@@ -737,6 +740,10 @@ function ClanDashboard({
                   >
                     <SocialUserRow
                       user={req}
+                      avatarSize="md"
+                      link
+                      showPlanBadge
+                      className="min-w-0 flex-1"
                       subtitle={
                         <>
                           <p className="text-xs text-muted">

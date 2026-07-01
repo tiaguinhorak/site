@@ -36,13 +36,15 @@ export const SOCIAL_USER_SELECT = {
   isAdmin: true,
 } satisfies Prisma.UserSelect;
 
-export type SocialUserRow = Prisma.UserGetPayload<{ select: typeof SOCIAL_USER_SELECT }>;
+export type SocialUserDbRow = Prisma.UserGetPayload<{ select: typeof SOCIAL_USER_SELECT }>;
 
-export function serializeSocialUser(user: SocialUserRow): SerializedSocialUser {
+export function serializeSocialUser(user: SocialUserDbRow): SerializedSocialUser {
   return {
     userId: user.id,
     nickname: user.nickname,
     displayName: resolveSteamDisplayName(user),
+    steamId: user.steamId,
+    steamPersonaName: user.steamPersonaName,
     country: user.country,
     avatarUrl: resolveUserAvatarUrl(user),
     plan: user.plan.toLowerCase(),

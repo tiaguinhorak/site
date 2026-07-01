@@ -13,6 +13,8 @@ export type SerializedSocialUser = {
   userId: string;
   nickname: string;
   displayName: string;
+  steamId: string | null;
+  steamPersonaName: string | null;
   country: string;
   avatarUrl: string | null;
   plan: string;
@@ -20,6 +22,41 @@ export type SerializedSocialUser = {
   elo: number;
   customization: PublicProfileCustomization | null;
 };
+
+/** Props normalizadas para SocialUserRow / SocialUserName (padrão global). */
+export type SocialUserView = SocialUserFields & {
+  avatarUrl: string | null;
+  country?: string;
+  level?: number;
+  elo?: number;
+};
+
+export function toSocialUserView(user: SerializedSocialUser): SocialUserView {
+  return {
+    nickname: user.nickname,
+    displayName: user.displayName,
+    steamId: user.steamId,
+    steamPersonaName: user.steamPersonaName,
+    plan: user.plan,
+    customization: user.customization,
+    avatarUrl: user.avatarUrl,
+    country: user.country,
+    level: user.level,
+    elo: user.elo,
+  };
+}
+
+export function isSerializedSocialUser(
+  user: SerializedSocialUser | SocialUserView,
+): user is SerializedSocialUser {
+  return "userId" in user;
+}
+
+export function normalizeSocialUser(
+  user: SerializedSocialUser | SocialUserView,
+): SocialUserView {
+  return isSerializedSocialUser(user) ? toSocialUserView(user) : user;
+}
 
 export function resolveSocialDisplayName(user: SocialUserFields): string {
   if (user.displayName?.trim()) return user.displayName.trim();

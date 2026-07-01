@@ -123,7 +123,7 @@ export function ClanBrowseHub({
                     <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted">
                       {t("leaderLabel")}
                     </p>
-                    <SocialUserRow user={topClan.leader} link showPlanBadge />
+                    <SocialUserRow user={topClan.leader} avatarSize="md" link showPlanBadge />
                   </div>
                 )}
               </div>
@@ -284,7 +284,7 @@ export function ClanBrowseHub({
                     </div>
                     {clan.leader && (
                       <div className="mt-2">
-                        <SocialUserRow user={clan.leader} link nameClassName="text-xs" />
+                        <SocialUserRow user={clan.leader} avatarSize="sm" link nameClassName="text-xs" />
                       </div>
                     )}
                   </div>

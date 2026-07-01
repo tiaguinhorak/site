@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, MessageSquare, Send } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
+import { SocialUserName } from "@/components/social/social-user-name";
 import { Button } from "@/components/ui/button";
-import { SocialUserRow } from "@/components/social/social-user-row";
 import { secureApi } from "@/lib/api/client";
+import { toSocialUserView, type SerializedSocialUser } from "@/lib/profile/social-user";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
-import type { SerializedSocialUser } from "@/lib/profile/social-user";
 
 type ClanMessage = SerializedSocialUser & {
   id: string;
@@ -86,33 +87,43 @@ export function ClanChatPanel({
         ) : (
           messages.map((msg) => {
             const isYou = msg.userId === currentUserId;
+            const view = toSocialUserView(msg);
             return (
               <div
                 key={msg.id}
                 className={cn("flex gap-2.5", isYou ? "flex-row-reverse" : "flex-row")}
               >
-                <div className="min-w-0 max-w-[min(100%,20rem)]">
+                <UserProfileAvatar
+                  avatarUrl={view.avatarUrl}
+                  nickname={view.nickname}
+                  customization={view.customization}
+                  size="sm"
+                />
+                <div className={cn("min-w-0 max-w-[min(100%,20rem)]", isYou && "items-end")}>
                   {!isYou && (
-                    <div className="mb-1">
-                      <SocialUserRow user={msg} link showPlanBadge nameClassName="text-[11px]" />
-                    </div>
+                    <SocialUserName
+                      user={view}
+                      link
+                      showPlanBadge
+                      nameClassName="text-[11px] font-semibold"
+                    />
                   )}
                   <div
                     className={cn(
-                      "rounded-xl px-3 py-2",
+                      "mt-0.5 rounded-2xl px-3 py-2 text-sm",
                       isYou
-                        ? "bg-primary/15 text-foreground"
-                        : "bg-black/25 text-foreground",
+                        ? "rounded-br-sm bg-primary text-primary-foreground"
+                        : "rounded-bl-sm bg-[color-mix(in_srgb,var(--foreground)_8%,transparent)] text-foreground",
                     )}
                   >
-                    <p className="whitespace-pre-wrap break-words text-sm">{msg.body}</p>
-                    <p className="mt-1 text-[10px] text-muted">
-                      {new Date(msg.createdAt).toLocaleTimeString(undefined, {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
+                    <p className="whitespace-pre-wrap break-words">{msg.body}</p>
                   </div>
+                  <p className="mt-0.5 px-1 font-mono text-[10px] text-muted">
+                    {new Date(msg.createdAt).toLocaleTimeString(undefined, {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
                 </div>
               </div>
             );
@@ -120,27 +131,26 @@ export function ClanChatPanel({
         )}
       </div>
 
-      <div className="flex gap-2 border-t border-border p-3">
+      <form
+        className="flex gap-2 border-t border-border p-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void handleSend();
+        }}
+      >
         <input
           type="text"
           value={draft}
           maxLength={400}
           placeholder={t("placeholder")}
           onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              void handleSend();
-            }
-          }}
           className="min-w-0 flex-1 rounded-lg border border-border bg-black/20 px-3 py-2 text-sm text-foreground outline-none focus:border-primary/50"
         />
         <Button
-          type="button"
+          type="submit"
           variant="primary"
           size="sm"
           disabled={sending || !draft.trim()}
-          onClick={() => void handleSend()}
           aria-label={t("send")}
         >
           {sending ? (
@@ -149,7 +159,7 @@ export function ClanChatPanel({
             <Send className="h-4 w-4" />
           )}
         </Button>
-      </div>
+      </form>
     </div>
   );
 }

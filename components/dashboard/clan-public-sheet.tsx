@@ -151,12 +151,21 @@ export function ClanPublicSheet({
                     >
                       <SocialUserRow
                         user={member}
+                        avatarSize="md"
                         link
                         showPlanBadge
+                        className="min-w-0 flex-1"
                         subtitle={
-                          <p className="text-xs text-muted">
-                            {member.points.toLocaleString("pt-BR")} {t("points")} ·{" "}
-                            {member.kills} kills · {member.wins} {t("statWins").toLowerCase()}
+                          <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-muted">
+                            <span>
+                              {member.points.toLocaleString("pt-BR")} {t("points")}
+                            </span>
+                            <span>·</span>
+                            <EloRankBadgeI18n elo={member.elo} size="sm" />
+                            <span>·</span>
+                            <span>
+                              {member.kills} kills · {member.wins} {t("statWins").toLowerCase()}
+                            </span>
                           </p>
                         }
                       />

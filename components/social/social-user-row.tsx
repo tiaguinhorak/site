@@ -3,11 +3,15 @@
 import type { ReactNode } from "react";
 import { UserProfileAvatar } from "@/components/profile/user-profile-avatar";
 import { SocialUserName } from "@/components/social/social-user-name";
-import type { SocialUserFields } from "@/lib/profile/social-user";
+import {
+  normalizeSocialUser,
+  type SerializedSocialUser,
+  type SocialUserView,
+} from "@/lib/profile/social-user";
 import { cn } from "@/lib/utils";
 
 type Props = {
-  user: SocialUserFields & { avatarUrl: string | null };
+  user: SerializedSocialUser | SocialUserView;
   avatarSize?: "sm" | "md" | "lg";
   subtitle?: ReactNode;
   link?: boolean;
@@ -17,7 +21,7 @@ type Props = {
   nameClassName?: string;
 };
 
-/** Avatar + nome público padronizados (Steam/nickname/plano). */
+/** Avatar + nome público padronizados (Steam/nickname/plano) — igual em amigos, ranked e clãs. */
 export function SocialUserRow({
   user,
   avatarSize = "sm",
@@ -28,17 +32,19 @@ export function SocialUserRow({
   className,
   nameClassName,
 }: Props) {
+  const view = normalizeSocialUser(user);
+
   return (
     <div className={cn("flex min-w-0 items-center gap-3", className)}>
       <UserProfileAvatar
-        avatarUrl={user.avatarUrl}
-        nickname={user.nickname}
-        customization={user.customization}
+        avatarUrl={view.avatarUrl}
+        nickname={view.nickname}
+        customization={view.customization}
         size={avatarSize}
       />
       <div className="min-w-0 flex-1">
         <SocialUserName
-          user={user}
+          user={view}
           link={link}
           showPlanBadge={showPlanBadge}
           suffix={suffix}
