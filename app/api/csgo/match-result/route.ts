@@ -62,6 +62,7 @@ const bodySchema = z.object({
   rounds: z.array(roundSchema).optional(),
   highlights: z.array(highlightSchema).optional(),
   deaths: z.array(deathSchema).optional(),
+  replayStale: z.boolean().optional(),
 });
 
 export async function POST(request: NextRequest) {

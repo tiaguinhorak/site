@@ -77,6 +77,8 @@ export type MatchResultInput = {
   rounds?: MatchResultRoundInput[];
   highlights?: MatchResultHighlightInput[];
   deaths?: MatchResultDeathInput[];
+  /** Recover ranked sessions cancelled/abandoned before result sync (server sync key only). */
+  replayStale?: boolean;
 };
 
 function computeCompetitiveDelta(won: boolean, kills: number, deaths: number, score: number): number {
@@ -100,10 +102,15 @@ export async function processMatchResultFromGame(input: MatchResultInput): Promi
   reason?: string;
 }> {
   const session = await prisma.rankedMatchSession.findFirst({
-    where: {
-      OR: [{ csgoMatchId: input.csgoMatchId }, { id: input.roomId }],
-      status: { in: ["starting", "live", "finished"] },
-    },
+    where: input.replayStale
+      ? {
+          OR: [{ csgoMatchId: input.csgoMatchId }, { id: input.roomId }],
+          resultSyncedAt: null,
+        }
+      : {
+          OR: [{ csgoMatchId: input.csgoMatchId }, { id: input.roomId }],
+          status: { in: ["starting", "live", "finished"] },
+        },
     select: {
       id: true,
       status: true,
@@ -139,6 +146,13 @@ export async function processMatchResultFromGame(input: MatchResultInput): Promi
   }[] = [];
 
   await prisma.$transaction(async (tx) => {
+    const needsFinishedStatus =
+      session.status !== "finished" &&
+      (input.replayStale ||
+        session.status === "cancelled" ||
+        session.status === "accepting" ||
+        session.status === "voting");
+
     await tx.rankedMatchSession.update({
       where: { id: session.id },
       data: {
@@ -150,6 +164,8 @@ export async function processMatchResultFromGame(input: MatchResultInput): Promi
         matchFinishedAt: finishedAt,
         resultSyncedAt: finishedAt,
         demoUrl: input.demoUrl ?? undefined,
+        ...(needsFinishedStatus ? { status: "finished" } : {}),
+        ...(session.csgoMatchId ? {} : { csgoMatchId: input.csgoMatchId }),
       },
     });
 
