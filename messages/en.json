@@ -340,7 +340,7 @@
     "inventoryTitle": "Inventory",
     "inventoryDesc": "Equip knives, gloves, rifles and agents on clutchclube servers.",
     "comparePlans": "Compare plans",
-    "comparePlansDesc": "All plans available on clutchclube."
+    "comparePlansDesc": "Pick the right plan and see below what each tier unlocks on the platform."
   },
   "confirmDialog": {
     "close": "Close dialog",
@@ -1535,7 +1535,67 @@
   "plans": {
     "currentPlan": "Current plan",
     "giftPlan": "Gift plan",
-    "purchaseSuccess": "Plan {plan} activated successfully!"
+    "purchaseSuccess": "Plan {plan} activated successfully!",
+    "includes": "What's included",
+    "cardFeatures": {
+      "free": [
+        "Public servers: Warmup, DM, Retakes and ForFun",
+        "Public profile and global ranking view",
+        "Standard Quick Connect",
+        "Basic inventory (no agents or stickers)"
+      ],
+      "premium": [
+        "Everything in Free",
+        "Ranked 5v5 queue with ELO and seasons",
+        "Create Lobby rooms",
+        "Priority slot on full servers",
+        "Expanded skins, agents and 2 sticker slots",
+        "Premium profile tag and Discord role"
+      ],
+      "elite": [
+        "Everything in Premium",
+        "Advanced profile customization (Elite)",
+        "Create a clan as Elite owner",
+        "4 sticker slots in inventory",
+        "Advanced profile statistics",
+        "Elite Discord role"
+      ]
+    },
+    "comparison": {
+      "title": "What each plan unlocks",
+      "description": "Detailed comparison of Free, Premium and Elite benefits on the platform.",
+      "featureColumn": "Benefit",
+      "included": "Included",
+      "notIncluded": "Not included",
+      "plans": {
+        "free": "Free",
+        "premium": "Premium",
+        "elite": "Elite"
+      },
+      "features": {
+        "publicServers": "Public servers (Warmup, DM, Retakes, ForFun)",
+        "profileRanking": "Public profile and ranking view",
+        "rankedQueue": "Ranked 5v5 queue with ELO",
+        "lobbyRooms": "Create Lobby rooms",
+        "serverPriority": "Priority slot on full servers",
+        "expandedSkins": "Expanded inventory skins",
+        "agents": "Equippable CS2 agents",
+        "stickers": "Inventory stickers",
+        "profileTag": "Premium/Elite profile tag",
+        "battlePassPremium": "Battle Pass Premium track",
+        "profileCustomization": "Advanced profile customization",
+        "createClan": "Create a clan (Elite owner)",
+        "discordRoles": "Premium/Elite Discord roles",
+        "advancedStats": "Advanced profile statistics"
+      },
+      "values": {
+        "stickers": {
+          "free": "No",
+          "premium": "2 slots",
+          "elite": "4 slots"
+        }
+      }
+    }
   },
   "upgrade": {
     "badge": "Upgrade",

@@ -6,7 +6,6 @@ import { Check, Crown, Gift, Loader2, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { GiftModal } from "@/components/gifts/gift-modal";
-import { PlanBadge } from "@/components/profile/plan-badge";
 import { useUser } from "@/lib/hooks/use-user";
 import { secureApi } from "@/lib/api/client";
 import { toast } from "@/lib/toast";
@@ -81,11 +80,27 @@ export function PlansSection({ embedded = false }: { embedded?: boolean }) {
   return (
     <>
       <section className={cn("relative", embedded ? "w-full min-w-0" : "py-8")}>
-        <div className="grid w-full min-w-0 grid-cols-1 gap-5 sm:gap-6 lg:grid-cols-3">
+        <div className="grid w-full min-w-0 grid-cols-1 gap-8 overflow-visible pt-3 sm:gap-10 lg:grid-cols-3 lg:pt-4">
           {plans.map((plan, index) => {
             const currentPlan = user?.plan?.toLowerCase() ?? "free";
             const isCurrent = plan.slug === currentPlan;
             const isFree = plan.slug === "free";
+            const busyKey = plan.slug || plan.id;
+            const displayPrice =
+              plan.storePriceCents != null && plan.storePriceCents > 0
+                ? plan.storePrice
+                : plan.price;
+            const displayPeriod =
+              isFree && !plan.period.startsWith("/") ? plan.period : plan.period;
+            const cardFeatures = (() => {
+              try {
+                const localized = t.raw(`cardFeatures.${plan.slug}`) as string[] | undefined;
+                if (Array.isArray(localized) && localized.length > 0) return localized;
+              } catch {
+                // fallback to API features
+              }
+              return plan.features;
+            })();
 
             return (
               <motion.article
@@ -95,64 +110,68 @@ export function PlansSection({ embedded = false }: { embedded?: boolean }) {
                 viewport={{ once: true, margin: "-40px" }}
                 transition={{ duration: 0.45, delay: index * 0.06 }}
                 className={cn(
-                  "relative flex min-w-0 flex-col overflow-hidden rounded-2xl border p-5 sm:p-6",
+                  "relative flex min-w-0 flex-col rounded-2xl border p-5 sm:p-6",
+                  plan.badge && "pt-9 sm:pt-10",
                   plan.highlight
                     ? "border-[color-mix(in_srgb,var(--primary)_45%,transparent)] glass-strong shadow-[0_0_40px_-14px_var(--glow-1)]"
                     : "border-border/70 glass",
                 )}
               >
-                <div
-                  className={cn(
-                    "pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-br opacity-40 blur-2xl",
-                    PLAN_ACCENT[plan.slug] ?? PLAN_ACCENT.free,
-                  )}
-                  aria-hidden
-                />
+                <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl" aria-hidden>
+                  <div
+                    className={cn(
+                      "absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-br opacity-40 blur-2xl",
+                      PLAN_ACCENT[plan.slug] ?? PLAN_ACCENT.free,
+                    )}
+                  />
+                </div>
 
                 {plan.badge && (
-                  <span className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-primary-foreground shadow-lg">
+                  <span className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-[linear-gradient(100deg,var(--primary-soft),var(--primary))] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-primary-foreground shadow-lg">
                     {plan.badge}
                   </span>
                 )}
 
                 <div className="relative flex items-start justify-between gap-3">
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      {plan.highlight && <Crown className="h-5 w-5 text-primary" />}
+                      {plan.highlight && <Crown className="h-5 w-5 shrink-0 text-primary" />}
                       <h3 className="font-display text-xl font-bold uppercase tracking-wide text-foreground">
                         {plan.name}
                       </h3>
                     </div>
-                    <div className="mt-3 flex flex-wrap items-baseline gap-1">
+                    <div className="mt-3 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
                       <span className="font-display text-4xl font-bold text-foreground">
-                        {plan.storePriceCents != null ? plan.storePrice : plan.price}
+                        {displayPrice}
                       </span>
-                      <span className="text-sm text-muted">{plan.period}</span>
+                      <span className="text-sm text-muted">{displayPeriod}</span>
                     </div>
                   </div>
                   {isCurrent && (
-                    <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-300">
+                    <span className="shrink-0 rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-300">
                       {t("currentPlan")}
                     </span>
                   )}
                 </div>
 
-                {plan.grantPlan && (
-                  <div className="relative mt-3">
-                    <PlanBadge plan={plan.grantPlan.toLowerCase() as "premium" | "elite"} />
-                  </div>
-                )}
-
-                <ul className="relative mt-5 flex-1 space-y-2.5">
-                  {plan.features.map((feature, featureIndex) => (
-                    <li key={`${plan.slug}-feature-${featureIndex}`} className="flex items-start gap-2.5 text-sm">
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--primary)_16%,transparent)] text-primary">
-                        <Check className="h-3 w-3" />
-                      </span>
-                      <span className="min-w-0 text-muted">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="relative mt-5 flex-1">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+                    {t("includes")}
+                  </p>
+                  <ul className="mt-3 space-y-2.5">
+                    {cardFeatures.map((feature, featureIndex) => (
+                      <li
+                        key={`${plan.slug}-feature-${featureIndex}`}
+                        className="flex items-start gap-2.5 text-sm"
+                      >
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--primary)_16%,transparent)] text-primary">
+                          <Check className="h-3 w-3" />
+                        </span>
+                        <span className="min-w-0 text-muted">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
 
                 <div className="relative mt-6 space-y-2">
                   {isFree ? (
@@ -166,7 +185,7 @@ export function PlansSection({ embedded = false }: { embedded?: boolean }) {
                         variant={plan.highlight ? "primary" : "outline"}
                         size="md"
                         className="w-full"
-                        disabled={!plan.storeItemId || isCurrent || busyId === (plan.slug || plan.id)}
+                        disabled={!plan.storeItemId || isCurrent || busyId === busyKey}
                         confirm={
                           plan.storeItemId && !isCurrent
                             ? confirmPresets.purchaseItem(plan.name, plan.storePrice)
@@ -174,14 +193,14 @@ export function PlansSection({ embedded = false }: { embedded?: boolean }) {
                         }
                         onClick={() => void buyPlan(plan)}
                       >
-                        {busyId === (plan.slug || plan.id) ? (
+                        {busyId === busyKey ? (
                           <Loader2 className="h-4 w-4 motion-safe-spin" />
                         ) : (
                           <Sparkles className="h-4 w-4" />
                         )}
                         {isCurrent ? t("currentPlan") : plan.cta}
                       </Button>
-                      {plan.storeItemId && (
+                      {plan.storeItemId && !isCurrent && (
                         <Button
                           type="button"
                           variant="ghost"

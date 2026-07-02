@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { DashboardPageShell } from "@/components/dashboard/dashboard-page-shell";
-import { UpgradeSection } from "@/components/dashboard/upgrade-section";
+import { PlanComparisonTable } from "@/components/plans/plan-comparison-table";
 import { PlansSection } from "@/components/plans/plans-section";
 
 export default async function PlansPage() {
@@ -8,8 +8,7 @@ export default async function PlansPage() {
 
   return (
     <DashboardPageShell title={t("plansTitle")} description={t("plansDesc")}>
-      <div className="space-y-10 sm:space-y-14">
-        <UpgradeSection />
+      <div className="space-y-12 sm:space-y-16">
         <div className="min-w-0">
           <h2 className="font-display text-lg font-bold text-foreground sm:text-xl">
             {t("comparePlans")}
@@ -19,6 +18,7 @@ export default async function PlansPage() {
             <PlansSection embedded />
           </div>
         </div>
+        <PlanComparisonTable />
       </div>
     </DashboardPageShell>
   );
