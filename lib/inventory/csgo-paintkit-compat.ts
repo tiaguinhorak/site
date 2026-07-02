@@ -2,50 +2,23 @@ import "server-only";
 
 import { CsgoApiError } from "@/lib/csgo-api/http";
 import {
+  classifyPaintkitGameClient,
+  isCatalogGameClientCs2,
+  isCatalogGameClientCsgo,
+  type CatalogGameClient,
+  type PaintkitCompatResult,
+} from "@/lib/inventory/paintkit-compat";
+import {
   fetchWsAllowlistKeys,
-  isInWsAllowlist,
   wsCatalogKey,
 } from "@/lib/inventory/ws-allowlist";
 
-/** Server runs CS:GO — paintkits in kgns !ws list work in-game; CSGO-API also lists CS2-only skins. */
-export type CatalogGameClient = "csgo" | "cs2" | "unknown";
-
-export type PaintkitCompatResult = {
-  gameClient: CatalogGameClient;
-  csgoCompatible: boolean;
-  /** Human-readable reason for admin UI. */
-  reason: string;
+export type { CatalogGameClient, PaintkitCompatResult };
+export {
+  classifyPaintkitGameClient,
+  isCatalogGameClientCs2,
+  isCatalogGameClientCsgo,
 };
-
-export function classifyPaintkitGameClient(
-  weaponId: string,
-  paintkit: number,
-  allowlist: Set<string>,
-  inCsgoApi = true,
-): PaintkitCompatResult {
-  if (allowlist.size > 0 && isInWsAllowlist(weaponId, paintkit, allowlist)) {
-    return {
-      gameClient: "csgo",
-      csgoCompatible: true,
-      reason: "Compatível com CS:GO (!ws / kgns weapons list).",
-    };
-  }
-
-  if (inCsgoApi) {
-    return {
-      gameClient: "cs2",
-      csgoCompatible: false,
-      reason:
-        "Skin listada na CSGO-API mas fora da lista CS:GO (!ws). Provável skin do CS2 — não renderiza no servidor CS:GO.",
-    };
-  }
-
-  return {
-    gameClient: "cs2",
-    csgoCompatible: false,
-    reason: "Paintkit não encontrado na lista CS:GO (!ws).",
-  };
-}
 
 export async function resolvePaintkitCompat(
   weaponId: string,
@@ -70,15 +43,6 @@ export async function assertPaintkitCsgoCompatible(
   }
 }
 
-export function isCatalogGameClientCsgo(gameClient: string | null | undefined): boolean {
-  return gameClient === "csgo";
-}
-
-export function isCatalogGameClientCs2(gameClient: string | null | undefined): boolean {
-  return gameClient === "cs2";
-}
-
-/** Bulk classify for catalog sync / admin backfill. */
 export async function classifyCatalogRowsGameClient(
   rows: Array<{ weaponId: string; paintkit: number }>,
   inCsgoApiByKey?: Set<string>,

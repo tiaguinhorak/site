@@ -10,7 +10,7 @@ import {
 } from "@/lib/inventory/ensure-catalog-synced";
 import { getCatalogWeaponOptions } from "@/lib/inventory/get-catalog-weapon-options";
 import { rarityAccent } from "@/lib/inventory/catalog-categories";
-import { resolveCatalogSkinImageUrl } from "@/lib/inventory/skin-images";
+import { resolveCatalogSkinImageUrlServer } from "@/lib/inventory/resolve-catalog-image-server";
 import {
   excludedWeaponIdsForDualTeam,
   excludedWeaponIdsForTeam,
@@ -178,27 +178,29 @@ export async function getCatalogSkinsForUser(
     equippedRows.map((row) => [row.skinId, { equippedT: row.equippedT, equippedCT: row.equippedCT }]),
   );
 
-  const items: CatalogSkinRow[] = rows.map((row) => {
-    const flags = equippedBySkin.get(row.id);
-    const equippedT = flags?.equippedT ?? false;
-    const equippedCT = flags?.equippedCT ?? false;
-    return {
-      id: row.id,
-      name: `${row.weaponName} | ${row.paintkitName}`,
-      category: row.category as InventoryCategoryKey,
-      rarity: row.rarity,
-      accent: rarityAccent(row.rarity),
-      imageUrl: resolveCatalogSkinImageUrl(row.imageUrl, row.id),
-      weaponId: row.weaponId,
-      weaponName: row.weaponName,
-      paintkit: row.paintkit,
-      paintkitName: row.paintkitName,
-      equipped: equippedT || equippedCT,
-      equippedT,
-      equippedCT,
-      owned: allSkins || ownedCatalogIds?.has(row.id) === true,
-    };
-  });
+  const items: CatalogSkinRow[] = await Promise.all(
+    rows.map(async (row) => {
+      const flags = equippedBySkin.get(row.id);
+      const equippedT = flags?.equippedT ?? false;
+      const equippedCT = flags?.equippedCT ?? false;
+      return {
+        id: row.id,
+        name: `${row.weaponName} | ${row.paintkitName}`,
+        category: row.category as InventoryCategoryKey,
+        rarity: row.rarity,
+        accent: rarityAccent(row.rarity),
+        imageUrl: await resolveCatalogSkinImageUrlServer(row.imageUrl, row.id, 256),
+        weaponId: row.weaponId,
+        weaponName: row.weaponName,
+        paintkit: row.paintkit,
+        paintkitName: row.paintkitName,
+        equipped: equippedT || equippedCT,
+        equippedT,
+        equippedCT,
+        owned: allSkins || ownedCatalogIds?.has(row.id) === true,
+      };
+    }),
+  );
 
   const filteredWeaponOptions = dualTeamOnly
     ? weaponOptions.filter((w) => weaponSupportsBothTeams(w.weaponId))

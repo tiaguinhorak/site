@@ -22,7 +22,7 @@ export function isRemoteCatalogImageUrl(url: string | null | undefined): boolean
   return trimmed.startsWith("http://") || trimmed.startsWith("https://");
 }
 
-/** Prefer persisted DB url; fall back to expected local path for a catalog id. */
+/** Prefer local path from DB; keep remote URLs until files are mirrored. */
 export function resolveCatalogSkinImageUrl(
   imageUrl: string | null | undefined,
   catalogId: string | null | undefined,
@@ -30,9 +30,7 @@ export function resolveCatalogSkinImageUrl(
   if (imageUrl?.trim()) {
     const trimmed = imageUrl.trim();
     if (isLocalCatalogImageUrl(trimmed)) return trimmed;
-    if (isRemoteCatalogImageUrl(trimmed) && catalogId) {
-      return catalogLocalImagePath(catalogId);
-    }
+    if (isRemoteCatalogImageUrl(trimmed)) return trimmed;
     return trimmed;
   }
   if (catalogId) return catalogLocalImagePath(catalogId);

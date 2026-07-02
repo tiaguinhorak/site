@@ -1,14 +1,11 @@
-import "server-only";
-
 import type { PrismaClient } from "@/lib/generated/prisma/client";
 import {
   apiSkinToCatalogRow,
-  CSGO_API_SKINS_URL,
+  fetchCsgoApiSkinsPayload,
   type CsgoApiSkin,
-} from "@/lib/inventory/csgo-api-index";
-import { catalogLocalImagePath } from "@/lib/inventory/catalog-image-path";
+} from "@/lib/inventory/csgo-api-catalog-shared";
 import { mirrorCatalogImage } from "@/lib/inventory/mirror-catalog-image";
-import { classifyPaintkitGameClient } from "@/lib/inventory/csgo-paintkit-compat";
+import { classifyPaintkitGameClient } from "@/lib/inventory/paintkit-compat";
 import {
   fetchWsAllowlistKeys,
   getWsAllowlistSource,
@@ -57,12 +54,7 @@ export async function syncCsgoSkinCatalogWithClient(
   options?: { mirrorImages?: boolean },
 ) {
   const mirrorImages = options?.mirrorImages ?? true;
-  const response = await fetch(CSGO_API_SKINS_URL);
-  if (!response.ok) {
-    throw new Error(`Falha ao baixar catálogo CS:GO (${response.status}).`);
-  }
-
-  const payload = (await response.json()) as CsgoApiSkin[];
+  const payload = await fetchCsgoApiSkinsPayload();
 
   let wsAllowlist: Set<string>;
   const allowlistMode = catalogAllowlistSource();
@@ -94,7 +86,7 @@ export async function syncCsgoSkinCatalogWithClient(
           where: { id: row.id },
           create: {
             ...row,
-            imageUrl: catalogLocalImagePath(row.id),
+            imageUrl: row.imageUrl,
             enabled: allowlistMode === "site-db" || allowlistMode === "site",
             source: "sync",
             gameClient: classifyPaintkitGameClient(row.weaponId, row.paintkit, wsAllowlist, true)
@@ -149,3 +141,5 @@ export async function syncCsgoSkinCatalogWithClient(
     allowlistMode,
   };
 }
+
+export type { CsgoApiSkin };

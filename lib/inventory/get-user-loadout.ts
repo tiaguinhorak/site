@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import { steamId64ToSteam2 } from "@/lib/steam/steam-id";
-import { resolveCatalogSkinImageUrl } from "@/lib/inventory/skin-images";
+import { resolveCatalogSkinImageUrlServer } from "@/lib/inventory/resolve-catalog-image-server";
 import { rarityAccent } from "@/lib/inventory/catalog-categories";
 import {
   teamEquipField,
@@ -130,26 +130,28 @@ export async function getUserServerLoadout(userId: string, team?: LoadoutTeam) {
     return stickers;
   }
 
-  const items: UserLoadoutItem[] = equipped.map((row) => ({
-    catalogSkinId: row.skinId,
-    name: `${row.skin.weaponName} | ${row.skin.paintkitName}`,
-    category: row.skin.category as InventoryCategoryKey,
-    weaponId: row.skin.weaponId,
-    paintkit: row.skin.paintkit,
-    paintkitName: row.skin.paintkitName,
-    imageUrl: resolveCatalogSkinImageUrl(row.skin.imageUrl, row.skinId),
-    rarity: row.skin.rarity,
-    accent: rarityAccent(row.skin.rarity),
-    floatValue: row.floatValue,
-    seed: row.seed,
-    stattrak: row.stattrak,
-    nametag: row.nametag,
-    equippedT: row.equippedT,
-    equippedCT: row.equippedCT,
-    equippedAt: row.createdAt.toISOString(),
-    stickersT: stickersForWeapon(row.skin.weaponId, "T"),
-    stickersCT: stickersForWeapon(row.skin.weaponId, "CT"),
-  }));
+  const items: UserLoadoutItem[] = await Promise.all(
+    equipped.map(async (row) => ({
+      catalogSkinId: row.skinId,
+      name: `${row.skin.weaponName} | ${row.skin.paintkitName}`,
+      category: row.skin.category as InventoryCategoryKey,
+      weaponId: row.skin.weaponId,
+      paintkit: row.skin.paintkit,
+      paintkitName: row.skin.paintkitName,
+      imageUrl: await resolveCatalogSkinImageUrlServer(row.skin.imageUrl, row.skinId, 512),
+      rarity: row.skin.rarity,
+      accent: rarityAccent(row.skin.rarity),
+      floatValue: row.floatValue,
+      seed: row.seed,
+      stattrak: row.stattrak,
+      nametag: row.nametag,
+      equippedT: row.equippedT,
+      equippedCT: row.equippedCT,
+      equippedAt: row.createdAt.toISOString(),
+      stickersT: stickersForWeapon(row.skin.weaponId, "T"),
+      stickersCT: stickersForWeapon(row.skin.weaponId, "CT"),
+    })),
+  );
 
   const agents = await getPlayerAgents(user.steamId);
   if (agents.agentT > 0 && agents.agentTName) {

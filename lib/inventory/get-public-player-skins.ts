@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { resolveCatalogSkinImageUrl } from "@/lib/inventory/skin-images";
+import { resolveCatalogSkinImageUrlServer } from "@/lib/inventory/resolve-catalog-image-server";
 import { rarityAccent } from "@/lib/inventory/catalog-categories";
 import type { InventoryCategoryKey } from "@/lib/profile";
 
@@ -67,19 +67,21 @@ export async function getPublicPlayerSkins(
     orderBy: { createdAt: "desc" },
   });
 
-  const items: PublicSkinItem[] = equipped.map((row) => ({
-    id: row.skinId,
-    name: `${row.skin.weaponName} | ${row.skin.paintkitName}`,
-    weaponName: row.skin.weaponName,
-    paintkitName: row.skin.paintkitName,
-    category: row.skin.category as InventoryCategoryKey,
-    rarity: row.skin.rarity,
-    accent: rarityAccent(row.skin.rarity),
-    imageUrl: resolveCatalogSkinImageUrl(row.skin.imageUrl, row.skinId),
-    stattrak: row.stattrak,
-    equippedT: row.equippedT,
-    equippedCT: row.equippedCT,
-  }));
+  const items: PublicSkinItem[] = await Promise.all(
+    equipped.map(async (row) => ({
+      id: row.skinId,
+      name: `${row.skin.weaponName} | ${row.skin.paintkitName}`,
+      weaponName: row.skin.weaponName,
+      paintkitName: row.skin.paintkitName,
+      category: row.skin.category as InventoryCategoryKey,
+      rarity: row.skin.rarity,
+      accent: rarityAccent(row.skin.rarity),
+      imageUrl: await resolveCatalogSkinImageUrlServer(row.skin.imageUrl, row.skinId, 512),
+      stattrak: row.stattrak,
+      equippedT: row.equippedT,
+      equippedCT: row.equippedCT,
+    })),
+  );
 
   return {
     total: items.length,

@@ -1,12 +1,12 @@
-import "server-only";
-
 import fs from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
+import { lookupRemoteCatalogImageUrl } from "@/lib/inventory/csgo-api-catalog-shared";
 import {
   CATALOG_SKINS_PUBLIC_DIR,
   catalogLocalImagePath,
   isLocalCatalogImageUrl,
+  isRemoteCatalogImageUrl,
   sanitizeCatalogImageId,
 } from "@/lib/inventory/catalog-image-path";
 
@@ -39,16 +39,15 @@ async function fileExists(filePath: string): Promise<boolean> {
   }
 }
 
-function pickSourceUrl(
+async function resolveSourceUrl(
   catalogId: string,
   imageUrl: string | null | undefined,
-): string | null {
+): Promise<string | null> {
   if (imageUrl?.trim()) {
     const trimmed = imageUrl.trim();
-    if (isLocalCatalogImageUrl(trimmed)) return null;
-    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+    if (isRemoteCatalogImageUrl(trimmed)) return trimmed;
   }
-  return null;
+  return lookupRemoteCatalogImageUrl(catalogId);
 }
 
 /**
@@ -67,7 +66,7 @@ export async function mirrorCatalogImage(
     return { ok: true, localPath, skipped: true };
   }
 
-  const sourceUrl = pickSourceUrl(catalogId, imageUrl);
+  const sourceUrl = await resolveSourceUrl(catalogId, imageUrl);
   if (!sourceUrl) {
     if (await fileExists(absolutePath)) {
       return { ok: true, localPath, skipped: true };
@@ -136,4 +135,8 @@ export async function mirrorCatalogImages(
 
   await Promise.all(Array.from({ length: concurrency }, () => worker()));
   return { mirrored, skipped, failed, errors };
+}
+
+export async function catalogLocalImageExists(catalogId: string): Promise<boolean> {
+  return fileExists(catalogImageAbsolutePath(catalogId));
 }
