@@ -56,7 +56,7 @@ export function PlansSection({ embedded = false }: { embedded?: boolean }) {
 
   async function buyPlan(plan: PlanCatalogItem) {
     if (!plan.storeItemId) return;
-    setBusyId(plan.id);
+    setBusyId(plan.slug || plan.id);
     const result = await secureApi("/api/store/purchase", {
       method: "POST",
       json: { storeItemId: plan.storeItemId, currency: "brl" },
@@ -89,7 +89,7 @@ export function PlansSection({ embedded = false }: { embedded?: boolean }) {
 
             return (
               <motion.article
-                key={plan.id}
+                key={plan.slug || plan.id}
                 initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-40px" }}
@@ -144,8 +144,8 @@ export function PlansSection({ embedded = false }: { embedded?: boolean }) {
                 )}
 
                 <ul className="relative mt-5 flex-1 space-y-2.5">
-                  {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2.5 text-sm">
+                  {plan.features.map((feature, featureIndex) => (
+                    <li key={`${plan.slug}-feature-${featureIndex}`} className="flex items-start gap-2.5 text-sm">
                       <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--primary)_16%,transparent)] text-primary">
                         <Check className="h-3 w-3" />
                       </span>
@@ -166,7 +166,7 @@ export function PlansSection({ embedded = false }: { embedded?: boolean }) {
                         variant={plan.highlight ? "primary" : "outline"}
                         size="md"
                         className="w-full"
-                        disabled={!plan.storeItemId || isCurrent || busyId === plan.id}
+                        disabled={!plan.storeItemId || isCurrent || busyId === (plan.slug || plan.id)}
                         confirm={
                           plan.storeItemId && !isCurrent
                             ? confirmPresets.purchaseItem(plan.name, plan.storePrice)
@@ -174,7 +174,7 @@ export function PlansSection({ embedded = false }: { embedded?: boolean }) {
                         }
                         onClick={() => void buyPlan(plan)}
                       >
-                        {busyId === plan.id ? (
+                        {busyId === (plan.slug || plan.id) ? (
                           <Loader2 className="h-4 w-4 motion-safe-spin" />
                         ) : (
                           <Sparkles className="h-4 w-4" />

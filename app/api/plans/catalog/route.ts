@@ -47,13 +47,15 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     plans: marketingPlans.map((plan, index) => {
-      const slug = rawPlans[index]?.slug ?? plan.name.toLowerCase();
+      const raw = rawPlans[index];
+      const slug = raw?.slug ?? plan.name.toLowerCase();
       const grantPlan =
         slug === "premium" ? "PREMIUM" : slug === "elite" ? "ELITE" : null;
       const storeItem = grantPlan ? byPlan.get(grantPlan) : undefined;
 
       return {
         ...plan,
+        id: raw?.id ?? slug,
         slug,
         storeItemId: storeItem?.id ?? null,
         storePrice: storeItem ? formatPriceCents(storeItem.priceCents) : plan.price,
