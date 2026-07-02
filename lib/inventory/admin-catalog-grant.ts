@@ -13,7 +13,7 @@ import {
   notifyInventorySkinRevoked,
 } from "@/lib/inventory/inventory-notifications";
 import { pushPlayerLoadoutToGameServer } from "@/lib/inventory/push-loadout-to-game-server";
-import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
+import { resolveCatalogSkinImageUrl } from "@/lib/inventory/skin-images";
 import { rarityAccent } from "@/lib/inventory/catalog-categories";
 import { invalidateUserCatalogAccess } from "@/lib/inventory/user-catalog-access-cache";
 import { getOwnedCatalogSkinIdsForUser } from "@/lib/inventory/inventory-ownership";
@@ -67,7 +67,7 @@ export async function listUserGrantedCatalogSkins(userId: string): Promise<UserG
         category: catalog.category as InventoryCategoryKey,
         rarity: catalog.rarity,
         accent: rarityAccent(catalog.rarity),
-        imageUrl: catalog.imageUrl ?? catalogSkinImageUrl(catalog.id) ?? null,
+        imageUrl: resolveCatalogSkinImageUrl(catalog.imageUrl, catalog.id),
         inventoryItemId: row.inventoryItemId,
       });
     } else {
@@ -348,7 +348,7 @@ export async function listCatalogSkinsForUserGrant(
       paintkitName: row.paintkitName,
       rarity: row.rarity,
       category: row.category,
-      imageUrl: row.imageUrl ?? catalogSkinImageUrl(row.id) ?? null,
+      imageUrl: resolveCatalogSkinImageUrl(row.imageUrl, row.id),
       enabled: row.enabled,
       name: formatSkinName(row.weaponName, row.paintkitName),
       accent: rarityAccent(row.rarity),

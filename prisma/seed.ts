@@ -227,8 +227,10 @@ async function main() {
 
   // Full CS:GO catalog comes from syncCsgoSkinCatalogWithClient below.
   const { syncCsgoSkinCatalogWithClient } = await import("../lib/inventory/sync-csgo-catalog-core");
-  const syncResult = await syncCsgoSkinCatalogWithClient(prisma);
-  console.log(`[seed] CS:GO catalog synced: ${syncResult.synced} skins`);
+  const syncResult = await syncCsgoSkinCatalogWithClient(prisma, { mirrorImages: true });
+  console.log(
+    `[seed] CS:GO catalog synced: ${syncResult.synced} skins, ${syncResult.imagesMirrored} images`,
+  );
 
   const catalogByInventoryName: Record<string, string> = {
     "Karambit Gamma Doppler": "skin-6bd8a366ec88",

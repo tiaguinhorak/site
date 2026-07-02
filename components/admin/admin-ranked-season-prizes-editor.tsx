@@ -9,7 +9,7 @@ import { StickerImage } from "@/components/inventory/sticker-image";
 import { SkinPreviewModal } from "@/components/skins/skin-preview-modal";
 import { secureApi } from "@/lib/api/client";
 import { rarityAccent } from "@/lib/inventory/catalog-categories";
-import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
+import { resolveCatalogSkinImageUrl } from "@/lib/inventory/skin-images";
 import { useSkinPreview } from "@/lib/use-skin-preview";
 import {
   AgentCatalogPicker,
@@ -138,7 +138,7 @@ function skinPrizeFromItem(position: number, sortOrder: number, item: CatalogSki
     stickerDefIndex: null,
     label,
     previewLabel: label,
-    previewImageUrl: item.imageUrl ?? catalogSkinImageUrl(item.id),
+    previewImageUrl: resolveCatalogSkinImageUrl(item.imageUrl, item.id),
     skinMeta: {
       weaponName: item.weaponName,
       paintkitName: item.paintkitName,
@@ -278,7 +278,7 @@ export function buildPrizeDraftsFromSeason(
         prize.rewardType === "COINS" || prize.rewardType === "PIX"
           ? null
           : prize.previewImageUrl ??
-            (prize.catalogSkinId ? catalogSkinImageUrl(prize.catalogSkinId) : null),
+            resolveCatalogSkinImageUrl(prize.previewImageUrl, prize.catalogSkinId),
       skinMeta:
         prize.rewardType === "CATALOG_SKIN"
           ? (() => {
@@ -322,7 +322,7 @@ function resolvePrizePreviewUrl(prize: SeasonPrizeDraft): string | null {
   if (prize.rewardType === "COINS" || prize.rewardType === "PIX") return null;
   if (prize.previewImageUrl) return prize.previewImageUrl;
   if (prize.rewardType === "CATALOG_SKIN" && prize.catalogSkinId) {
-    return catalogSkinImageUrl(prize.catalogSkinId);
+    return resolveCatalogSkinImageUrl(null, prize.catalogSkinId);
   }
   return null;
 }

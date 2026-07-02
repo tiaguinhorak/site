@@ -2,11 +2,9 @@ import "server-only";
 
 import type { CsgoSkinCatalog } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import {
-  lookupCatalogFromApi,
-  listApiSkinsForWeapon,
-  type CatalogRowFromApi,
-} from "@/lib/inventory/csgo-api-index";
+import { catalogLocalImagePath } from "@/lib/inventory/catalog-image-path";
+import { mirrorCatalogImage } from "@/lib/inventory/mirror-catalog-image";
+import type { CatalogRowFromApi } from "@/lib/inventory/csgo-api-index";
 import {
   assertPaintkitCsgoCompatible,
   classifyPaintkitGameClient,
@@ -54,15 +52,28 @@ function serializeRow(row: CsgoSkinCatalog): CatalogSkinAdminRow {
   };
 }
 
+function rowToApiShape(row: CsgoSkinCatalog): CatalogRowFromApi {
+  return {
+    id: row.id,
+    weaponId: row.weaponId,
+    weaponName: row.weaponName,
+    paintkit: row.paintkit,
+    paintkitName: row.paintkitName,
+    rarity: row.rarity,
+    category: row.category,
+    imageUrl: row.imageUrl,
+    weaponDefIndex: row.weaponDefIndex,
+  };
+}
+
 export async function lookupCatalogSkinPreview(weaponId: string, paintkit: number) {
-  const fromApi = await lookupCatalogFromApi(weaponId, paintkit);
-  const compat = await resolvePaintkitCompat(weaponId, paintkit, fromApi !== null);
   const existing = await prisma.csgoSkinCatalog.findFirst({
     where: { weaponId, paintkit },
   });
+  const compat = await resolvePaintkitCompat(weaponId, paintkit, existing !== null);
   return {
-    found: fromApi !== null,
-    api: fromApi,
+    found: existing !== null,
+    api: existing ? rowToApiShape(existing) : null,
     existing: existing ? serializeRow(existing) : null,
     compatibility: compat,
   };
@@ -82,7 +93,7 @@ type UpsertInput = {
   id?: string;
 };
 
-async function upsertCatalogRow(input: UpsertInput, apiRow: CatalogRowFromApi | null) {
+async function upsertCatalogRow(input: UpsertInput, seedRow: CatalogRowFromApi | null) {
   const existing = await prisma.csgoSkinCatalog.findFirst({
     where: { weaponId: input.weaponId, paintkit: input.paintkit },
   });
@@ -92,20 +103,22 @@ async function upsertCatalogRow(input: UpsertInput, apiRow: CatalogRowFromApi | 
     input.weaponId,
     input.paintkit,
     allowlist,
-    apiRow !== null,
+    seedRow !== null || existing !== null,
   );
 
   const data = {
     weaponId: input.weaponId,
-    weaponName: input.weaponName ?? apiRow?.weaponName ?? existing?.weaponName ?? "Weapon",
+    weaponName: input.weaponName ?? seedRow?.weaponName ?? existing?.weaponName ?? "Weapon",
     paintkit: input.paintkit,
     paintkitName:
-      input.paintkitName ?? apiRow?.paintkitName ?? existing?.paintkitName ?? `Paint ${input.paintkit}`,
-    rarity: input.rarity ?? apiRow?.rarity ?? existing?.rarity ?? "comum",
-    category: input.category ?? apiRow?.category ?? existing?.category ?? "rifle",
-    imageUrl: input.imageUrl ?? apiRow?.imageUrl ?? existing?.imageUrl ?? null,
+      input.paintkitName ?? seedRow?.paintkitName ?? existing?.paintkitName ?? `Paint ${input.paintkit}`,
+    rarity: input.rarity ?? seedRow?.rarity ?? existing?.rarity ?? "comum",
+    category: input.category ?? seedRow?.category ?? existing?.category ?? "rifle",
+    imageUrl: input.imageUrl ?? seedRow?.imageUrl ?? existing?.imageUrl ?? catalogLocalImagePath(
+      existing?.id ?? input.id ?? `${input.weaponId}_${input.paintkit}`,
+    ),
     weaponDefIndex:
-      input.weaponDefIndex ?? apiRow?.weaponDefIndex ?? existing?.weaponDefIndex ?? null,
+      input.weaponDefIndex ?? seedRow?.weaponDefIndex ?? existing?.weaponDefIndex ?? null,
     enabled: input.enabled ?? existing?.enabled ?? true,
     source: existing?.source && existing.source !== "sync" ? existing.source : input.source,
     gameClient: compat.gameClient,
@@ -115,7 +128,7 @@ async function upsertCatalogRow(input: UpsertInput, apiRow: CatalogRowFromApi | 
     data.enabled = false;
   }
 
-  const id = existing?.id ?? input.id ?? apiRow?.id ?? `${input.weaponId}_${input.paintkit}`;
+  const id = existing?.id ?? input.id ?? seedRow?.id ?? `${input.weaponId}_${input.paintkit}`;
 
   const row = await prisma.csgoSkinCatalog.upsert({
     where: { id },
@@ -128,6 +141,17 @@ async function upsertCatalogRow(input: UpsertInput, apiRow: CatalogRowFromApi | 
     update: data,
   });
 
+  if (input.imageUrl && input.imageUrl.startsWith("http")) {
+    const mirrored = await mirrorCatalogImage(row.id, input.imageUrl);
+    if (mirrored.ok) {
+      const updated = await prisma.csgoSkinCatalog.update({
+        where: { id: row.id },
+        data: { imageUrl: mirrored.localPath },
+      });
+      return serializeRow(updated);
+    }
+  }
+
   return serializeRow(row);
 }
 
@@ -137,21 +161,29 @@ async function afterCatalogMutation(): Promise<void> {
 }
 
 export async function upsertCatalogSkinFromPaintkit(input: UpsertInput) {
-  const apiRow = await lookupCatalogFromApi(input.weaponId, input.paintkit);
-  if (!apiRow && !input.paintkitName) {
+  const existing = await prisma.csgoSkinCatalog.findFirst({
+    where: { weaponId: input.weaponId, paintkit: input.paintkit },
+  });
+
+  if (!existing && !input.paintkitName) {
     throw new Error(
-      "Skin não encontrada na CSGO-API. Confira weaponId e paintkit ou preencha nome manualmente.",
+      "Skin não encontrada no catálogo local. Rode npm run sync:skins ou preencha os campos manualmente.",
     );
   }
 
-  const compat = await resolvePaintkitCompat(input.weaponId, input.paintkit, apiRow !== null);
+  const seedRow = existing ? rowToApiShape(existing) : null;
+  const compat = await resolvePaintkitCompat(
+    input.weaponId,
+    input.paintkit,
+    seedRow !== null,
+  );
   if (!compat.csgoCompatible && (input.enabled ?? true)) {
     throw new Error(
       `Skin bloqueada (CS2): ${compat.reason} Use uma skin da lista CS:GO (!ws).`,
     );
   }
 
-  const row = await upsertCatalogRow(input, apiRow);
+  const row = await upsertCatalogRow(input, seedRow);
   await afterCatalogMutation();
   return row;
 }
@@ -160,19 +192,24 @@ export async function importWeaponSkinsFromApi(
   weaponId: string,
   options?: { enabled?: boolean },
 ) {
-  const apiRows = await listApiSkinsForWeapon(weaponId);
-  if (!apiRows.length) {
-    throw new Error(`Nenhuma skin na CSGO-API para ${weaponId}.`);
+  const rows = await prisma.csgoSkinCatalog.findMany({
+    where: { weaponId },
+    orderBy: { paintkitName: "asc" },
+  });
+  if (!rows.length) {
+    throw new Error(
+      `Nenhuma skin no banco para ${weaponId}. Rode npm run sync:skins primeiro.`,
+    );
   }
 
   const allowlist = await fetchWsAllowlistKeys();
   let imported = 0;
   let skippedCs2 = 0;
 
-  for (const apiRow of apiRows) {
+  for (const existing of rows) {
     const compat = classifyPaintkitGameClient(
-      apiRow.weaponId,
-      apiRow.paintkit,
+      existing.weaponId,
+      existing.paintkit,
       allowlist,
       true,
     );
@@ -183,13 +220,13 @@ export async function importWeaponSkinsFromApi(
 
     await upsertCatalogRow(
       {
-        weaponId: apiRow.weaponId,
-        paintkit: apiRow.paintkit,
+        weaponId: existing.weaponId,
+        paintkit: existing.paintkit,
         source: "import",
         enabled: options?.enabled ?? true,
-        id: apiRow.id,
+        id: existing.id,
       },
-      apiRow,
+      rowToApiShape(existing),
     );
     imported += 1;
   }
@@ -292,11 +329,17 @@ export async function updateCatalogSkinAdmin(
     }
   }
 
+  let imageUrl = data.imageUrl;
+  if (imageUrl !== undefined && imageUrl?.startsWith("http")) {
+    const mirrored = await mirrorCatalogImage(id, imageUrl);
+    if (mirrored.ok) imageUrl = mirrored.localPath;
+  }
+
   const row = await prisma.csgoSkinCatalog.update({
     where: { id },
     data: {
       ...(data.enabled !== undefined ? { enabled: data.enabled } : {}),
-      ...(data.imageUrl !== undefined ? { imageUrl: data.imageUrl } : {}),
+      ...(imageUrl !== undefined ? { imageUrl } : {}),
       ...(data.paintkitName !== undefined ? { paintkitName: data.paintkitName } : {}),
     },
   });

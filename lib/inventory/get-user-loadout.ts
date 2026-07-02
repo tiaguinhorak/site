@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import { steamId64ToSteam2 } from "@/lib/steam/steam-id";
-import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
+import { resolveCatalogSkinImageUrl } from "@/lib/inventory/skin-images";
 import { rarityAccent } from "@/lib/inventory/catalog-categories";
 import {
   teamEquipField,
@@ -137,7 +137,7 @@ export async function getUserServerLoadout(userId: string, team?: LoadoutTeam) {
     weaponId: row.skin.weaponId,
     paintkit: row.skin.paintkit,
     paintkitName: row.skin.paintkitName,
-    imageUrl: row.skin.imageUrl ?? catalogSkinImageUrl(row.skinId) ?? null,
+    imageUrl: resolveCatalogSkinImageUrl(row.skin.imageUrl, row.skinId),
     rarity: row.skin.rarity,
     accent: rarityAccent(row.skin.rarity),
     floatValue: row.floatValue,

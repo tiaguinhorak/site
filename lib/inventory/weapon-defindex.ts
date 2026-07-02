@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getCsgoApiIndex } from "@/lib/inventory/csgo-api-index";
+import { prisma } from "@/lib/prisma";
 
 const FALLBACK_WEAPON_DEFINDEX: Record<string, number> = {
   weapon_deagle: 1,
@@ -49,16 +49,12 @@ export async function weaponIdToItemDefIndex(weaponId: string): Promise<number |
     return FALLBACK_WEAPON_DEFINDEX.weapon_knife;
   }
 
-  try {
-    const index = await getCsgoApiIndex();
-    const skin = index.byWeapon.get(id)?.[0];
-    const weaponIdNum = skin?.weapon?.weapon_id;
-    if (weaponIdNum !== undefined && Number.isFinite(Number(weaponIdNum))) {
-      return Number(weaponIdNum);
-    }
-  } catch {
-    // fallback only
-  }
+  const row = await prisma.csgoSkinCatalog.findFirst({
+    where: { weaponId: id, weaponDefIndex: { not: null } },
+    select: { weaponDefIndex: true },
+    orderBy: { updatedAt: "desc" },
+  });
+  if (row?.weaponDefIndex != null) return row.weaponDefIndex;
 
   return FALLBACK_WEAPON_DEFINDEX[id] ?? null;
 }

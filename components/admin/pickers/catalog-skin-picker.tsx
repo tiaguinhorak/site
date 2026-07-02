@@ -11,7 +11,7 @@ import {
   rarityAccent,
 } from "@/lib/inventory/catalog-categories";
 import { adminCatalogItemToPreview } from "@/lib/inventory/skin-preview-mappers";
-import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
+import { resolveCatalogSkinImageUrl } from "@/lib/inventory/skin-images";
 import { useSkinPreview } from "@/lib/use-skin-preview";
 import { cn } from "@/lib/utils";
 
@@ -190,7 +190,7 @@ export function CatalogSkinPicker({
             {items.map((item) => {
               const name = skinDisplayName(item);
               const accent = rarityAccent(item.rarity);
-              const image = item.imageUrl ?? catalogSkinImageUrl(item.id);
+              const image = resolveCatalogSkinImageUrl(item.imageUrl, item.id);
               return (
                 <li
                   key={item.id}

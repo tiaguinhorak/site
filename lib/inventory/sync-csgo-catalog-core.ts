@@ -1,9 +1,13 @@
+import "server-only";
+
 import type { PrismaClient } from "@/lib/generated/prisma/client";
 import {
   apiSkinToCatalogRow,
   CSGO_API_SKINS_URL,
   type CsgoApiSkin,
 } from "@/lib/inventory/csgo-api-index";
+import { catalogLocalImagePath } from "@/lib/inventory/catalog-image-path";
+import { mirrorCatalogImage } from "@/lib/inventory/mirror-catalog-image";
 import { classifyPaintkitGameClient } from "@/lib/inventory/csgo-paintkit-compat";
 import {
   fetchWsAllowlistKeys,
@@ -30,7 +34,29 @@ export async function fetchSiteEnabledAllowlistKeys(prisma: PrismaClient): Promi
   return keys;
 }
 
-export async function syncCsgoSkinCatalogWithClient(prisma: PrismaClient) {
+async function persistLocalImageUrl(
+  prisma: PrismaClient,
+  catalogId: string,
+  remoteImageUrl: string | null,
+): Promise<string | null> {
+  const mirrored = await mirrorCatalogImage(catalogId, remoteImageUrl);
+  if (!mirrored.ok) {
+    console.warn(`[catalog] image mirror failed for ${catalogId}: ${mirrored.error}`);
+    return null;
+  }
+  const localPath = mirrored.localPath;
+  await prisma.csgoSkinCatalog.update({
+    where: { id: catalogId },
+    data: { imageUrl: localPath },
+  });
+  return localPath;
+}
+
+export async function syncCsgoSkinCatalogWithClient(
+  prisma: PrismaClient,
+  options?: { mirrorImages?: boolean },
+) {
+  const mirrorImages = options?.mirrorImages ?? true;
   const response = await fetch(CSGO_API_SKINS_URL);
   if (!response.ok) {
     throw new Error(`Falha ao baixar catálogo CS:GO (${response.status}).`);
@@ -59,6 +85,7 @@ export async function syncCsgoSkinCatalogWithClient(prisma: PrismaClient) {
     .filter((row) => isInWsAllowlist(row.weaponId, row.paintkit, wsAllowlist));
 
   let synced = 0;
+  let imagesMirrored = 0;
   for (let i = 0; i < allRows.length; i += BATCH_SIZE) {
     const batch = allRows.slice(i, i + BATCH_SIZE);
     await prisma.$transaction(
@@ -67,6 +94,7 @@ export async function syncCsgoSkinCatalogWithClient(prisma: PrismaClient) {
           where: { id: row.id },
           create: {
             ...row,
+            imageUrl: catalogLocalImagePath(row.id),
             enabled: allowlistMode === "site-db" || allowlistMode === "site",
             source: "sync",
             gameClient: classifyPaintkitGameClient(row.weaponId, row.paintkit, wsAllowlist, true)
@@ -79,7 +107,6 @@ export async function syncCsgoSkinCatalogWithClient(prisma: PrismaClient) {
             paintkitName: row.paintkitName,
             rarity: row.rarity,
             category: row.category,
-            imageUrl: row.imageUrl,
             weaponDefIndex: row.weaponDefIndex,
             gameClient: "csgo",
           },
@@ -88,9 +115,18 @@ export async function syncCsgoSkinCatalogWithClient(prisma: PrismaClient) {
       { timeout: TX_TIMEOUT_MS },
     );
     synced += batch.length;
+
+    if (mirrorImages) {
+      for (const row of batch) {
+        const localPath = await persistLocalImageUrl(prisma, row.id, row.imageUrl);
+        if (localPath) imagesMirrored += 1;
+      }
+      if ((i / BATCH_SIZE + 1) % 5 === 0) {
+        console.log(`[catalog] progress ${synced}/${allRows.length} skins, ${imagesMirrored} images`);
+      }
+    }
   }
 
-  // Never delete admin/import skins — only prune legacy sync-only rows when using external ws allowlist.
   if (
     wsAllowlist.size > 0 &&
     allRows.length > 0 &&
@@ -108,6 +144,7 @@ export async function syncCsgoSkinCatalogWithClient(prisma: PrismaClient) {
 
   return {
     synced,
+    imagesMirrored,
     wsOnly: wsAllowlist.size > 0,
     allowlistMode,
   };

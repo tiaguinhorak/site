@@ -7,7 +7,7 @@ import { notifyInventorySkinGranted } from "@/lib/inventory/inventory-notificati
 import { invalidateUserCatalogAccess } from "@/lib/inventory/user-catalog-access-cache";
 import { savePlayerAgentsForUser } from "@/lib/inventory/player-agents";
 import { pushPlayerAgentsToGameServer } from "@/lib/inventory/push-agents-to-game-server";
-import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
+import { resolveCatalogSkinImageUrl } from "@/lib/inventory/skin-images";
 import { lookupAgentFromApi } from "@/lib/inventory/csgo-api-agent-index";
 import { lookupStickerFromApi } from "@/lib/inventory/csgo-api-sticker-index";
 import type { StoreItemReward } from "@/lib/generated/prisma/client";
@@ -79,7 +79,7 @@ export async function grantCatalogSkinReward(
     kind: "CATALOG_SKIN",
     catalogSkinId,
     name: skinName,
-    imageUrl: catalog.imageUrl ?? catalogSkinImageUrl(catalog.id),
+    imageUrl: resolveCatalogSkinImageUrl(catalog.imageUrl, catalog.id),
     alreadyOwned,
   };
 }

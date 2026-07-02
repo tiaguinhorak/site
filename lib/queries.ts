@@ -8,7 +8,7 @@ import {
   inventoryCategoryFromDb,
   inventoryRarityFromDb,
 } from "@/lib/profile";
-import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
+import { resolveCatalogSkinImageUrl } from "@/lib/inventory/skin-images";
 import { resolveCatalogIdForInventoryItem } from "@/lib/inventory/catalog-links";
 
 export async function getGameModesWithRooms() {
@@ -121,11 +121,10 @@ export async function getUserInventory(userId: string) {
       category: inventoryCategoryFromDb(item.category),
       rarity: inventoryRarityFromDb(item.rarity),
       accent: item.accent,
-      imageUrl:
-        item.imageUrl ??
-        item.catalogSkin?.imageUrl ??
-        catalogSkinImageUrl(catalogId) ??
-        null,
+      imageUrl: resolveCatalogSkinImageUrl(
+        item.imageUrl ?? item.catalogSkin?.imageUrl ?? null,
+        catalogId,
+      ),
       paintkitName: item.catalogSkin?.paintkitName ?? null,
       weaponId: item.catalogSkin?.weaponId ?? null,
       catalogLinked: Boolean(catalogId),

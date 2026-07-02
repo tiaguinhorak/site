@@ -1,6 +1,6 @@
 import type { SkinPreviewData } from "@/components/skins/skin-preview-modal";
 import { rarityAccent } from "@/lib/inventory/catalog-categories";
-import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
+import { resolveCatalogSkinImageUrl } from "@/lib/inventory/skin-images";
 
 export function catalogSkinToPreview(item: {
   id: string;
@@ -61,7 +61,7 @@ export function adminCatalogItemToPreview(item: {
   return {
     id: item.id,
     name: `${item.weaponName} | ${item.paintkitName}`,
-    imageUrl: item.imageUrl ?? catalogSkinImageUrl(item.id),
+    imageUrl: resolveCatalogSkinImageUrl(item.imageUrl, item.id),
     accent: rarityAccent(item.rarity),
     rarity: item.rarity,
     category: item.category,
@@ -83,7 +83,7 @@ export function storeRewardToPreview(reward: {
   return {
     id: reward.catalogSkinId,
     name: reward.label ?? "Skin",
-    imageUrl: reward.imageUrl ?? catalogSkinImageUrl(reward.catalogSkinId),
+    imageUrl: resolveCatalogSkinImageUrl(reward.imageUrl, reward.catalogSkinId),
     accent: rarityAccent(reward.subLabel ?? "common"),
     rarity: reward.subLabel ?? "common",
     weaponName: parts[0] ?? undefined,

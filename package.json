@@ -19,6 +19,7 @@
     "db:setup": "prisma migrate deploy && prisma db seed",
     "db:studio": "prisma studio",
     "sync:skins": "npx tsx scripts/sync-csgo-catalog.ts",
+    "sync:skin-images": "npx tsx scripts/mirror-catalog-images.ts",
     "sync:leaderboard": "npx tsx scripts/sync-leaderboard-ranks.ts",
     "sync:steam-profiles": "npx tsx scripts/sync-steam-profiles.ts"
   },

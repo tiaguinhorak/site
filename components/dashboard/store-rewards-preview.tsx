@@ -12,7 +12,7 @@ import {
   type StoreRewardPreviewTarget,
 } from "@/components/store/reward-preview-modal";
 import { rarityAccent } from "@/lib/inventory/catalog-categories";
-import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
+import { resolveCatalogSkinImageUrl } from "@/lib/inventory/skin-images";
 import { storeRewardToPreview } from "@/lib/inventory/skin-preview-mappers";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +33,7 @@ const LIST_COLLAPSE_AT = 6;
 
 function rewardImageUrl(reward: StoreRewardPreviewItem): string | null {
   if (reward.imageUrl) return reward.imageUrl;
-  if (reward.catalogSkinId) return catalogSkinImageUrl(reward.catalogSkinId);
+  if (reward.catalogSkinId) return resolveCatalogSkinImageUrl(reward.imageUrl, reward.catalogSkinId);
   return null;
 }
 

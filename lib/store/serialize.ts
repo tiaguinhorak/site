@@ -2,7 +2,7 @@ import "server-only";
 
 import type { Prisma, StoreItem, StoreItemReward } from "@/lib/generated/prisma/client";
 import { formatPriceCents } from "@/lib/serializers";
-import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
+import { resolveCatalogSkinImageUrl } from "@/lib/inventory/skin-images";
 import type { StoreRewardPreview } from "@/lib/store/types";
 import type { AgentPreviewMeta } from "@/lib/store/agent-preview-map";
 import type { StickerPreviewMeta } from "@/lib/store/sticker-preview-map";
@@ -27,9 +27,10 @@ export function rewardPreviewLabel(
   if (reward.kind === "CATALOG_SKIN" && reward.catalogSkin) {
     return {
       label: `${reward.catalogSkin.weaponName} | ${reward.catalogSkin.paintkitName}`,
-      imageUrl:
-        reward.catalogSkin.imageUrl ??
-        (reward.catalogSkinId ? catalogSkinImageUrl(reward.catalogSkinId) : null),
+      imageUrl: resolveCatalogSkinImageUrl(
+        reward.catalogSkin.imageUrl,
+        reward.catalogSkinId,
+      ),
     };
   }
 

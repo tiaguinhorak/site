@@ -10,7 +10,7 @@ import {
 } from "@/lib/inventory/ensure-catalog-synced";
 import { getCatalogWeaponOptions } from "@/lib/inventory/get-catalog-weapon-options";
 import { rarityAccent } from "@/lib/inventory/catalog-categories";
-import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
+import { resolveCatalogSkinImageUrl } from "@/lib/inventory/skin-images";
 import {
   excludedWeaponIdsForDualTeam,
   excludedWeaponIdsForTeam,
@@ -188,7 +188,7 @@ export async function getCatalogSkinsForUser(
       category: row.category as InventoryCategoryKey,
       rarity: row.rarity,
       accent: rarityAccent(row.rarity),
-      imageUrl: row.imageUrl ?? catalogSkinImageUrl(row.id) ?? null,
+      imageUrl: resolveCatalogSkinImageUrl(row.imageUrl, row.id),
       weaponId: row.weaponId,
       weaponName: row.weaponName,
       paintkit: row.paintkit,

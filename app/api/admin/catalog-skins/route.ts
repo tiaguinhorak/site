@@ -21,7 +21,7 @@ import {
   listCatalogSkinsAdmin,
   upsertCatalogSkinFromPaintkit,
 } from "@/lib/inventory/catalog-admin";
-import { listApiWeaponOptions } from "@/lib/inventory/csgo-api-index";
+import { getCatalogWeaponOptions } from "@/lib/inventory/get-catalog-weapon-options";
 import {
   createCatalogImportJob,
   completeCatalogImportJob,
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 
   const weaponOptions =
     page === 1 || params.get("weapons") === "1"
-      ? await listApiWeaponOptions()
+      ? await getCatalogWeaponOptions(category === "all" ? "all" : category)
       : [];
 
   return NextResponse.json({ ...result, weaponOptions });

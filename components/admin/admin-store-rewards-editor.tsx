@@ -28,7 +28,7 @@ import {
 } from "@/components/store/reward-preview-modal";
 import { adminCatalogItemToPreview, storeRewardToPreview } from "@/lib/inventory/skin-preview-mappers";
 import { rarityAccent } from "@/lib/inventory/catalog-categories";
-import { catalogSkinImageUrl } from "@/lib/inventory/skin-images";
+import { resolveCatalogSkinImageUrl } from "@/lib/inventory/skin-images";
 
 export type RewardDraft = {
   kind: "CATALOG_SKIN" | "AGENT" | "STICKER";
@@ -71,10 +71,7 @@ function RewardThumb({ reward, onPreview }: { reward: RewardDraft; onPreview: ()
     >
       {reward.kind === "CATALOG_SKIN" ? (
         <InventoryItemArt
-          imageUrl={
-            reward.imageUrl ??
-            (reward.catalogSkinId ? catalogSkinImageUrl(reward.catalogSkinId) : null)
-          }
+          imageUrl={resolveCatalogSkinImageUrl(reward.imageUrl, reward.catalogSkinId)}
           accent={rarityAccent(reward.rarity ?? "common")}
           className="h-11 w-12"
         />
@@ -163,7 +160,7 @@ export function AdminStoreRewardsEditor({
       quantity: 1,
       sortOrder: rewards.length,
       label: skinDisplayName(item),
-      imageUrl: item.imageUrl ?? catalogSkinImageUrl(item.id),
+      imageUrl: resolveCatalogSkinImageUrl(item.imageUrl, item.id),
       rarity: item.rarity,
       category: item.category,
       weaponId: item.weaponId,

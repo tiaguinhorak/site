@@ -24,9 +24,7 @@ function imageAlreadyDecoded(img: HTMLImageElement | null): boolean {
 }
 
 /**
- * Steam CDN images via native <img>.
- * Skeleton is an overlay (not opacity-0 on the img) so cached images still show
- * when onLoad does not fire.
+ * Catalog images from /public/catalog/skins (saved during npm run sync:skins).
  */
 export function RemoteImage({
   src,

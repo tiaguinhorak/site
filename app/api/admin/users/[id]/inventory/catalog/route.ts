@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth/admin";
 import { listCatalogSkinsForUserGrant } from "@/lib/inventory/admin-catalog-grant";
-import { listApiWeaponOptions } from "@/lib/inventory/csgo-api-index";
+import { getCatalogWeaponOptions } from "@/lib/inventory/get-catalog-weapon-options";
 
 export async function GET(
   request: NextRequest,
@@ -43,7 +43,7 @@ export async function GET(
 
   const weaponOptions =
     page === 1 || params.get("weapons") === "1"
-      ? await listApiWeaponOptions()
+      ? await getCatalogWeaponOptions(category === "all" ? "all" : category)
       : [];
 
   return NextResponse.json({ ...result, weaponOptions });
